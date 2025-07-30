@@ -78,7 +78,7 @@ router.get('/user/:userId/today', async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { page = 1, limit = 20, mood, tags, startDate, endDate } = req.query;
+    const { page = 1, limit = 20, mood, tags, startDate, endDate, searchText } = req.query;
     
     console.log('Fetching journal entries for user:', userId);
     
@@ -94,6 +94,11 @@ router.get('/user/:userId', async (req, res) => {
       filter.tags = { $in: tagArray };
     }
     
+    if (searchText && searchText.trim()) {
+      // Add text search
+      filter.$text = { $search: searchText.trim() };
+    }
+    
     if (startDate || endDate) {
       filter.date = {};
       if (startDate) filter.date.$gte = new Date(startDate);
@@ -102,8 +107,20 @@ router.get('/user/:userId', async (req, res) => {
     
     console.log('Filter:', filter);
     
-    const entries = await JournalEntry.find(filter)
-      .sort({ date: -1, createdAt: -1 })
+    // Build query
+    let query = JournalEntry.find(filter);
+    
+    // If text search is used, include text score for relevance
+    if (searchText && searchText.trim()) {
+      query = query.select({ score: { $meta: 'textScore' } });
+      // Sort by text relevance score first, then by date
+      query = query.sort({ score: { $meta: 'textScore' }, date: -1, createdAt: -1 });
+    } else {
+      // Regular sort by date
+      query = query.sort({ date: -1, createdAt: -1 });
+    }
+    
+    const entries = await query
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .populate('userId', 'username');

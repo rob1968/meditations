@@ -7,6 +7,144 @@ const SharedMeditation = require('../models/SharedMeditation');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 
+// Multilingual notification texts
+const getNotificationTexts = (language, type, meditationType) => {
+  const texts = {
+    en: {
+      approved: {
+        title: '✅ Meditation Approved!',
+        message: `Your ${meditationType} meditation has been approved and is now live in the community.`
+      },
+      rejected: {
+        title: '❌ Meditation Rejected',
+        message: `Your ${meditationType} meditation was not approved for the community.`
+      }
+    },
+    nl: {
+      approved: {
+        title: '✅ Meditatie Goedgekeurd!',
+        message: `Je ${meditationType} meditatie is goedgekeurd en is nu beschikbaar in de community.`
+      },
+      rejected: {
+        title: '❌ Meditatie Afgewezen',
+        message: `Je ${meditationType} meditatie is niet goedgekeurd voor de community.`
+      }
+    },
+    de: {
+      approved: {
+        title: '✅ Meditation Genehmigt!',
+        message: `Deine ${meditationType} Meditation wurde genehmigt und ist jetzt in der Community verfügbar.`
+      },
+      rejected: {
+        title: '❌ Meditation Abgelehnt',
+        message: `Deine ${meditationType} Meditation wurde nicht für die Community genehmigt.`
+      }
+    },
+    fr: {
+      approved: {
+        title: '✅ Méditation Approuvée!',
+        message: `Votre méditation ${meditationType} a été approuvée et est maintenant disponible dans la communauté.`
+      },
+      rejected: {
+        title: '❌ Méditation Rejetée',
+        message: `Votre méditation ${meditationType} n'a pas été approuvée pour la communauté.`
+      }
+    },
+    es: {
+      approved: {
+        title: '✅ Meditación Aprobada!',
+        message: `Tu meditación de ${meditationType} ha sido aprobada y ya está disponible en la comunidad.`
+      },
+      rejected: {
+        title: '❌ Meditación Rechazada',
+        message: `Tu meditación de ${meditationType} no fue aprobada para la comunidad.`
+      }
+    },
+    it: {
+      approved: {
+        title: '✅ Meditazione Approvata!',
+        message: `La tua meditazione ${meditationType} è stata approvata ed è ora disponibile nella community.`
+      },
+      rejected: {
+        title: '❌ Meditazione Rifiutata',
+        message: `La tua meditazione ${meditationType} non è stata approvata per la community.`
+      }
+    },
+    pt: {
+      approved: {
+        title: '✅ Meditação Aprovada!',
+        message: `Sua meditação ${meditationType} foi aprovada e agora está disponível na comunidade.`
+      },
+      rejected: {
+        title: '❌ Meditação Rejeitada',
+        message: `Sua meditação ${meditationType} não foi aprovada para a comunidade.`
+      }
+    },
+    ru: {
+      approved: {
+        title: '✅ Медитация Одобрена!',
+        message: `Ваша медитация ${meditationType} одобрена и теперь доступна в сообществе.`
+      },
+      rejected: {
+        title: '❌ Медитация Отклонена',
+        message: `Ваша медитация ${meditationType} не была одобрена для сообщества.`
+      }
+    },
+    zh: {
+      approved: {
+        title: '✅ 冥想已批准！',
+        message: `您的${meditationType}冥想已获批准，现已在社区中上线。`
+      },
+      rejected: {
+        title: '❌ 冥想被拒绝',
+        message: `您的${meditationType}冥想未获得社区批准。`
+      }
+    },
+    ja: {
+      approved: {
+        title: '✅ 瞑想が承認されました！',
+        message: `あなたの${meditationType}瞑想が承認され、コミュニティで公開されました。`
+      },
+      rejected: {
+        title: '❌ 瞑想が拒否されました',
+        message: `あなたの${meditationType}瞑想はコミュニティで承認されませんでした。`
+      }
+    },
+    ko: {
+      approved: {
+        title: '✅ 명상이 승인되었습니다!',
+        message: `당신의 ${meditationType} 명상이 승인되어 커뮤니티에서 공개되었습니다.`
+      },
+      rejected: {
+        title: '❌ 명상이 거부되었습니다',
+        message: `당신의 ${meditationType} 명상이 커뮤니티에서 승인되지 않았습니다.`
+      }
+    },
+    hi: {
+      approved: {
+        title: '✅ ध्यान स्वीकृत!',
+        message: `आपका ${meditationType} ध्यान स्वीकृत हो गया है और अब समुदाय में उपलब्ध है।`
+      },
+      rejected: {
+        title: '❌ ध्यान अस्वीकृत',
+        message: `आपका ${meditationType} ध्यान समुदाय के लिए स्वीकृत नहीं किया गया।`
+      }
+    },
+    ar: {
+      approved: {
+        title: '✅ تم قبول التأمل!',
+        message: `تم قبول تأملك ${meditationType} وهو متاح الآن في المجتمع.`
+      },
+      rejected: {
+        title: '❌ تم رفض التأمل',
+        message: `لم يتم قبول تأملك ${meditationType} للمجتمع.`
+      }
+    }
+  };
+  
+  return texts[language] || texts.en;
+};
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -548,13 +686,18 @@ router.patch('/admin/meditation/:id/approve', async (req, res) => {
     meditation.moderationNotes = moderationNotes || 'Approved by admin';
     await meditation.save();
 
+    // Get user's language preference
+    const user = await User.findById(meditation.author.userId);
+    const userLanguage = user?.preferredLanguage || meditation.language || 'en';
+    const notificationTexts = getNotificationTexts(userLanguage, 'approved', meditation.meditationType);
+    
     // Create notification for the user
     const notification = new Notification({
       userId: meditation.author.userId,
       meditationId: meditation._id,
       type: 'approved',
-      title: '✅ Meditation Approved!',
-      message: `Your meditation "${meditation.title}" has been approved and is now live in the community.`,
+      title: notificationTexts.title,
+      message: notificationTexts.message,
       moderationNotes: moderationNotes || 'Approved by admin'
     });
     
@@ -590,13 +733,18 @@ router.patch('/admin/meditation/:id/reject', async (req, res) => {
     meditation.moderationNotes = moderationNotes;
     await meditation.save();
 
+    // Get user's language preference
+    const user = await User.findById(meditation.author.userId);
+    const userLanguage = user?.preferredLanguage || meditation.language || 'en';
+    const notificationTexts = getNotificationTexts(userLanguage, 'rejected', meditation.meditationType);
+    
     // Create notification for the user
     const notification = new Notification({
       userId: meditation.author.userId,
       meditationId: meditation._id,
       type: 'rejected',
-      title: '❌ Meditation Rejected',
-      message: `Your meditation "${meditation.title}" was not approved for the community.`,
+      title: notificationTexts.title,
+      message: notificationTexts.message,
       moderationNotes: moderationNotes
     });
     

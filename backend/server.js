@@ -17,6 +17,7 @@ const userMeditationsRoute = require('./routes/userMeditations');
 const communityRoute = require('./routes/community');
 const notificationsRoute = require('./routes/notifications');
 const journalRoute = require('./routes/journal');
+const addictionsRoute = require('./routes/addictions');
 const app = express();
 
 // Create a write stream (in append mode) for logging
@@ -45,6 +46,7 @@ app.use('/api/user-meditations', userMeditationsRoute);
 app.use('/api/community', communityRoute);
 app.use('/api/notifications', notificationsRoute);
 app.use('/api/journal', journalRoute);
+app.use('/api/addictions', addictionsRoute);
 
 // Add a route for fetching voices
 app.use('/api/voices', meditationRoute);

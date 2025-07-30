@@ -141,6 +141,9 @@ JournalEntrySchema.index({ isShared: 1, sharedAt: -1 });
 JournalEntrySchema.index({ mood: 1 });
 JournalEntrySchema.index({ tags: 1 });
 
+// Text index for full-text search on title and content
+JournalEntrySchema.index({ title: 'text', content: 'text' });
+
 // Compound index to ensure one entry per day per user
 JournalEntrySchema.index({ 
   userId: 1, 
