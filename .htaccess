@@ -1,0 +1,11 @@
+RewriteEngine On
+
+# API proxy
+RewriteRule ^api/(.*)$ /proxy-api.php/api/$1 [L,QSA]
+
+# React routes - all other requests to index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/api
+RewriteCond %{REQUEST_URI} !^/assets
+RewriteRule ^(.*)$ /index.html [L]
