@@ -7,6 +7,7 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const multer = require('multer');
 const crypto = require('crypto');
+const axios = require('axios');
 const { getElevenlabsStats } = require('../utils/elevenlabsTracking');
 
 // Configure multer for image uploads
@@ -731,6 +732,297 @@ router.put('/user/:id/profile', async (req, res) => {
     
     res.status(500).json({ error: 'Failed to update profile' });
   }
+});
+
+// Pi Network authentication
+router.post('/pi-login', async (req, res) => {
+  try {
+    const { piUserId, piUsername, accessToken, authMethod } = req.body;
+    
+    console.log('Pi authentication request:', { piUserId, piUsername, authMethod });
+    
+    // Enhanced validation for Pi authentication data
+    if (!piUserId || typeof piUserId !== 'string' || piUserId.trim().length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Valid Pi user ID is required',
+        errorCode: 'INVALID_PI_USER_ID'
+      });
+    }
+    
+    if (!piUsername || typeof piUsername !== 'string' || piUsername.trim().length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Valid Pi username is required',
+        errorCode: 'INVALID_PI_USERNAME'
+      });
+    }
+    
+    if (!accessToken || typeof accessToken !== 'string' || accessToken.trim().length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Valid Pi access token is required',
+        errorCode: 'INVALID_ACCESS_TOKEN'
+      });
+    }
+    
+    if (authMethod !== 'pi') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid authentication method. Expected "pi"',
+        errorCode: 'INVALID_AUTH_METHOD'
+      });
+    }
+    
+    // Additional validation for Pi fields length and format
+    if (piUserId.length > 100) {
+      return res.status(400).json({
+        success: false,
+        error: 'Pi user ID too long',
+        errorCode: 'PI_USER_ID_TOO_LONG'
+      });
+    }
+    
+    if (piUsername.length > 50) {
+      return res.status(400).json({
+        success: false,
+        error: 'Pi username too long',
+        errorCode: 'PI_USERNAME_TOO_LONG'
+      });
+    }
+    
+    // Sanitize inputs
+    const sanitizedPiUserId = piUserId.trim();
+    const sanitizedPiUsername = piUsername.trim();
+    const sanitizedAccessToken = accessToken.trim();
+    
+    let verifiedUsername = sanitizedPiUsername; // Default to provided username
+    
+    // Verify Pi Network access token with Pi Platform API
+    try {
+      console.log('Verifying Pi authentication with Pi Platform API...');
+      
+      // Determine API URL based on sandbox mode
+      const piApiBaseUrl = process.env.PI_SANDBOX_MODE === 'true' 
+        ? 'https://sandbox.minepi.com' 
+        : 'https://api.minepi.com';
+      
+      console.log('Using Pi API URL:', piApiBaseUrl);
+      
+      // Call Pi Platform API to verify user
+      const verifyResponse = await axios.get(`${piApiBaseUrl}/v2/me`, {
+        headers: {
+          'Authorization': `Bearer ${sanitizedAccessToken}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000 // 10 second timeout
+      });
+      
+      console.log('Pi Platform API verification successful:', {
+        uid: verifyResponse.data.uid,
+        username: verifyResponse.data.username
+      });
+      
+      // Verify that the user data matches
+      if (verifyResponse.data.uid !== sanitizedPiUserId) {
+        console.error('Pi user ID mismatch:', {
+          claimed: sanitizedPiUserId,
+          verified: verifyResponse.data.uid
+        });
+        return res.status(401).json({
+          success: false,
+          error: 'Pi user verification failed: User ID mismatch',
+          errorCode: 'PI_USER_ID_MISMATCH'
+        });
+      }
+      
+      // Update username if Pi Platform API returns a different one
+      verifiedUsername = verifyResponse.data.username || sanitizedPiUsername;
+      
+    } catch (verifyError) {
+      console.error('Pi Platform API verification failed:', verifyError.message);
+      
+      if (verifyError.response) {
+        console.error('Pi API response:', {
+          status: verifyError.response.status,
+          data: verifyError.response.data
+        });
+        
+        if (verifyError.response.status === 401) {
+          return res.status(401).json({
+            success: false,
+            error: 'Pi authentication token is invalid or expired',
+            errorCode: 'PI_TOKEN_INVALID'
+          });
+        }
+      }
+      
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to verify Pi authentication',
+        errorCode: 'PI_VERIFICATION_FAILED'
+      });
+    }
+    
+    // Check if user already exists with this Pi ID
+    let user = await User.findOne({ piUserId: sanitizedPiUserId });
+    
+    if (user) {
+      // Existing Pi user, update last login and username if changed
+      console.log('Existing Pi user found:', user.username);
+      
+      // Update Pi username if it has changed (use verified username)
+      if (user.piUsername !== verifiedUsername) {
+        user.piUsername = verifiedUsername;
+      }
+      
+      user.lastLogin = new Date();
+      await user.save();
+      
+      console.log('Pi user login successful:', user.username);
+    } else {
+      // New Pi user, create account
+      console.log('Creating new Pi user:', sanitizedPiUsername);
+      
+      // Generate a unique username based on verified Pi username with error handling
+      let username = verifiedUsername;
+      let counter = 1;
+      const maxAttempts = 100; // Prevent infinite loops
+      
+      // Ensure username is unique in our system
+      try {
+        while (await User.findOne({ username: username }) && counter <= maxAttempts) {
+          username = `${sanitizedPiUsername}_${counter}`;
+          counter++;
+        }
+        
+        if (counter > maxAttempts) {
+          return res.status(500).json({
+            success: false,
+            error: 'Unable to generate unique username',
+            errorCode: 'USERNAME_GENERATION_FAILED'
+          });
+        }
+      } catch (dbError) {
+        console.error('Database error during username check:', dbError);
+        return res.status(500).json({
+          success: false,
+          error: 'Database error during user creation',
+          errorCode: 'DATABASE_ERROR'
+        });
+      }
+      
+      // Create new user with Pi authentication and enhanced error handling
+      try {
+        user = new User({
+          username: username,
+          authMethod: 'pi',
+          piUserId: sanitizedPiUserId,
+          piUsername: verifiedUsername,
+          // Default values for Pi users
+          credits: 10,
+          totalCreditsEarned: 10,
+          preferredLanguage: 'en', // Default to English, can be changed later
+          createdAt: new Date(),
+          lastLogin: new Date()
+        });
+        
+        await user.save();
+      } catch (userCreationError) {
+        console.error('Error creating Pi user:', userCreationError);
+        
+        // Handle specific Mongoose validation errors
+        if (userCreationError.name === 'ValidationError') {
+          const validationErrors = Object.values(userCreationError.errors).map(err => err.message);
+          return res.status(400).json({
+            success: false,
+            error: 'User validation failed',
+            details: validationErrors,
+            errorCode: 'USER_VALIDATION_ERROR'
+          });
+        }
+        
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to create Pi user account',
+          errorCode: 'USER_CREATION_FAILED'
+        });
+      }
+      
+      // Initialize welcome credits
+      await user.initializeCredits();
+      
+      console.log('New Pi user created successfully:', user.username);
+    }
+    
+    // Create user credits object
+    const userCredits = {
+      credits: user.credits,
+      totalCreditsEarned: user.totalCreditsEarned,
+      totalCreditsSpent: user.totalCreditsSpent
+    };
+    
+    // Return success response
+    res.json({
+      success: true,
+      message: user.isNew ? 'Pi user created successfully' : 'Pi login successful',
+      user: {
+        id: user._id,
+        username: user.username,
+        authMethod: user.authMethod,
+        piUsername: user.piUsername,
+        preferredLanguage: user.preferredLanguage,
+        location: user.location,
+        gender: user.gender,
+        bio: user.bio,
+        age: user.age,
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin
+      },
+      token: accessToken, // Use Pi's access token for now
+      credits: userCredits
+    });
+    
+  } catch (error) {
+    console.error('Error in Pi authentication:', error);
+    
+    // Handle duplicate key errors (shouldn't happen with sparse index, but just in case)
+    if (error.code === 11000) {
+      if (error.message.includes('piUserId')) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'Pi user ID already exists in system' 
+        });
+      }
+      if (error.message.includes('username')) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'Username already taken' 
+        });
+      }
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      error: 'Pi authentication failed' 
+    });
+  }
+});
+
+// Pi Network validation key endpoint
+router.get('/validation-key', (req, res) => {
+  res.set('Content-Type', 'text/plain');
+  res.send(process.env.PI_VALIDATION_KEY || 'e9ab4e70062f0f03a03f2e7be0d6f536690d28a03ccdc86892107e131516eaec58ae98d059f7f9f81d2fd956e18ba2945562bea7f01e711d1743e45120baf9f7');
 });
 
 module.exports = router;

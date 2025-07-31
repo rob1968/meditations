@@ -15,7 +15,7 @@ $apiPath = str_replace('/api.php', '', $apiPath);
 $apiPath = ltrim($apiPath, '/');
 
 // Build the backend URL
-$backendUrl = 'https://127.0.0.1:5443/' . $apiPath;
+$backendUrl = 'http://127.0.0.1:5002/' . $apiPath;
 
 // Get the request method and body
 $method = $_SERVER['REQUEST_METHOD'];

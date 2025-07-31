@@ -3,6 +3,9 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
+  padding-bottom: calc(80px + var(--space-lg)); /* Space for bottom navigation */
+  max-height: calc(100vh - 160px); /* Account for header and bottom nav */
+  overflow-y: auto;
 }
 
 .wizard-header {
@@ -10,7 +13,7 @@
 }
 
 .wizard-content {
-  margin-bottom: 30px;
+  margin-bottom: 10px;
 }
 
 .step-title h2 {
@@ -22,7 +25,7 @@
 }
 
 .step-body {
-  min-height: 400px;
+  min-height: 300px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -116,7 +119,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 0;
+  padding: 10px 0 20px 0;
   gap: 20px;
   min-height: 48px;
 }
@@ -473,6 +476,8 @@
 @media (max-width: 768px) {
   .wizard-container {
     padding: 15px;
+    padding-bottom: calc(80px + var(--space-md)); /* Adjust for mobile bottom nav */
+    max-height: calc(100vh - 140px); /* Tighter mobile viewport */
   }
   
   .step-items {
@@ -491,6 +496,7 @@
   
   .step-navigation {
     gap: 15px;
+    padding: 8px 0 18px 0;
   }
   
   .nav-btn {
@@ -532,6 +538,7 @@
 @media (max-width: 480px) {
   .step-navigation {
     gap: 12px;
+    padding: 5px 0 15px 0;
   }
   
   .nav-btn {

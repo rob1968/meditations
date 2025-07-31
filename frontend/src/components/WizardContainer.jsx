@@ -18,11 +18,11 @@ const WizardContainer = ({
   const { t } = useTranslation();
 
   const stepTitles = {
-    1: t('stepMeditationType', 'Meditatie Type'),
-    2: t('stepText', 'Meditatie Tekst'),
-    3: t('stepVoice', 'Stem Keuze'),
-    4: t('stepBackground', 'Achtergrond Muziek'),
-    5: t('stepReview', 'Overzicht')
+    1: t('stepType', 'Type'),
+    2: t('stepText', 'Text'),
+    3: t('stepVoice', 'Voice'),
+    4: t('stepMusic', 'Music'),
+    5: t('stepReview', 'Review')
   };
 
   const hideStepTitle = [1, 2, 3, 4, 5].includes(currentStep);

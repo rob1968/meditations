@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
   // Auth endpoints
   REGISTER: '/api/auth/register',
   LOGIN: '/api/auth/login',
+  PI_LOGIN: '/api/auth/pi-login',
   USER_MEDITATIONS: (userId) => `/api/user-meditations/list/${userId}`,
   USER_STATS: (userId) => `/api/auth/user/${userId}/stats`,
   UPLOAD_IMAGE: (meditationId) => `/api/user-meditations/meditation/${meditationId}/upload-image`,

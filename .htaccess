@@ -1,7 +1,10 @@
 RewriteEngine On
 
-# API proxy
+# API proxy first
 RewriteRule ^api/(.*)$ /proxy-api.php/api/$1 [L,QSA]
+
+# Allow validation-key.txt to be served as-is (exists as file)
+# Don't rewrite if file exists
 
 # React routes - all other requests to index.html
 RewriteCond %{REQUEST_FILENAME} !-f

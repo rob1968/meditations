@@ -12,6 +12,19 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
   const [filter, setFilter] = useState('all'); // all, unread, read
   const { t } = useTranslation();
 
+  const meditationTypeLabels = {
+    sleep: t('sleepMeditation', 'Sleep'),
+    stress: t('stressMeditation', 'Stress'),
+    focus: t('focusMeditation', 'Focus'),
+    anxiety: t('anxietyMeditation', 'Anxiety'),
+    energy: t('energyMeditation', 'Energy'),
+    breathing: t('breathingMeditation', 'Breathing'),
+    walking: t('walkingMeditation', 'Walking'),
+    morning: t('morningMeditation', 'Morning'),
+    compassion: t('compassionMeditation', 'Compassion'),
+    mindfulness: t('mindfulnessMeditation', 'Mindfulness')
+  };
+
   useEffect(() => {
     if (user) {
       fetchNotifications();
@@ -216,7 +229,9 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
                 
                 <div className="notification-meditation">
                   <span className="meditation-ref">
-                    📿 {notification.meditationId?.title || t('deletedMeditation', 'Verwijderde meditatie')}
+                    📿 {notification.meditationId ? 
+                      `${meditationTypeLabels[notification.meditationId.meditationType] || notification.meditationId.meditationType} - ${notification.meditationId.language}` 
+                      : t('deletedMeditation', 'Verwijderde meditatie')}
                   </span>
                 </div>
               </div>

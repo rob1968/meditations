@@ -20,6 +20,8 @@ import BackgroundSlider from './components/BackgroundSlider';
 import WizardContainer from './components/WizardContainer';
 import ReviewStep from './components/ReviewStep';
 import { getFullUrl, getAssetUrl, API_ENDPOINTS } from './config/api';
+import { isPiBrowser } from './utils/piDetection';
+import piAuthService from './services/piAuth';
 
 const App = () => {
   const [text, setText] = useState("");
@@ -60,6 +62,8 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('create');
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileSection, setProfileSection] = useState('profile');
+  const [isPiEnvironment, setIsPiEnvironment] = useState(false);
+  const [piAuthInitialized, setPiAuthInitialized] = useState(false);
   
   // Credits state
   const [userCredits, setUserCredits] = useState(null);
@@ -332,18 +336,21 @@ const App = () => {
 
   // Wizard navigation functions
   const nextStep = () => {
+    stopAllBackgroundAudio(); // Stop any playing background audio
     if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
   };
 
   const prevStep = () => {
+    stopAllBackgroundAudio(); // Stop any playing background audio
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
   const goToStep = (step) => {
+    stopAllBackgroundAudio(); // Stop any playing background audio
     if (step >= 1 && step <= 5) {
       setCurrentStep(step);
     }
@@ -703,29 +710,81 @@ const App = () => {
     }
   }, [text, originalGeneratedText]);
 
-  // Check for existing user session and language preference on app start
+  // Initialize Pi authentication and check for existing user session
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser && storedUser !== 'undefined' && storedUser !== 'null') {
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        
-        if (userData && userData.preferredLanguage) {
-          i18n.changeLanguage(userData.preferredLanguage);
-          localStorage.setItem('selectedLanguage', userData.preferredLanguage);
+    const initializeApp = async () => {
+      // Check if we're in Pi Browser environment
+      const piDetected = isPiBrowser();
+      setIsPiEnvironment(piDetected);
+      
+      if (piDetected) {
+        console.log('Pi Browser detected - initializing Pi authentication service...');
+        try {
+          const initialized = await piAuthService.initialize();
+          setPiAuthInitialized(initialized);
+          
+          if (initialized) {
+            console.log('Pi authentication service initialized successfully');
+            
+            // Check if user was previously authenticated with Pi
+            const authMethod = localStorage.getItem('authMethod');
+            if (authMethod === 'pi') {
+              console.log('Previous Pi authentication detected - attempting auto-login...');
+              try {
+                const result = await piAuthService.autoAuthenticate();
+                if (result.success) {
+                  console.log('Pi auto-authentication successful');
+                  setUser(result.user);
+                  if (result.user.preferredLanguage) {
+                    i18n.changeLanguage(result.user.preferredLanguage);
+                    localStorage.setItem('selectedLanguage', result.user.preferredLanguage);
+                  }
+                  return; // Exit early since we've authenticated
+                }
+              } catch (error) {
+                console.log('Pi auto-authentication failed:', error.message);
+                // Clear Pi auth data and fall through to traditional auth check
+                localStorage.removeItem('authMethod');
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error initializing Pi authentication:', error);
+          setPiAuthInitialized(false);
         }
-      } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('user');
       }
-    } else {
-      // Fallback: Load saved language preference from localStorage if no user preferred language
-      const savedLanguage = localStorage.getItem('selectedLanguage');
-      if (savedLanguage) {
-        i18n.changeLanguage(savedLanguage);
+      
+      // Check for existing traditional user session
+      const storedUser = localStorage.getItem('user');
+      if (storedUser && storedUser !== 'undefined' && storedUser !== 'null') {
+        try {
+          const userData = JSON.parse(storedUser);
+          const authMethod = localStorage.getItem('authMethod');
+          
+          // Only auto-login traditional users, Pi users are handled above
+          if (authMethod !== 'pi') {
+            setUser(userData);
+            
+            if (userData && userData.preferredLanguage) {
+              i18n.changeLanguage(userData.preferredLanguage);
+              localStorage.setItem('selectedLanguage', userData.preferredLanguage);
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+          localStorage.removeItem('user');
+          localStorage.removeItem('authMethod');
+        }
+      } else {
+        // Fallback: Load saved language preference from localStorage if no user preferred language
+        const savedLanguage = localStorage.getItem('selectedLanguage');
+        if (savedLanguage) {
+          i18n.changeLanguage(savedLanguage);
+        }
       }
-    }
+    };
+    
+    initializeApp();
   }, [i18n]);
   
   // Fetch unread notifications count
@@ -774,14 +833,26 @@ const App = () => {
       localStorage.setItem('selectedLanguage', userData.preferredLanguage);
     }
     
+    console.log('User logged in:', userData.authMethod || 'traditional', userData.username);
     handleTabChange('create');
   };
 
   const handleLogout = () => {
+    // Check if user was authenticated with Pi and logout from Pi service
+    const authMethod = localStorage.getItem('authMethod');
+    if (authMethod === 'pi' && piAuthService.isAuthenticated()) {
+      console.log('Logging out Pi user...');
+      piAuthService.logout();
+    }
+    
+    // Clear all authentication data
     localStorage.removeItem('user');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authMethod');
     setUser(null);
     setUserCredits(null);
     handleTabChange('create');
+    console.log('User logged out');
     // Note: We keep the language preference even after logout
   };
 

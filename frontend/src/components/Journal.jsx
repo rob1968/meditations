@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import axios from 'axios';
@@ -13,8 +13,8 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const [editingEntry, setEditingEntry] = useState(null);
   const [playingEntryId, setPlayingEntryId] = useState(null);
   const [generatingAudio, setGeneratingAudio] = useState(null);
-  const [filterMood, setFilterMood] = useState('all');
   const [searchTags, setSearchTags] = useState('');
+  const [searchText, setSearchText] = useState('');
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [transcribing, setTranscribing] = useState(false);
@@ -36,7 +36,52 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const [selectedVoiceId, setSelectedVoiceId] = useState('default');
   const [uploadingVoice, setUploadingVoice] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  
+  // Addictions state
+  const [addictions, setAddictions] = useState([]);
+  const [showAddictionForm, setShowAddictionForm] = useState(false);
+  const [editingAddiction, setEditingAddiction] = useState(null);
+  const [addictionForm, setAddictionForm] = useState({
+    type: '',
+    description: '',
+    startDate: '',
+    quitDate: '',
+    status: 'active' // 'active', 'recovering', 'relapsed', 'clean'
+  });
   const [expandedMoodId, setExpandedMoodId] = useState(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastSavedContent, setLastSavedContent] = useState('');
+  const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
+  
+  // Tab navigation state
+  const [activeTab, setActiveTab] = useState('browse'); // 'write', 'browse', 'voice', 'calendar', 'addictions'
+  
+  // Function to highlight search text in content
+  const highlightSearchText = (text, searchTerm) => {
+    if (!searchTerm || !text) return text;
+    
+    const parts = text.split(new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+    
+    return parts.map((part, index) => 
+      part.toLowerCase() === searchTerm.toLowerCase() ? 
+        <span key={index} style={{ backgroundColor: '#ffeb3b', color: '#000', fontWeight: 'bold' }}>{part}</span> : 
+        part
+    );
+  };
+  
+  // Generate automatic voice name based on current date
+  const generateVoiceName = () => {
+    const currentLanguage = i18n.language || 'nl';
+    const today = new Date();
+    const dateString = today.toLocaleDateString(currentLanguage === 'nl' ? 'nl-NL' : 'en-US');
+    
+    if (currentLanguage === 'nl') {
+      return `Mijn Stem ${dateString}`;
+    } else {
+      return `My Voice ${dateString}`;
+    }
+  };
   const { t } = useTranslation();
 
   // Form states
@@ -49,14 +94,14 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   });
 
   const moods = [
-    { value: 'happy', emoji: '🌞', label: t('happy', 'Blij'), color: '#FFD700', bg: 'linear-gradient(135deg, #FFD700, #FFA500)' },
-    { value: 'calm', emoji: '🌊', label: t('calm', 'Rustig'), color: '#87CEEB', bg: 'linear-gradient(135deg, #87CEEB, #4682B4)' },
-    { value: 'peaceful', emoji: '🕊️', label: t('peaceful', 'Vreedzaam'), color: '#98FB98', bg: 'linear-gradient(135deg, #98FB98, #32CD32)' },
-    { value: 'grateful', emoji: '🙏', label: t('grateful', 'Dankbaar'), color: '#DDA0DD', bg: 'linear-gradient(135deg, #DDA0DD, #9370DB)' },
-    { value: 'reflective', emoji: '🌙', label: t('reflective', 'Reflectief'), color: '#C0C0C0', bg: 'linear-gradient(135deg, #C0C0C0, #708090)' },
-    { value: 'energetic', emoji: '⚡', label: t('energetic', 'Energiek'), color: '#FF6347', bg: 'linear-gradient(135deg, #FF6347, #DC143C)' },
-    { value: 'stressed', emoji: '🌋', label: t('stressed', 'Gestrest'), color: '#FF4500', bg: 'linear-gradient(135deg, #FF4500, #B22222)' },
-    { value: 'anxious', emoji: '🌪️', label: t('anxious', 'Bezorgd'), color: '#708090', bg: 'linear-gradient(135deg, #708090, #2F4F4F)' }
+    { value: 'happy', emoji: '🌞', label: t('happy', 'Blij'), description: 'Vrolijk en positief', color: '#FFD700', bg: 'linear-gradient(135deg, #FFD700, #FFA500)' },
+    { value: 'calm', emoji: '🌊', label: t('calm', 'Rustig'), description: 'Kalm en sereen', color: '#87CEEB', bg: 'linear-gradient(135deg, #87CEEB, #4682B4)' },
+    { value: 'peaceful', emoji: '🕊️', label: t('peaceful', 'Vreedzaam'), description: 'Vreedzaam en harmonieus', color: '#98FB98', bg: 'linear-gradient(135deg, #98FB98, #32CD32)' },
+    { value: 'grateful', emoji: '🙏', label: t('grateful', 'Dankbaar'), description: 'Vol waardering', color: '#DDA0DD', bg: 'linear-gradient(135deg, #DDA0DD, #9370DB)' },
+    { value: 'reflective', emoji: '🌙', label: t('reflective', 'Reflectief'), description: 'Nadenkend en contemplatief', color: '#C0C0C0', bg: 'linear-gradient(135deg, #C0C0C0, #708090)' },
+    { value: 'energetic', emoji: '⚡', label: t('energetic', 'Energiek'), description: 'Vol energie en motivatie', color: '#FF6347', bg: 'linear-gradient(135deg, #FF6347, #DC143C)' },
+    { value: 'stressed', emoji: '🌋', label: t('stressed', 'Gestrest'), description: 'Onder druk en gespannen', color: '#FF4500', bg: 'linear-gradient(135deg, #FF4500, #B22222)' },
+    { value: 'anxious', emoji: '🌪️', label: t('anxious', 'Bezorgd'), description: 'Ongerust en nerveus', color: '#708090', bg: 'linear-gradient(135deg, #708090, #2F4F4F)' }
   ];
 
   useEffect(() => {
@@ -65,7 +110,36 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       fetchTodaysEntry();
       fetchUserVoices();
     }
-  }, [user, filterMood, searchTags]);
+  }, [user, searchTags, searchText]);
+
+  // Separate useEffect for auto-loading today's entry data when available
+  useEffect(() => {
+    if (!user || justSaved || activeTab !== 'write') return;
+    
+    if (hasTodaysEntry && todaysEntry) {
+      // Auto-load today's existing entry data
+      setFormData({
+        title: todaysEntry.title,
+        content: todaysEntry.content,
+        mood: todaysEntry.mood || '',
+        tags: todaysEntry.tags || [],
+        date: todaysEntry.date ? new Date(todaysEntry.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      });
+      setEditingEntry(todaysEntry);
+      setShowCreateForm(true);
+    } else if (!hasTodaysEntry) {
+      // Auto-setup for new entry if no existing entry
+      setFormData({
+        title: '',
+        content: '',
+        mood: '',
+        tags: [],
+        date: new Date().toISOString().split('T')[0]
+      });
+      setEditingEntry(null);
+      setShowCreateForm(true);
+    }
+  }, [user, hasTodaysEntry, todaysEntry, activeTab]);
 
   // Check audio recording support on component mount
   useEffect(() => {
@@ -92,12 +166,14 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     };
   }, [mediaRecorder]);
 
-  const fetchEntries = async () => {
+  const fetchEntries = async (showLoading = true) => {
     try {
-      setIsLoading(true);
+      if (showLoading) {
+        setIsLoading(true);
+      }
       const params = new URLSearchParams();
-      if (filterMood !== 'all') params.append('mood', filterMood);
       if (searchTags) params.append('tags', searchTags);
+      if (searchText) params.append('searchText', searchText);
       
       const response = await axios.get(getFullUrl(`/api/journal/user/${user.id}?${params}`));
       setEntries(response.data.entries);
@@ -105,7 +181,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       console.error('Error fetching journal entries:', error);
       setError(t('failedToLoadEntries', 'Failed to load journal entries'));
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -124,10 +202,10 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
   const fetchEntryForDate = async (date) => {
     try {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
+      // Parse the date string properly to avoid timezone issues
+      const [year, month, day] = date.split('-');
+      const startOfDay = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
+      const endOfDay = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
       
       const response = await axios.get(getFullUrl(`/api/journal/user/${user.id}?startDate=${startOfDay.toISOString()}&endDate=${endOfDay.toISOString()}`));
       
@@ -178,13 +256,13 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     const entry = await fetchEntryForDate(date);
     
     if (entry) {
-      // Edit existing entry for this date
+      // Edit existing entry for this date - use the selected date, not the entry date
       setFormData({
         title: entry.title,
         content: entry.content,
         mood: entry.mood || '',
         tags: entry.tags || [],
-        date: new Date(entry.date).toISOString().split('T')[0]
+        date: date // Use the selected date string directly
       });
       setEditingEntry(entry);
     } else {
@@ -201,6 +279,8 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     
     setShowDatePicker(false);
     setShowCreateForm(true);
+    // Switch to write tab for editing
+    setActiveTab('write');
   };
 
   const fetchUserVoices = async () => {
@@ -499,10 +579,18 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       console.log('Save response:', response.data);
 
       if (response.data.success) {
-        await fetchEntries();
-        await fetchTodaysEntry(); // Refresh today's entry
-        resetForm();
+        setJustSaved(true); // Prevent auto-reopening form
+        resetForm(); // Close form immediately for better UX
         setError('');
+        
+        // Refresh data in background without showing loading states
+        fetchEntries(false);
+        fetchTodaysEntry();
+        
+        // Reset justSaved flag after a short delay
+        setTimeout(() => {
+          setJustSaved(false);
+        }, 100);
       }
     } catch (error) {
       console.error('Error saving journal entry:', error);
@@ -939,6 +1027,228 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     });
   };
 
+  // Count words in text
+  const countWords = (text) => {
+    if (!text.trim()) return 0;
+    return text.trim().split(/\s+/).length;
+  };
+
+  // Auto-save functionality
+  const autoSave = useCallback(async () => {
+    if (!formData.content.trim() || formData.content === lastSavedContent || autoSaving) {
+      return;
+    }
+
+    try {
+      setAutoSaving(true);
+      const payload = {
+        userId: user.id,
+        title: formatDate(formData.date),
+        content: formData.content.trim(),
+        date: formData.date
+      };
+
+      if (formData.mood && formData.mood.trim()) {
+        payload.mood = formData.mood.trim();
+      }
+
+      if (formData.tags && formData.tags.length > 0) {
+        payload.tags = formData.tags.filter(tag => tag.trim()).map(tag => tag.trim());
+      }
+
+      let response;
+      if (editingEntry && editingEntry._id) {
+        response = await axios.put(getFullUrl(`/api/journal/${editingEntry._id}`), payload);
+      } else {
+        response = await axios.post(getFullUrl('/api/journal/create'), payload);
+      }
+
+      if (response.data.success) {
+        setLastSavedContent(formData.content);
+        // Update editingEntry if it was a new entry
+        if (!editingEntry && response.data.entry) {
+          setEditingEntry(response.data.entry);
+        }
+        // Silently refresh entries in background
+        fetchEntries(false);
+        fetchTodaysEntry();
+      }
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+      // Don't show error for auto-save failures to avoid interrupting user
+    } finally {
+      setAutoSaving(false);
+    }
+  }, [formData, editingEntry, user, lastSavedContent, autoSaving]);
+
+  // Auto-save effect - triggers after user stops typing for 2 seconds
+  useEffect(() => {
+    if (!user || !showCreateForm || !formData.content.trim()) return;
+
+    const timeoutId = setTimeout(() => {
+      autoSave();
+    }, 2000); // 2 seconds delay
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.content, formData.mood, formData.tags, user, showCreateForm, autoSave]);
+
+  // Addictions functions
+  const fetchAddictions = async () => {
+    try {
+      const response = await axios.get(getFullUrl(`/api/addictions/user/${user.id}`));
+      setAddictions(response.data.addictions);
+    } catch (error) {
+      console.error('Error fetching addictions:', error);
+      setError(t('failedToLoadAddictions', 'Failed to load addictions'));
+    }
+  };
+
+  const handleSaveAddiction = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      
+      const requestData = {
+        userId: user.id,
+        ...addictionForm
+      };
+      
+      let response;
+      if (editingAddiction) {
+        response = await axios.put(getFullUrl(`/api/addictions/${editingAddiction._id}`), requestData);
+      } else {
+        response = await axios.post(getFullUrl('/api/addictions/create'), requestData);
+      }
+      
+      if (response.data.success) {
+        await fetchAddictions();
+        setShowAddictionForm(false);
+        setEditingAddiction(null);
+        setAddictionForm({
+          type: '',
+          description: '',
+          startDate: '',
+          quitDate: '',
+          status: 'active'
+        });
+      }
+    } catch (error) {
+      console.error('Error saving addiction:', error);
+      setError(error.response?.data?.error || t('failedToSaveAddiction', 'Failed to save addiction'));
+    }
+  };
+
+  const handleEditAddiction = (addiction) => {
+    setAddictionForm({
+      type: addiction.type,
+      description: addiction.description || '',
+      startDate: addiction.startDate ? new Date(addiction.startDate).toISOString().split('T')[0] : '',
+      quitDate: addiction.quitDate ? new Date(addiction.quitDate).toISOString().split('T')[0] : '',
+      status: addiction.status
+    });
+    setEditingAddiction(addiction);
+    setShowAddictionForm(true);
+  };
+
+  const handleDeleteAddiction = async (addictionId) => {
+    if (!window.confirm(t('confirmDeleteAddiction', 'Are you sure you want to delete this addiction tracking?'))) {
+      return;
+    }
+    
+    try {
+      await axios.delete(getFullUrl(`/api/addictions/${addictionId}?userId=${user.id}`));
+      await fetchAddictions();
+    } catch (error) {
+      console.error('Error deleting addiction:', error);
+      setError(t('failedToDeleteAddiction', 'Failed to delete addiction'));
+    }
+  };
+
+  const getAddictionIcon = (type) => {
+    const icons = {
+      'smoking': '🚭',
+      'alcohol': '🍷',
+      'drugs': '💊',
+      'gambling': '🎲',
+      'shopping': '🛍️',
+      'social_media': '📱',
+      'gaming': '🎮',
+      'food': '🍔',
+      'caffeine': '☕',
+      'sugar': '🍭',
+      'phone': '📱',
+      'internet': '🌐',
+      'other': '❓'
+    };
+    return icons[type] || '❓';
+  };
+
+  const getAddictionDisplayName = (addiction) => {
+    const names = {
+      'smoking': t('smoking', 'Roken'),
+      'alcohol': t('alcohol', 'Alcohol'),
+      'drugs': t('drugs', 'Drugs'),
+      'gambling': t('gambling', 'Gokken'),
+      'shopping': t('shopping', 'Winkelen'),
+      'social_media': t('socialMedia', 'Social Media'),
+      'gaming': t('gaming', 'Gaming'),
+      'food': t('food', 'Eten'),
+      'caffeine': t('caffeine', 'Cafeïne'),
+      'sugar': t('sugar', 'Suiker'),
+      'phone': t('phone', 'Telefoon'),
+      'internet': t('internet', 'Internet'),
+      'other': t('other', 'Anders')
+    };
+    return names[addiction.type] || addiction.customType || addiction.type;
+  };
+
+  // Helper function to get total days of addiction
+  const getTotalAddictionDays = (addiction) => {
+    if (!addiction.startDate) return 0;
+    
+    const startDate = new Date(addiction.startDate + 'T00:00:00');
+    const endDate = addiction.quitDate ? new Date(addiction.quitDate + 'T00:00:00') : new Date();
+    
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    
+    return Math.max(0, diffDays);
+  };
+
+  const getDaysClean = (addiction) => {
+    if (!addiction.quitDate || addiction.status === 'active' || addiction.status === 'relapsed') {
+      return 0;
+    }
+    
+    const now = new Date();
+    // Parse date string correctly - ensure it's treated as local date
+    const quitDate = new Date(addiction.quitDate + 'T00:00:00');
+    
+    // Check if quit date is in the future
+    if (quitDate > now) {
+      return 0;
+    }
+    
+    // Set both dates to start of day for accurate day comparison
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const quitDay = new Date(quitDate.getFullYear(), quitDate.getMonth(), quitDate.getDate());
+    
+    // Calculate difference in milliseconds
+    const diffTime = today.getTime() - quitDay.getTime();
+    
+    // Convert to days - person is 1 day clean on quit day, 2 days clean the next day, etc.
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    
+    return Math.max(1, diffDays); // Minimum 1 day if we got this far
+  };
+
+  // Fetch addictions when user changes or when addictions tab is active
+  useEffect(() => {
+    if (user && activeTab === 'addictions') {
+      fetchAddictions();
+    }
+  }, [user, activeTab]);
+
   if (isLoading) {
     return (
       <div className="journal-container">
@@ -950,6 +1260,110 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     );
   }
 
+  // Generate calendar days for selected month
+  const generateCalendarDays = () => {
+    const today = new Date();
+    const todayDateString = today.getFullYear() + '-' + 
+      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+      String(today.getDate()).padStart(2, '0');
+    
+    const currentYear = currentCalendarMonth.getFullYear();
+    const currentMonth = currentCalendarMonth.getMonth();
+    
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    const firstDayWeekday = firstDayOfMonth.getDay();
+    
+    const days = [];
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < firstDayWeekday; i++) {
+      days.push(null);
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+      // Create date string in local timezone format
+      const dateString = currentYear + '-' + 
+        String(currentMonth + 1).padStart(2, '0') + '-' + 
+        String(day).padStart(2, '0');
+      
+      const isToday = dateString === todayDateString;
+      const dayDate = new Date(currentYear, currentMonth, day);
+      const isPast = dayDate < today && !isToday;
+      
+      // Check if there's an entry for this date
+      const hasEntry = entries.some(entry => {
+        const entryDate = new Date(entry.date);
+        const entryDateString = entryDate.getFullYear() + '-' + 
+          String(entryDate.getMonth() + 1).padStart(2, '0') + '-' + 
+          String(entryDate.getDate()).padStart(2, '0');
+        return entryDateString === dateString;
+      });
+      
+      days.push({
+        day,
+        date: dateString,
+        isToday,
+        isPast,
+        hasEntry,
+        isClickable: isPast || isToday // Past dates and today are clickable
+      });
+    }
+    
+    return days;
+  };
+
+  const handleCalendarDateClick = (dateString) => {
+    if (dateString) {
+      handleDateSelection(dateString);
+    }
+  };
+
+  const goToPreviousMonth = () => {
+    setCurrentCalendarMonth(new Date(currentCalendarMonth.getFullYear(), currentCalendarMonth.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    const today = new Date();
+    const nextMonth = new Date(currentCalendarMonth.getFullYear(), currentCalendarMonth.getMonth() + 1, 1);
+    // Don't allow navigation beyond current month
+    if (nextMonth <= today) {
+      setCurrentCalendarMonth(nextMonth);
+    }
+  };
+
+  const goToCurrentMonth = () => {
+    setCurrentCalendarMonth(new Date());
+  };
+
+  const formatMonthYear = () => {
+    const currentLanguage = i18n.language || 'nl';
+    
+    const localeMap = {
+      'nl': 'nl-NL',
+      'en': 'en-US',
+      'de': 'de-DE',
+      'fr': 'fr-FR',
+      'es': 'es-ES',
+      'it': 'it-IT',
+      'pt': 'pt-PT',
+      'ru': 'ru-RU',
+      'ja': 'ja-JP',
+      'ko': 'ko-KR',
+      'zh': 'zh-CN',
+      'ar': 'ar-SA',
+      'hi': 'hi-IN'
+    };
+    
+    const locale = localeMap[currentLanguage] || 'nl-NL';
+    
+    return currentCalendarMonth.toLocaleDateString(locale, {
+      year: 'numeric',
+      month: 'long'
+    });
+  };
+
   return (
     <div className="journal-container">
       <PageHeader 
@@ -960,51 +1374,857 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         onInboxClick={onInboxClick}
         onCreateClick={onCreateClick}
       />
-      <div className="journal-header">
-        <div className="journal-header-buttons">
-          <button 
-            className="new-entry-btn"
-            onClick={() => {
-              if (hasTodaysEntry && todaysEntry) {
-                // Edit today's entry
-                setFormData({
-                  title: todaysEntry.title,
-                  content: todaysEntry.content,
-                  mood: todaysEntry.mood || '',
-                  tags: todaysEntry.tags || [],
-                  date: todaysEntry.date ? new Date(todaysEntry.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-                });
-                setEditingEntry(todaysEntry);
-              } else {
-                // Create new entry (for today)
-                setFormData({
-                  title: '',
-                  content: '',
-                  mood: '',
-                  tags: [],
-                  date: new Date().toISOString().split('T')[0]
-                });
-                setEditingEntry(null);
-              }
-              setShowCreateForm(true);
-            }}
-          >
-            {hasTodaysEntry ? (
-              <>📝 {t('editTodaysEntry', 'Edit Today')}</>
-            ) : (
-              <>✏️ {t('newEntry', 'New Entry')}</>
-            )}
-          </button>
-          
-          <button 
-            className="calendar-entry-btn"
-            onClick={() => setShowDatePicker(true)}
-          >
-            📅 {t('selectDate', 'Choose Date')}
-          </button>
-        </div>
+
+      {/* Tab Navigation */}
+      <div className="journal-tabs">
+        <button 
+          className={`tab ${activeTab === 'write' ? 'active' : ''}`}
+          onClick={() => setActiveTab('write')}
+        >
+          <span className="tab-icon">✏️</span>
+          <span className="tab-label">{t('write', 'Schrijven')}</span>
+        </button>
+        <button 
+          className={`tab ${activeTab === 'browse' ? 'active' : ''}`}
+          onClick={() => setActiveTab('browse')}
+        >
+          <span className="tab-icon">📖</span>
+          <span className="tab-label">{t('browse', 'Bladeren')}</span>
+        </button>
+        <button 
+          className={`tab ${activeTab === 'voice' ? 'active' : ''}`}
+          onClick={() => setActiveTab('voice')}
+        >
+          <span className="tab-icon">🎵</span>
+          <span className="tab-label">{t('audio', 'Audio')}</span>
+        </button>
+        <button 
+          className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
+          onClick={() => setActiveTab('calendar')}
+        >
+          <span className="tab-icon">📅</span>
+          <span className="tab-label">{t('calendar', 'Kalender')}</span>
+        </button>
+        <button 
+          className={`tab ${activeTab === 'addictions' ? 'active' : ''}`}
+          onClick={() => setActiveTab('addictions')}
+        >
+          <span className="tab-icon">🚭</span>
+          <span className="tab-label">{t('addictions', 'Verslavingen')}</span>
+        </button>
       </div>
 
+      {/* Tab Content */}
+      <div className="journal-tab-content">
+        {/* Write Tab */}
+        {activeTab === 'write' && (
+          <div className="write-tab-content">
+            {/* Quick Write Mode */}
+            <div className="quick-write-card">
+              <div className="card-header">
+                <h3>{t('quickWrite', 'Snel schrijven')}</h3>
+                <span className="today-date">{formatDate(new Date().toISOString().split('T')[0])}</span>
+              </div>
+              
+              {/* Quick mood selector */}
+              <div className="quick-mood-selector">
+                {moods.slice(0, 4).map(mood => (
+                  <button
+                    key={mood.value}
+                    type="button"
+                    className={`mood-quick-btn ${formData.mood === mood.value ? 'active' : ''}`}
+                    onClick={() => setFormData({...formData, mood: mood.value})}
+                    title={mood.label}
+                  >
+                    {mood.emoji}
+                  </button>
+                ))}
+                <button 
+                  className="mood-more-btn"
+                  onClick={() => setShowCreateForm(true)}
+                >
+                  +
+                </button>
+              </div>
+
+              {/* Quick write textarea */}
+              <textarea
+                value={formData.content}
+                onChange={(e) => setFormData({...formData, content: e.target.value})}
+                placeholder={t('quickWritePlaceholder', 'Wat houd je vandaag bezig? Begin hier met schrijven...')}
+                className="quick-write-textarea"
+                rows="6"
+                maxLength="5000"
+              />
+
+              {/* Quick actions */}
+              <div className="quick-actions">
+                <div className="writing-tools-quick">
+                  {audioSupported && recordingState === 'idle' && (
+                    <button
+                      type="button"
+                      className="voice-quick-btn"
+                      onClick={startRecording}
+                      title={t('voiceToText', 'Spraak naar tekst')}
+                    >
+                      🎤
+                    </button>
+                  )}
+                  <span className="word-count-quick">
+                    {countWords(formData.content)} {t('words', 'woorden')}
+                  </span>
+                </div>
+                <div className="save-actions">
+                  <button 
+                    className="save-quick-btn"
+                    onClick={handleSaveEntry}
+                    disabled={!formData.content.trim()}
+                  >
+                    💾 {t('save', 'Opslaan')}
+                  </button>
+                  <button 
+                    className="expand-btn"
+                    onClick={() => setShowCreateForm(true)}
+                  >
+                    ⤢ {t('expand', 'Uitbreiden')}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Today's Entry Status */}
+            {hasTodaysEntry && (
+              <div className="todays-entry-status">
+                <div className="status-icon">✅</div>
+                <div className="status-content">
+                  <h4>{t('todaysEntryComplete', 'Vandaag al geschreven!')}</h4>
+                  <p>{t('entryLength', 'Lengte')}: {countWords(todaysEntry?.content || '')} {t('words', 'woorden')}</p>
+                  <button 
+                    className="edit-today-btn"
+                    onClick={() => {
+                      setFormData({
+                        title: todaysEntry.title,
+                        content: todaysEntry.content,
+                        mood: todaysEntry.mood || '',
+                        tags: todaysEntry.tags || [],
+                        date: todaysEntry.date ? new Date(todaysEntry.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                      });
+                      setEditingEntry(todaysEntry);
+                      setShowCreateForm(true);
+                    }}
+                  >
+                    ✏️ {t('editEntry', 'Bewerken')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Browse Tab */}
+        {activeTab === 'browse' && (
+          <div className="browse-tab-content">
+            {/* Search and Filters */}
+            <div className="browse-controls">
+              <div className="search-bar">
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    placeholder={t('searchContent', 'Zoek in tekst...')}
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    className="search-input"
+                    style={{ marginBottom: '10px' }}
+                  />
+                  {searchText && (
+                    <button
+                      onClick={() => setSearchText('')}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '18px',
+                        color: '#666'
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    placeholder={t('searchTags', 'Zoek op tags...')}
+                    value={searchTags}
+                    onChange={(e) => setSearchTags(e.target.value)}
+                    className="search-input"
+                  />
+                  {searchTags && (
+                    <button
+                      onClick={() => setSearchTags('')}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '18px',
+                        color: '#666'
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="mood-filters">
+                {moods.slice(0, 6).map(mood => (
+                  <button
+                    key={mood.value}
+                    className="mood-filter-btn"
+                    onClick={() => setSearchTags(mood.value)}
+                    title={mood.label}
+                  >
+                    {mood.emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Entries Timeline */}
+            <div className="entries-timeline">
+              {entries.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📝</div>
+                  <h3>{t('noEntries', 'Nog geen dagboek entries')}</h3>
+                  <p>{t('startWriting', 'Begin met schrijven in de "Schrijven" tab')}</p>
+                  <button 
+                    className="start-writing-btn"
+                    onClick={() => setActiveTab('write')}
+                  >
+                    ✏️ {t('startWriting', 'Begin met schrijven')}
+                  </button>
+                </div>
+              ) : (
+                entries.map((entry) => (
+                  <div key={entry._id} className="timeline-entry">
+                    <div className="entry-date">{formatDate(entry.date)}</div>
+                    <div className="entry-card">
+                      <div className="entry-header">
+                        {entry.mood && (
+                          <div className="entry-mood">
+                            {moods.find(m => m.value === entry.mood)?.emoji}
+                          </div>
+                        )}
+                        <div className="entry-meta">
+                          {entry.audioFile && (
+                            <span className="audio-indicator">🎵</span>
+                          )}
+                          <span className="word-count">{countWords(entry.content)} {t('words', 'woorden')}</span>
+                        </div>
+                      </div>
+                      <h3 className="entry-title" style={{ margin: '10px 0', fontSize: '1.1em', fontWeight: 'bold' }}>
+                        {highlightSearchText(entry.title, searchText)}
+                      </h3>
+                      <div className="entry-preview">
+                        {entry.content.length > 150 ? 
+                          <>{highlightSearchText(entry.content.substring(0, 150), searchText)}...</> : 
+                          highlightSearchText(entry.content, searchText)
+                        }
+                      </div>
+                      <div className="entry-actions-quick">
+                        <button 
+                          className="read-more-btn"
+                          onClick={() => handleEditEntry(entry)}
+                        >
+                          {t('readMore', 'Lees verder')}
+                        </button>
+                        {entry.audioFile && (
+                          <button 
+                            className="play-btn-quick"
+                            onClick={() => handlePlayAudio(entry)}
+                          >
+                            {playingEntryId === entry._id ? '⏸️' : '▶️'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Audio Tab */}
+        {activeTab === 'voice' && (
+          <div className="voice-tab-content">
+            {/* Journal Audio Generation Section */}
+            <div className="journal-audio-section">
+              <h3>{t('generateJournalAudio', 'Dagboek Audio Genereren')}</h3>
+              
+              {/* Voice Selection */}
+              <div className="voice-selection-container">
+                <label>{t('selectVoice', 'Selecteer een stem')}:</label>
+                <select 
+                  value={selectedVoiceId} 
+                  onChange={(e) => setSelectedVoiceId(e.target.value)}
+                  className="voice-select"
+                >
+                  <option value="default">{t('defaultVoice', 'Standaard Stem (Sarah)')}</option>
+                  <option value="EXAVITQu4vr4xnSDxMaL">Sarah - {t('calm', 'Kalm')}</option>
+                  <option value="pNInz6obpgDQGcFmaJgB">Adam - {t('deep', 'Diep')}</option>
+                  <option value="21m00Tcm4TlvDq8ikWAM">Rachel - {t('warm', 'Warm')}</option>
+                  {userCustomVoices.map(voice => (
+                    <option key={voice.voiceId} value={voice.voiceId}>
+                      {voice.name} - {t('custom', 'Aangepast')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Journal Entries List */}
+              <div className="journal-entries-for-audio">
+                <h4>{t('yourJournalEntries', 'Je dagboekentries')}:</h4>
+                {entries.length === 0 ? (
+                  <p className="no-entries-message">{t('noEntriesForAudio', 'Geen dagboekentries gevonden. Schrijf eerst een dagboekentry.')}</p>
+                ) : (
+                  <div className="audio-entries-list">
+                    {entries.map(entry => (
+                      <div key={entry._id} className="audio-entry-card">
+                        <div className="audio-entry-header">
+                          <span className="entry-date-audio">{formatDate(entry.date)}</span>
+                          {entry.mood && (
+                            <span className="entry-mood-audio">
+                              {moods.find(m => m.value === entry.mood)?.emoji}
+                            </span>
+                          )}
+                          {entry.audioFile && (
+                            <span className="has-audio-indicator" title={t('hasAudio', 'Heeft audio')}>
+                              🎵
+                            </span>
+                          )}
+                        </div>
+                        <h5 className="entry-title-audio">{entry.title}</h5>
+                        <p className="entry-preview-audio">
+                          {entry.content.length > 100 ? 
+                            `${entry.content.substring(0, 100)}...` : 
+                            entry.content
+                          }
+                        </p>
+                        <div className="audio-entry-actions">
+                          {!entry.audioFile ? (
+                            <button 
+                              className="generate-audio-btn"
+                              onClick={() => handleGenerateAudio(entry)}
+                              disabled={generatingAudio === entry._id}
+                            >
+                              {generatingAudio === entry._id ? (
+                                <>{t('generating', 'Genereren...')} <span className="spinner-small"></span></>
+                              ) : (
+                                <>🎙️ {t('generateAudio', 'Audio Genereren')}</>
+                              )}
+                            </button>
+                          ) : (
+                            <div className="audio-controls">
+                              <button 
+                                className="play-audio-btn"
+                                onClick={() => handlePlayAudio(entry)}
+                              >
+                                {playingEntryId === entry._id ? '⏸️' : '▶️'} 
+                                {playingEntryId === entry._id ? t('pause', 'Pauzeer') : t('play', 'Afspelen')}
+                              </button>
+                              <button 
+                                className="regenerate-audio-btn"
+                                onClick={() => handleGenerateAudio(entry)}
+                                disabled={generatingAudio === entry._id}
+                                title={t('regenerateAudio', 'Audio opnieuw genereren')}
+                              >
+                                🔄
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <hr className="section-divider" />
+
+            {/* Voice Management Section */}
+            <div className="voice-management-card">
+              <h3>{t('manageVoices', 'Beheer je stemmen')}</h3>
+              
+              {/* Voice Recording Interface */}
+              <div className="voice-recorder-main">
+                {/* Idle State */}
+                {voiceRecordingState === 'idle' && (
+                  <div className="voice-recorder-idle">
+                    <div className="voice-recorder-header">
+                      <h4>{t('recordYourVoice', 'Neem Je Stem Op')}</h4>
+                      <div className="recording-info">
+                        <p className="recording-limit">⏱️ {t('maxRecordingTime', 'maximaal 1 minuut')}</p>
+                        <p className="quality-tips">💡 {t('qualityTips', 'Tips: Spreek duidelijk in een stille ruimte')}</p>
+                        <p className="credit-cost">💰 {t('creditCost', 'Kosten: 2 credits')}</p>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      className="start-voice-recording-btn recording-idle-btn"
+                      onClick={startVoiceRecording}
+                      disabled={!audioSupported}
+                    >
+                      <div className="mic-icon pulse">🎙️</div>
+                      <span>{t('startRecording', 'Start Opname')}</span>
+                    </button>
+                    
+                    {!audioSupported && (
+                      <div className="audio-not-supported">
+                        ⚠️ {t('audioNotSupported', 'Audio opname niet beschikbaar op dit apparaat')}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Recording State */}
+                {voiceRecordingState === 'recording' && (
+                  <div className="voice-recorder-recording">
+                    <div className="recording-visual">
+                      <div className="recording-pulse recordingPulse"></div>
+                      <div className="mic-icon-large">🎙️</div>
+                    </div>
+                    
+                    <div className="recording-timer live-timer">
+                      {Math.floor(voiceRecordingTime / 60)}:{(voiceRecordingTime % 60).toString().padStart(2, '0')}
+                    </div>
+                    
+                    <div className="progress-container">
+                      <div 
+                        className={`progress-bar live-progress ${
+                          voiceRecordingTime <= 30 ? 'progress-good' : 
+                          voiceRecordingTime <= 45 ? 'progress-warning' : 
+                          'progress-danger'
+                        }`}
+                        style={{ width: `${(voiceRecordingTime / 60) * 100}%` }}
+                      ></div>
+                    </div>
+                    
+                    <div className="quality-feedback live-feedback">
+                      {voiceRecordingTime > 45 && (
+                        <p className="warning-text pulse">⚠️ {t('recordingWarning', 'Bijna klaar! Maximum 1 minuut')}</p>
+                      )}
+                      <p className="feedback-text">
+                        {voiceRecordingTime < 15 ? `🔵 ${t('keepTalking', 'Blijf praten voor betere kwaliteit')}` : 
+                         voiceRecordingTime < 30 ? `🟢 ${t('goodLength', 'Goede lengte!')}` : 
+                         voiceRecordingTime < 45 ? `🟡 ${t('optimalLength', 'Optimale lengte bereikt')}` : 
+                         `🟠 ${t('nearMaximum', 'Bijna maximum bereikt')}`}
+                      </p>
+                    </div>
+                    
+                    <button 
+                      className="stop-voice-recording-btn"
+                      onClick={stopVoiceRecording}
+                    >
+                      ⏹️ {t('stopRecording', 'Stop Opname')}
+                    </button>
+                  </div>
+                )}
+                
+                {/* Processing State */}
+                {voiceRecordingState === 'processing' && (
+                  <div className="voice-recorder-processing">
+                    <div className="wave-animation waveAnimation">
+                      <div className="wave"></div>
+                      <div className="wave"></div>
+                      <div className="wave"></div>
+                    </div>
+                    <h4>{t('processingVoice', 'Stem wordt verwerkt...')}</h4>
+                    <p>{t('processingMessage', 'Even geduld, we bereiden je stem voor')}</p>
+                  </div>
+                )}
+                
+                {/* Preview State */}
+                {voiceRecordingState === 'preview' && recordedVoiceBlob && (
+                  <div className="voice-recorder-preview">
+                    <div className="preview-header success-header">
+                      <div className="success-icon">✅</div>
+                      <h4>{t('recordingComplete', 'Opname Voltooid!')}</h4>
+                      <p>{t('recordingLength', 'Lengte')}: {Math.floor(voiceRecordingTime / 60)}:{(voiceRecordingTime % 60).toString().padStart(2, '0')}</p>
+                    </div>
+                    
+                    <button 
+                      className="play-preview-btn preview-play-btn"
+                      onClick={playVoicePreview}
+                    >
+                      ▶️ {t('playPreview', 'Beluister Opname')}
+                    </button>
+                    
+                    <div className="voice-save-section enhanced-save-interface">
+                      <input 
+                        type="text" 
+                        placeholder={generateVoiceName()}
+                        className="voice-name-input auto-name-input"
+                        defaultValue={generateVoiceName()}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            saveCustomVoice(e.target.value);
+                          }
+                        }}
+                      />
+                      <div className="save-info">
+                        <span className="credit-cost-display">💰 {t('creditCost', 'Kosten: 2 credits')}</span>
+                      </div>
+                      <button 
+                        className="save-voice-btn enhanced-save-btn"
+                        onClick={(e) => {
+                          const input = e.target.parentElement.querySelector('.voice-name-input');
+                          saveCustomVoice(input.value || generateVoiceName());
+                        }}
+                        disabled={uploadingVoice}
+                      >
+                        {uploadingVoice ? (
+                          <><div className="spinner"></div> {t('uploading', 'Opslaan...')}</>
+                        ) : (
+                          `💾 ${t('saveVoice', 'Stem Opslaan')}`
+                        )}
+                      </button>
+                    </div>
+                    
+                    <button 
+                      className="retake-voice-btn retake-recording-btn"
+                      onClick={cancelVoiceRecording}
+                    >
+                      🔄 {t('retakeRecording', 'Opnieuw Opnemen')}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Voice Management */}
+              {userCustomVoices.length > 0 && (
+                <div className="custom-voices-management">
+                  <h4>{t('yourVoices', 'Je Stemmen')}:</h4>
+                  <div className="voices-grid">
+                    {userCustomVoices.map(voice => (
+                      <div key={voice.voiceId} className="voice-card">
+                        <div className="voice-info">
+                          <span className="voice-name">{voice.name}</span>
+                          <span className="voice-id">ID: {voice.voiceId.substring(0, 8)}...</span>
+                        </div>
+                        <div className="voice-actions">
+                          <button 
+                            className="test-voice-btn"
+                            onClick={() => setSelectedVoiceId(voice.voiceId)}
+                          >
+                            🔊 {t('test', 'Test')}
+                          </button>
+                          <button 
+                            className="delete-voice-btn"
+                            onClick={() => deleteCustomVoice(voice.voiceId)}
+                            title={t('deleteVoice', 'Verwijder stem')}
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Addictions Tab */}
+        {activeTab === 'addictions' && (
+          <div className="addictions-tab-content">
+            {/* Addictions Overview */}
+            <div className="addictions-overview">
+              <div className="addictions-header">
+                <h2>{t('addictionTracking', 'Verslavingen Bijhouden')}</h2>
+                <button 
+                  className="add-addiction-btn"
+                  onClick={() => {
+                    setAddictionForm({
+                      type: '',
+                      description: '',
+                      startDate: '',
+                      quitDate: '',
+                      status: 'active'
+                    });
+                    setEditingAddiction(null);
+                    setShowAddictionForm(true);
+                  }}
+                >
+                  + {t('addAddiction', 'Verslaving Toevoegen')}
+                </button>
+              </div>
+              
+              {/* Quick Stats */}
+              <div className="addiction-stats">
+                <div className="stat-card active">
+                  <div className="stat-number">{addictions.filter(a => a.status === 'active').length}</div>
+                  <div className="stat-label">{t('active', 'Actief')}</div>
+                </div>
+                <div className="stat-card recovering">
+                  <div className="stat-number">{addictions.filter(a => a.status === 'recovering').length}</div>
+                  <div className="stat-label">{t('recovering', 'Herstellende')}</div>
+                </div>
+                <div className="stat-card clean">
+                  <div className="stat-number">{addictions.filter(a => a.status === 'clean').length}</div>
+                  <div className="stat-label">{t('clean', 'Schoon')}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Addiction Form */}
+            {showAddictionForm && (
+              <div className="addiction-form-overlay">
+                <div className="addiction-form-container">
+                  <div className="form-header">
+                    <h3>{editingAddiction ? t('editAddiction', 'Verslaving Bewerken') : t('addNewAddiction', 'Nieuwe Verslaving Toevoegen')}</h3>
+                    <button 
+                      className="close-form-btn"
+                      onClick={() => setShowAddictionForm(false)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  
+                  <form className="addiction-form" onSubmit={handleSaveAddiction}>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>{t('addictionType', 'Type Verslaving')}:</label>
+                        <select 
+                          value={addictionForm.type} 
+                          onChange={(e) => setAddictionForm({...addictionForm, type: e.target.value})}
+                          required
+                        >
+                          <option value="">{t('selectType', 'Selecteer type')}</option>
+                          <option value="smoking">{t('smoking', 'Roken')}</option>
+                          <option value="alcohol">{t('alcohol', 'Alcohol')}</option>
+                          <option value="drugs">{t('drugs', 'Drugs')}</option>
+                          <option value="gambling">{t('gambling', 'Gokken')}</option>
+                          <option value="shopping">{t('shopping', 'Winkelen')}</option>
+                          <option value="social_media">{t('socialMedia', 'Social Media')}</option>
+                          <option value="gaming">{t('gaming', 'Gaming')}</option>
+                          <option value="food">{t('food', 'Eten')}</option>
+                          <option value="caffeine">{t('caffeine', 'Cafeïne')}</option>
+                          <option value="sugar">{t('sugar', 'Suiker')}</option>
+                          <option value="phone">{t('phone', 'Telefoon')}</option>
+                          <option value="internet">{t('internet', 'Internet')}</option>
+                          <option value="other">{t('other', 'Anders')}</option>
+                        </select>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>{t('status', 'Status')}:</label>
+                        <select 
+                          value={addictionForm.status} 
+                          onChange={(e) => setAddictionForm({...addictionForm, status: e.target.value})}
+                        >
+                          <option value="active">{t('active', 'Actief')}</option>
+                          <option value="recovering">{t('recovering', 'Herstellende')}</option>
+                          <option value="relapsed">{t('relapsed', 'Teruggevallen')}</option>
+                          <option value="clean">{t('clean', 'Schoon')}</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>{t('description', 'Beschrijving')} ({t('optional', 'optioneel')}):</label>
+                      <textarea 
+                        value={addictionForm.description}
+                        onChange={(e) => setAddictionForm({...addictionForm, description: e.target.value})}
+                        placeholder={t('addictionDescription', 'Beschrijf je verslaving, triggers, of andere details...')}
+                        rows={3}
+                      />
+                    </div>
+                    
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>{t('startDate', 'Startdatum')}:</label>
+                        <input 
+                          type="date" 
+                          value={addictionForm.startDate}
+                          onChange={(e) => setAddictionForm({...addictionForm, startDate: e.target.value})}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>{t('quitDate', 'Stopdatum')} ({t('optional', 'optioneel')}):</label>
+                        <input 
+                          type="date" 
+                          value={addictionForm.quitDate}
+                          onChange={(e) => setAddictionForm({...addictionForm, quitDate: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="form-actions">
+                      <button type="button" onClick={() => setShowAddictionForm(false)}>
+                        {t('cancel', 'Annuleren')}
+                      </button>
+                      <button type="submit" className="save-btn">
+                        {editingAddiction ? t('update', 'Bijwerken') : t('save', 'Opslaan')}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Addictions List */}
+            <div className="addictions-list">
+              {addictions.length === 0 ? (
+                <div className="no-addictions">
+                  <div className="no-addictions-icon">🌱</div>
+                  <h3>{t('noAddictions', 'Geen verslavingen bijgehouden')}</h3>
+                  <p>{t('addFirstAddiction', 'Voeg je eerste verslaving toe om je voortgang bij te houden')}</p>
+                </div>
+              ) : (
+                <div className="addictions-grid">
+                  {addictions.map(addiction => (
+                    <div key={addiction._id} className={`addiction-card ${addiction.status}`}>
+                      <div className="addiction-header">
+                        <div className="addiction-type">
+                          <span className="addiction-icon">{getAddictionIcon(addiction.type)}</span>
+                          <h4>{getAddictionDisplayName(addiction)}</h4>
+                        </div>
+                        <div className="addiction-status">
+                          <span className={`status-badge ${addiction.status}`}>
+                            {t(addiction.status, addiction.status)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {addiction.description && (
+                        <p className="addiction-description">{addiction.description}</p>
+                      )}
+                      
+                      <div className="addiction-dates">
+                        <div className="date-info">
+                          <span className="date-label">{t('started', 'Begonnen')}:</span>
+                          <span className="date-value">{formatDate(addiction.startDate)}</span>
+                        </div>
+                        {addiction.quitDate && (
+                          <div className="date-info">
+                            <span className="date-label">{t('quit', 'Gestopt')}:</span>
+                            <span className="date-value">{formatDate(addiction.quitDate)}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {(addiction.status === 'recovering' || addiction.status === 'clean') && addiction.quitDate && (
+                        <div className="days-clean">
+                          <span className="days-number">{getDaysClean(addiction)}</span>
+                          <span className="days-label">{t('daysClean', 'dagen schoon')}</span>
+                        </div>
+                      )}
+                      
+                      
+                      <div className="addiction-actions">
+                        <button 
+                          className="edit-btn"
+                          onClick={() => handleEditAddiction(addiction)}
+                        >
+                          ✏️ {t('edit', 'Bewerken')}
+                        </button>
+                        <button 
+                          className="delete-btn"
+                          onClick={() => handleDeleteAddiction(addiction._id)}
+                        >
+                          🗑️ {t('delete', 'Verwijderen')}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Calendar Tab */}
+        {activeTab === 'calendar' && (
+          <div className="calendar-tab-content">
+            {/* Mini Calendar for History */}
+            <div className="journal-calendar">
+              <div className="calendar-header">
+                <div className="calendar-navigation">
+                  <button 
+                    className="calendar-nav-btn" 
+                    onClick={goToPreviousMonth}
+                    title={t('previousMonth', 'Vorige maand')}
+                  >
+                    ‹
+                  </button>
+                  <h3 className="calendar-month-year">{formatMonthYear()}</h3>
+                  <button 
+                    className="calendar-nav-btn" 
+                    onClick={goToNextMonth}
+                    disabled={currentCalendarMonth.getMonth() === new Date().getMonth() && currentCalendarMonth.getFullYear() === new Date().getFullYear()}
+                    title={t('nextMonth', 'Volgende maand')}
+                  >
+                    ›
+                  </button>
+                </div>
+                <div className="calendar-actions">
+                  <button 
+                    className="calendar-today-btn"
+                    onClick={goToCurrentMonth}
+                    title={t('currentMonth', 'Huidige maand')}
+                  >
+                    {t('today', 'Vandaag')}
+                  </button>
+                </div>
+                <p>{t('selectPastDate', 'Klik op een vorige dag om een dagboek in te vullen')}</p>
+              </div>
+              <div className="calendar-grid">
+                <div className="calendar-weekdays">
+                  {['Z', 'M', 'D', 'W', 'D', 'V', 'Z'].map((day, index) => (
+                    <div key={index} className="weekday">{day}</div>
+                  ))}
+                </div>
+                <div className="calendar-days">
+                  {generateCalendarDays().map((dayObj, index) => (
+                    <div 
+                      key={index} 
+                      className={`calendar-day ${
+                        dayObj ? (
+                          dayObj.isToday ? 'today' : 
+                          dayObj.hasEntry ? 'has-entry' : 
+                          dayObj.isClickable ? 'clickable' : 
+                          'future'
+                        ) : 'empty'
+                      }`}
+                      onClick={() => (dayObj?.isClickable || dayObj?.hasEntry) && handleCalendarDateClick(dayObj.date)}
+                      title={
+                        dayObj?.hasEntry ? t('editEntry', 'Bewerk dagboek entry') : 
+                        dayObj?.isClickable ? t('clickToEdit', 'Klik om dagboek in te vullen') : ''
+                      }
+                    >
+                      {dayObj ? dayObj.day : ''}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Error Banner */}
       {error && (
         <div className="error-banner">
           <span>⚠️</span>
@@ -1050,159 +2270,139 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         </div>
       )}
 
-      {/* Filters */}
-      <div className="journal-filters">
-        <div className="mood-filter">
-          <label>{t('mood', 'Stemming')}:</label>
-          <select value={filterMood} onChange={(e) => setFilterMood(e.target.value)}>
-            <option value="all">{t('allMoods', 'Alle stemmingen')}</option>
-            {moods.map(mood => (
-              <option key={mood.value} value={mood.value}>
-                {mood.emoji} {mood.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="tags-filter">
-          <label>{t('tags', 'Tags')}:</label>
-          <input
-            type="text"
-            placeholder={t('searchByTags', 'Zoek op tags...')}
-            value={searchTags}
-            onChange={(e) => setSearchTags(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Create/Edit Form */}
+      {/* Expanded Writing Form Modal */}
       {showCreateForm && (
         <div className="journal-form-overlay">
-          <div className="journal-form">
+          <div className="expanded-journal-form">
             <div className="form-header">
-              <h3>
-                {editingEntry && hasTodaysEntry ? 
-                  t('editTodaysEntry', 'Edit Today') : 
-                  editingEntry ? 
-                    t('editEntry', 'Edit Entry') : 
-                    hasTodaysEntry ?
-                      t('appendToToday', 'Add to today') :
-                      t('newEntry', 'New Entry')
-                }
-              </h3>
-              <button className="close-btn" onClick={resetForm}>✕</button>
+              <div className="date-indicator">
+                <span className="writing-for">
+                  {editingEntry ? 
+                    `📝 ${t('editing', 'Bewerken')}: ${formatDate(formData.date)}` : 
+                    `✏️ ${t('writingFor', 'Schrijven voor')}: ${formatDate(formData.date)}`
+                  }
+                </span>
+              </div>
+              <button className="close-btn" onClick={() => setShowCreateForm(false)}>✕</button>
             </div>
-            
-            <div className="form-content">
-              <div className="form-group">
-                <label>{t('mood', 'Stemming')} <span style={{opacity: 0.6, fontSize: '12px'}}>(optioneel)</span></label>
-                <div className="mood-selector-grid">
+
+            {/* Full Writing Interface */}
+            <div className="expanded-writing-area">
+              {/* Quick Mood Selector */}
+              <div className="quick-mood-bar">
+                <span className="mood-label">{t('howAreYouFeeling', 'Hoe voel je je?')}</span>
+                <div className="mood-quick-selector">
                   {moods.map(mood => (
                     <button
                       key={mood.value}
                       type="button"
-                      className={`mood-card ${formData.mood === mood.value ? 'active' : ''}`}
+                      className={`mood-emoji-btn ${formData.mood === mood.value ? 'active' : ''}`}
                       onClick={() => setFormData({...formData, mood: mood.value})}
-                      style={{
-                        background: formData.mood === mood.value ? mood.bg : 'var(--glass-light)',
-                        borderColor: formData.mood === mood.value ? mood.color : 'rgba(255, 255, 255, 0.1)'
-                      }}
+                      title={mood.label}
                     >
-                      <span className="mood-emoji">{mood.emoji}</span>
-                      <span className="mood-label">{mood.label}</span>
+                      {mood.emoji}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>{t('tags', 'Tags')} <span style={{opacity: 0.6, fontSize: '12px'}}>(optioneel)</span></label>
-                <div className="tags-input">
-                  <input
-                    type="text"
-                    placeholder={t('addTag', 'Add tag...')}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addTag(e.target.value);
-                        e.target.value = '';
-                      }
-                    }}
-                  />
-                  <div className="tags-list">
-                    {formData.tags.map((tag, index) => (
-                      <span key={index} className="tag">
-                        {tag}
-                        <button onClick={() => removeTag(tag)}>×</button>
-                      </span>
-                    ))}
+              {/* Main Writing Area */}
+              <div className="writing-tools-expanded">
+                {/* Voice Recording */}
+                {audioSupported && recordingState === 'idle' && (
+                  <button
+                    type="button"
+                    className="voice-tool-btn"
+                    onClick={startRecording}
+                    title={t('startVoiceRecording', 'Start spraak opname')}
+                  >
+                    🎤
+                  </button>
+                )}
+                
+                {recordingState === 'recording' && (
+                  <div className="recording-indicator">
+                    <button
+                      type="button"
+                      className="stop-recording-btn"
+                      onClick={stopRecording}
+                    >
+                      ⏹
+                    </button>
+                    <span className="recording-time">
+                      🔴 {formatRecordingTime(recordingTime)}
+                    </span>
                   </div>
+                )}
+                
+                {recordingState === 'processing' && (
+                  <div className="processing-indicator">
+                    <div className="spinner"></div>
+                    <span>{t('transcribing', 'Transcriberen...')}</span>
+                  </div>
+                )}
+
+                {/* Word Count */}
+                <div className="word-count">
+                  {countWords(formData.content)} {t('words', 'woorden')}
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>
-                  {t('journalContent', 'Inhoud')}
-                  <div className="content-actions">
-                    {/* Show start button only when idle and audio is supported */}
-                    {audioSupported && recordingState === 'idle' && (
-                      <button
-                        type="button"
-                        className="voice-input-btn"
-                        onClick={startRecording}
-                        title={t('startVoiceRecording', 'Start spraak opname')}
-                      >
-                        🎤 {t('speakEntry', 'Inspreek dagboek')}
-                      </button>
-                    )}
-                    
-                    {/* Show recording controls when recording */}
-                    {recordingState === 'recording' && (
-                      <div className="recording-controls">
-                        <button
-                          type="button"
-                          className="stop-recording-btn"
-                          onClick={stopRecording}
-                          title={t('stopRecording', 'Stop opname')}
-                        >
-                          ⏹ {t('stopRecording', 'Stop opname')}
-                        </button>
-                        <span className="recording-time">
-                          🔴 {formatRecordingTime(recordingTime)}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Show processing indicator */}
-                    {recordingState === 'processing' && (
-                      <div className="transcribing-indicator">
-                        <div className="spinner"></div>
-                        {t('transcribing', 'Vertalen naar tekst...')}
-                      </div>
-                    )}
-                    
-                    {/* Show not supported message */}
-                    {!audioSupported && (
-                      <div className="audio-not-supported">
-                        ⚠️ Audio opname niet beschikbaar op dit apparaat
-                      </div>
-                    )}
-                  </div>
-                </label>
-                <textarea
-                  value={formData.content}
-                  onChange={(e) => setFormData({...formData, content: e.target.value})}
-                  placeholder={t('enterContent', 'Schrijf je gedachten of gebruik de opname knop...')}
-                  rows="10"
-                  maxLength="5000"
+              <textarea
+                ref={(el) => {
+                  if (el && showCreateForm) {
+                    setTimeout(() => el.focus(), 100);
+                  }
+                }}
+                value={formData.content}
+                onChange={(e) => setFormData({...formData, content: e.target.value})}
+                placeholder={t('startWriting', 'Begin met schrijven... Wat houd je vandaag bezig?')}
+                className="expanded-writing-textarea"
+                rows="15"
+                maxLength="5000"
+              />
+
+              {/* Tags Section */}
+              <div className="tags-section">
+                <label>{t('tags', 'Tags')}:</label>
+                <input
+                  type="text"
+                  placeholder={t('addTag', 'Voeg tag toe...')}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTag(e.target.value);
+                      e.target.value = '';
+                    }
+                  }}
                 />
+                <div className="tags-list">
+                  {formData.tags.map((tag, index) => (
+                    <span key={index} className="tag">
+                      #{tag}
+                      <button onClick={() => removeTag(tag)}>×</button>
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              <div className="form-actions">
-                <button className="save-btn" onClick={handleSaveEntry}>
-                  {t('saveEntry', 'Invoer Opslaan')}
+              {/* Action Buttons */}
+              <div className="form-actions-expanded">
+                <button 
+                  className="save-btn-primary" 
+                  onClick={handleSaveEntry}
+                  disabled={!formData.content.trim()}
+                >
+                  💾 {t('save', 'Opslaan')}
                 </button>
-                <button className="cancel-btn" onClick={resetForm}>
-                  {t('cancel', 'Annuleren')}
+                <button 
+                  className="save-and-close-btn" 
+                  onClick={async () => {
+                    await handleSaveEntry();
+                    setShowCreateForm(false);
+                  }}
+                >
+                  ✅ {t('saveAndClose', 'Opslaan & Sluiten')}
                 </button>
               </div>
             </div>
@@ -1210,285 +2410,27 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         </div>
       )}
 
-      {/* Entries List */}
-      <div className="journal-entries-section">
-        {entries.length === 0 ? (
-          <div className="empty-journal-state">
-            <div className="empty-journal-icon">📝</div>
-            <h3>{t('noEntries', 'Geen dagboek invoeren nog')}</h3>
-            <p>{t('createFirstEntry', 'Creëer je eerste dagboek invoer om te beginnen')}</p>
-          </div>
-        ) : (
-          entries.map((entry) => (
-            <div key={entry._id} className="journal-entry">
-              <div className="entry-header">
-                <div className="entry-info">
-                  <h3 className="entry-title">{entry.title}</h3>
-                  <div className="entry-meta">
-                    {entry.audioFile && (
-                      <span className="entry-duration">
-                        <span className="meta-icon">🎵</span> 
-                        {Math.floor(entry.audioFile.duration / 60)}:{(entry.audioFile.duration % 60).toString().padStart(2, '0')}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {entry.mood && (
-                  <div className="entry-mood-container">
-                    <div 
-                      className="entry-mood-display"
-                      onClick={() => {
-                        setExpandedMoodId(expandedMoodId === entry._id ? null : entry._id);
-                      }}
-                    >
-                      {moods.find(m => m.value === entry.mood)?.emoji}
-                    </div>
-                    {expandedMoodId === entry._id && (
-                      <div className="entry-mood-label">
-                        {moods.find(m => m.value === entry.mood)?.label}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {entry.tags && entry.tags.length > 0 && (
-                <div className="entry-tags">
-                  {entry.tags.slice(0, 5).map((tag, index) => (
-                    <span key={index} className="entry-tag">#{tag}</span>
-                  ))}
-                  {entry.tags.length > 5 && (
-                    <span className="more-tags">+{entry.tags.length - 5}</span>
-                  )}
-                </div>
-              )}
-
-              <div className="entry-content">
-                {entry.content.length > 200 ? 
-                  `${entry.content.substring(0, 200)}...` : 
-                  entry.content
-                }
-              </div>
-
-              <div className="entry-controls">
-                <div className="entry-actions">
-                  <button 
-                    className="edit-btn entry-action-btn"
-                    onClick={() => handleEditEntry(entry)}
-                  >
-                    ✏️ {t('editEntry', 'Bewerken')}
-                  </button>
-                  <button 
-                    className="delete-btn entry-action-btn" 
-                    onClick={() => handleDeleteEntry(entry._id)}
-                    title={t('delete', 'Verwijderen')}
-                  >
-                    🗑️
-                  </button>
-                </div>
-                
-                {entry.audioFile ? (
-                  <div className="audio-controls">
-                    <button 
-                      className="play-btn entry-action-btn"
-                      onClick={() => handlePlayAudio(entry)}
-                    >
-                      {playingEntryId === entry._id ? '⏸️' : '▶️'} 
-                      {playingEntryId === entry._id ? t('pause', 'Pauzeren') : t('playVoice', 'Afspelen')}
-                    </button>
-                    {!entry.isShared && (
-                      <button 
-                        className="share-btn entry-action-btn"
-                        onClick={() => handleShareEntry(entry)}
-                      >
-                        📤 {t('shareJournal', 'Delen')}
-                      </button>
-                    )}
-                    {entry.isShared && (
-                      <span className="shared-indicator">
-                        🌟 {t('shared', 'Gedeeld')}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="generate-audio-section">
-                    {/* Voice Selector */}
-                    <div className="voice-selector">
-                      <label>{t('selectVoice', 'Select Voice')}:</label>
-                      <select 
-                        value={selectedVoiceId} 
-                        onChange={(e) => setSelectedVoiceId(e.target.value)}
-                        className="voice-select"
-                      >
-                        <option value="default">{t('defaultVoice', 'Standaard Stem')}</option>
-                        {userCustomVoices.map(voice => (
-                          <option key={voice.voiceId} value={voice.voiceId}>
-                            {voice.name} {t('customVoice', '(Eigen)')}
-                          </option>
-                        ))}
-                      </select>
-                      
-                      <button 
-                        className="record-voice-btn"
-                        onClick={() => setShowVoiceRecorder(!showVoiceRecorder)}
-                        disabled={uploadingVoice}
-                      >
-                        🎙️ {t('recordVoice', 'Neem Stem Op')}
-                      </button>
-                    </div>
-
-                    {/* Voice Recording Interface */}
-                    {showVoiceRecorder && (
-                      <div className="voice-recorder">
-                        <div className="voice-recorder-header">
-                          <h4>{t('recordYourVoice', 'Neem Je Stem Op')}</h4>
-                          <p>{t('voiceRecordingInstructions', 'Spreek 1-2 minuten duidelijk in de microfoon voor de beste kwaliteit.')}</p>
-                        </div>
-                        
-                        <div className="voice-recording-controls">
-                          {voiceRecordingState === 'idle' && (
-                            <button 
-                              className="start-voice-recording-btn"
-                              onClick={startVoiceRecording}
-                              disabled={!audioSupported}
-                            >
-                              🔴 {t('startRecording', 'Start Opname')}
-                            </button>
-                          )}
-                          
-                          {voiceRecordingState === 'recording' && (
-                            <div className="recording-status">
-                              <button 
-                                className="stop-voice-recording-btn"
-                                onClick={stopVoiceRecording}
-                              >
-                                ⏹️ {t('stopRecording', 'Stop Opname')}
-                              </button>
-                              <div className="voice-recording-time">
-                                🔴 {Math.floor(voiceRecordingTime / 60)}:{(voiceRecordingTime % 60).toString().padStart(2, '0')}
-                                <br />
-                                <small>{t('targetTime', 'Doel: 1-2 minuten')}</small>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {voiceRecordingState === 'processing' && (
-                            <div className="processing-status">
-                              <div className="spinner"></div>
-                              {t('processingVoice', 'Verwerken...')}
-                            </div>
-                          )}
-                          
-                          {voiceRecordingState === 'preview' && recordedVoiceBlob && (
-                            <div className="voice-preview">
-                              <button 
-                                className="play-preview-btn"
-                                onClick={playVoicePreview}
-                              >
-                                ▶️ {t('playPreview', 'Beluister')}
-                              </button>
-                              
-                              <div className="voice-save-section">
-                                <input 
-                                  type="text" 
-                                  placeholder={t('voiceNamePlaceholder', 'Naam voor je stem...')}
-                                  className="voice-name-input"
-                                  onKeyPress={(e) => {
-                                    if (e.key === 'Enter') {
-                                      saveCustomVoice(e.target.value);
-                                    }
-                                  }}
-                                />
-                                <button 
-                                  className="save-voice-btn"
-                                  onClick={(e) => {
-                                    const input = e.target.parentElement.querySelector('.voice-name-input');
-                                    saveCustomVoice(input.value);
-                                  }}
-                                  disabled={uploadingVoice}
-                                >
-                                  {uploadingVoice ? (
-                                    <><div className="spinner"></div> {t('uploading', 'Uploading...')}</>
-                                  ) : (
-                                    `💾 ${t('saveVoice', 'Save Voice')} (2 credits)`
-                                  )}
-                                </button>
-                              </div>
-                              
-                              <button 
-                                className="cancel-voice-btn"
-                                onClick={cancelVoiceRecording}
-                              >
-                                ❌ {t('cancel', 'Annuleren')}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {!audioSupported && (
-                          <div className="audio-not-supported">
-                            ⚠️ {t('audioNotSupported', 'Audio opname niet beschikbaar op dit apparaat')}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Custom Voice Management */}
-                    {userCustomVoices.length > 0 && (
-                      <div className="custom-voices-list">
-                        <h5>{t('yourVoices', 'Je Stemmen')}:</h5>
-                        {userCustomVoices.map(voice => (
-                          <div key={voice.voiceId} className="custom-voice-item">
-                            <span className="voice-name">{voice.name}</span>
-                            <button 
-                              className="delete-voice-btn"
-                              onClick={() => deleteCustomVoice(voice.voiceId)}
-                              title={t('deleteVoice', 'Verwijder stem')}
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <button 
-                      className="generate-audio-btn"
-                      onClick={() => handleGenerateAudio(entry)}
-                      disabled={generatingAudio === entry._id || (userCredits && userCredits.credits < 1)}
-                    >
-                      {generatingAudio === entry._id ? (
-                        <><div className="spinner"></div> {t('generating', 'Genereren...')}</>
-                      ) : (
-                        `🎤 ${t('generateVoice', 'Stem Genereren')} (1 credit)`
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {entry.audioFile && (
-                <audio 
-                  id={`journal-audio-${entry._id}`}
-                  preload="none"
-                  onEnded={() => setPlayingEntryId(null)}
-                  onPause={() => {
-                    if (playingEntryId === entry._id) {
-                      setPlayingEntryId(null);
-                    }
-                  }}
-                >
-                  <source 
-                    src={getFullUrl(`/assets/audio/journals/${entry.audioFile.filename}`)} 
-                    type="audio/mpeg" 
-                  />
-                </audio>
-              )}
-            </div>
-          ))
-        )}
-      </div>
+      {/* Audio Elements for playback */}
+      {entries.map((entry) => (
+        entry.audioFile && (
+          <audio 
+            key={entry._id}
+            id={`journal-audio-${entry._id}`}
+            preload="none"
+            onEnded={() => setPlayingEntryId(null)}
+            onPause={() => {
+              if (playingEntryId === entry._id) {
+                setPlayingEntryId(null);
+              }
+            }}
+          >
+            <source 
+              src={getFullUrl(`/assets/audio/journals/${entry.audioFile.filename}`)} 
+              type="audio/mpeg" 
+            />
+          </audio>
+        )
+      ))}
     </div>
   );
 };

@@ -185,7 +185,7 @@ const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxCl
             <div className="admin-meditation-thumbnail">
               <img 
                 src={getImageUrl(meditation)}
-                alt={meditation.title}
+                alt={`${meditationTypeLabels[meditation.meditationType]} meditation`}
                 onError={(e) => {
                   console.log('Image load error for:', getImageUrl(meditation));
                   e.target.style.display = 'none';
@@ -198,7 +198,7 @@ const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxCl
 
             <div className="admin-meditation-content">
               <div className="meditation-header">
-                <h4>{meditation.title}</h4>
+                <h4>{meditationTypeLabels[meditation.meditationType]} - {meditation.language}</h4>
                 <div className="meditation-badges">
                   <span className="type-badge">
                     {meditationTypeLabels[meditation.meditationType]}
@@ -307,7 +307,7 @@ const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxCl
             </div>
 
             <div className="modal-body">
-              <h4>{selectedMeditation.title}</h4>
+              <h4>{meditationTypeLabels[selectedMeditation.meditationType]} - {selectedMeditation.language}</h4>
               <p className="description">{selectedMeditation.description}</p>
               
               <div className="detail-section">

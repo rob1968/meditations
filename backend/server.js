@@ -26,8 +26,34 @@ const accessLogStream = fs.createWriteStream(path.join(__dirname, 'access.log'),
 // Setup the logger
 app.use(morgan('combined', { stream: accessLogStream }));
 
-app.use(cors());
+// Configure CORS with more permissive settings for Pi Browser
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps)
+    if (!origin) return callback(null, true);
+    
+    // Allow all origins in development/Pi Browser
+    // In production, you might want to restrict this
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-JSON-Parse-Time'],
+  maxAge: 86400 // 24 hours
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Log all requests for debugging Pi Browser issues
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - Origin: ${req.headers.origin || 'no-origin'} - User-Agent: ${req.headers['user-agent'] || 'no-user-agent'}`);
+  if (req.path.includes('pi-login')) {
+    console.log('[Pi Auth Request] Headers:', JSON.stringify(req.headers, null, 2));
+  }
+  next();
+});
 
 // Serve static files from assets directory
 app.use('/assets', express.static(path.join(__dirname, '../assets')));

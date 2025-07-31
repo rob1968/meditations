@@ -47,7 +47,7 @@ const UserMenu = ({
         {
           id: 'profile-info',
           icon: '👤',
-          label: t('profileInformation', 'Profile Information'),
+          label: t('profile', 'Profile'),
           action: () => {
             // Scroll to profile info section
             const element = document.querySelector('.profile-info-section');

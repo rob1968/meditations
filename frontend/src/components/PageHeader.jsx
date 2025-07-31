@@ -50,9 +50,8 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
 
   // Profile menu items
   const profileMenuItems = [
-    { id: 'create', icon: '✨', label: t('creeer', 'Creëer') },
     { id: 'inbox', icon: '📬', label: t('inbox', 'Inbox'), badge: unreadCount },
-    { id: 'profile', icon: '👤', label: t('profileInformation', 'Profile Information') },
+    { id: 'profile', icon: '👤', label: t('profile', 'Profile') },
     { id: 'credits', icon: '💎', label: t('credits', 'Credits') },
     { id: 'statistics', icon: '📊', label: t('statistics', 'Statistics') }
   ];

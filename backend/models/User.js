@@ -55,6 +55,26 @@ const UserSchema = new mongoose.Schema({
     required: false
   },
   
+  // Pi Network integration
+  authMethod: {
+    type: String,
+    enum: ['traditional', 'pi'],
+    default: 'traditional'
+  },
+  piUserId: {
+    type: String,
+    trim: true,
+    required: false,
+    sparse: true, // Allow multiple null values, but unique non-null values
+    unique: true
+  },
+  piUsername: {
+    type: String,
+    trim: true,
+    required: false,
+    maxlength: 50
+  },
+  
   // User's meditation history
   meditations: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -222,7 +242,9 @@ UserSchema.methods.getCustomVoices = function() {
   return this.customVoices.sort((a, b) => b.createdAt - a.createdAt);
 };
 
-// Create index for better performance
+// Create indexes for better performance
 UserSchema.index({ username: 1 });
+UserSchema.index({ piUserId: 1 });
+UserSchema.index({ authMethod: 1 });
 
 module.exports = mongoose.model('User', UserSchema);

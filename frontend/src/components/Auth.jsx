@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl, API_ENDPOINTS } from '../config/api';
 import { getSortedCountries } from '../data/countries';
 import PageHeader from './PageHeader';
+import { isPiBrowser } from '../utils/piDetection';
+import piAuthService from '../services/piAuth';
 
 const Auth = ({ onLogin }) => {
   const [username, setUsername] = useState('');
@@ -17,10 +19,43 @@ const Auth = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isPiAuthenticated, setIsPiAuthenticated] = useState(false);
+  const [showPiAuth, setShowPiAuth] = useState(false);
+  const [piAuthStatus, setPiAuthStatus] = useState(null);
   const { t, i18n } = useTranslation();
 
   // Get sorted countries for the current language
   const countries = getSortedCountries(i18n.language);
+
+  // Check Pi Browser and initialize Pi authentication on component mount
+  useEffect(() => {
+    const initializePiAuth = async () => {
+      if (isPiBrowser()) {
+        console.log('Pi Browser detected, initializing Pi authentication...');
+        setShowPiAuth(true);
+        
+        try {
+          const initialized = await piAuthService.initialize();
+          if (initialized) {
+            const status = piAuthService.getAuthStatus();
+            setPiAuthStatus(status);
+            console.log('Pi authentication service initialized:', status);
+          } else {
+            console.log('Pi authentication service failed to initialize');
+            setShowPiAuth(false);
+          }
+        } catch (error) {
+          console.error('Error initializing Pi authentication:', error);
+          setShowPiAuth(false);
+        }
+      } else {
+        console.log('Not in Pi Browser, using traditional authentication');
+        setShowPiAuth(false);
+      }
+    };
+
+    initializePiAuth();
+  }, []);
   
   // Available languages
   const availableLanguages = [
@@ -61,6 +96,54 @@ const Auth = ({ onLogin }) => {
     }
   };
 
+  // Handle Pi Network authentication with enhanced debugging
+  const handlePiAuth = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      console.log('[Auth Component] Starting Pi authentication...');
+      
+      // Update debug status during authentication
+      const updateStatus = () => {
+        const status = piAuthService.getAuthStatus();
+        setPiAuthStatus(status);
+      };
+      
+      // Update status before authentication
+      updateStatus();
+      
+      const result = await piAuthService.authenticateUser();
+      
+      // Update status after authentication attempt
+      updateStatus();
+      
+      if (result.success) {
+        console.log('[Auth Component] Pi authentication successful:', result);
+        
+        // Store user data and token in localStorage
+        localStorage.setItem('user', JSON.stringify(result.user));
+        localStorage.setItem('authToken', result.token);
+        localStorage.setItem('authMethod', 'pi');
+        
+        setIsPiAuthenticated(true);
+        onLogin(result.user);
+      } else {
+        throw new Error('Pi authentication failed');
+      }
+    } catch (error) {
+      console.error('[Auth Component] Pi authentication error:', error);
+      setError(error.message || t('piAuthFailed', 'Pi authentication failed'));
+      
+      // Update status after error
+      const status = piAuthService.getAuthStatus();
+      setPiAuthStatus(status);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle traditional authentication
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -98,6 +181,7 @@ const Auth = ({ onLogin }) => {
 
       // Store user data in localStorage
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      localStorage.setItem('authMethod', 'traditional');
       
       // Call parent callback
       onLogin(response.data.user);
@@ -133,11 +217,85 @@ const Auth = ({ onLogin }) => {
       </div>
       <div className="auth-card">
         <div className="auth-header">
-          <h2>{isLogin ? t('login', 'Login') : t('register', 'Register')}</h2>
-          <p>{isLogin ? t('loginSubtitle', 'Welcome back') : t('registerSubtitle', 'Create your account')}</p>
+          <h2>
+            {showPiAuth 
+              ? t('piAuthTitle', 'Pi Network Authentication') 
+              : (isLogin ? t('login', 'Login') : t('register', 'Register'))
+            }
+          </h2>
+          <p>
+            {showPiAuth 
+              ? t('piAuthSubtitle', 'Access with your Pi Network account') 
+              : (isLogin ? t('loginSubtitle', 'Welcome back') : t('registerSubtitle', 'Create your account'))
+            }
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        {showPiAuth ? (
+          // Pi Network Authentication
+          <div className="pi-auth-section">
+            <div className="pi-auth-info">
+              <div className="pi-status">
+                <span className="pi-indicator">π</span>
+                <span>{t('piDetected', 'Pi Browser Detected')}</span>
+              </div>
+              
+              {/* Enhanced Visual Debugging like working example */}
+              <div style={{ 
+                border: '1px dashed blue', 
+                padding: '10px', 
+                margin: '10px 0', 
+                fontSize: '12px', 
+                backgroundColor: '#f0f0ff',
+                borderRadius: '4px'
+              }}>
+                <p><strong>[Debug Info - Pi Auth]</strong></p>
+                <p>Pi Browser: {isPiBrowser() ? 'Yes' : 'No'}</p>
+                <p>SDK Loaded: {piAuthStatus?.isSDKAvailable ? 'Yes' : 'No'}</p>
+                <p>Service Initialized: {piAuthStatus?.isInitialized ? 'Yes' : 'No'}</p>
+                <p>Authentication Available: {piAuthStatus?.isAvailable ? 'Yes' : 'No'}</p>
+                <p>Authentication in Progress: {piAuthStatus?.isAuthenticating ? 'Yes' : 'No'}</p>
+                <p>Current Status: {isLoading ? 'Loading/Authenticating...' : 'Ready'}</p>
+                {error && <p style={{ color: 'red', fontWeight: 'bold' }}>Error: {error}</p>}
+              </div>
+            </div>
+            
+            <button 
+              type="button"
+              onClick={handlePiAuth}
+              disabled={isLoading || !piAuthStatus?.isAvailable}
+              className="pi-auth-button"
+            >
+              {isLoading ? (
+                <div className="loading-spinner">
+                  <div className="spinner"></div>
+                  {t('piAuthenticating', 'Authenticating with Pi...')}
+                </div>
+              ) : (
+                <>
+                  <span className="pi-logo">π</span>
+                  {t('loginWithPi', 'Login with Pi Network')}
+                </>
+              )}
+            </button>
+            
+            {error && <div className="error-message">{error}</div>}
+            
+            <div className="auth-fallback">
+              <hr />
+              <p>{t('piAuthFallback', 'Having trouble with Pi authentication?')}</p>
+              <button 
+                type="button"
+                onClick={() => setShowPiAuth(false)}
+                className="fallback-button"
+              >
+                {t('useTraditionalAuth', 'Use traditional login instead')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          // Traditional Authentication Form
+          <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label>{t('username', 'Username')}</label>
             <input
@@ -259,22 +417,40 @@ const Auth = ({ onLogin }) => {
             )}
           </button>
         </form>
+        )}
 
-        <div className="auth-switch">
-          <p>
-            {isLogin ? t('noAccount', "Don't have an account?") : t('haveAccount', 'Already have an account?')}
-            <button 
-              type="button" 
-              onClick={() => {
-                setIsLogin(!isLogin);
-                resetForm();
-              }}
-              className="switch-button"
-            >
-              {isLogin ? t('register', 'Register') : t('login', 'Login')}
-            </button>
-          </p>
-        </div>
+        {!showPiAuth && (
+          <div className="auth-switch">
+            <p>
+              {isLogin ? t('noAccount', "Don't have an account?") : t('haveAccount', 'Already have an account?')}
+              <button 
+                type="button" 
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  resetForm();
+                }}
+                className="switch-button"
+              >
+                {isLogin ? t('register', 'Register') : t('login', 'Login')}
+              </button>
+            </p>
+            
+            {isPiBrowser() && (
+              <div className="pi-auth-option">
+                <hr />
+                <p>{t('piAvailable', 'Pi Network authentication is available')}</p>
+                <button 
+                  type="button"
+                  onClick={() => setShowPiAuth(true)}
+                  className="pi-switch-button"
+                >
+                  <span className="pi-logo">π</span>
+                  {t('switchToPi', 'Use Pi Network instead')}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -120,7 +120,7 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
   return (
     <div className="profile-info-section">
       <div className="profile-section-header">
-        <h3>👤 {t('profileInformation', 'Profile Information')}</h3>
+        <h3>👤 {t('profile', 'Profile')}</h3>
         {!isEditMode ? (
           <button className="edit-profile-btn" onClick={startEdit}>
             <span className="edit-icon">✏️</span>
