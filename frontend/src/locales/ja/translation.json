@@ -432,6 +432,7 @@
   "journalContent": "内容",
   "contentRequired": "内容が必要です",
   "mood": "気分",
+  "howDoYouFeelToday": "今日はどんな気分ですか？",
   "tags": "タグ",
   "saveEntry": "エントリを保存",
   "generateVoice": "音声を生成",
@@ -504,7 +505,13 @@
   "adminNotes": "管理者メモ",
   "deletedMeditation": "削除された瞑想",
   "notifications": "通知",
-  "selectPastDate": "過去の日をクリックして日記エントリを記入します",
+  "selectPastDate": "日記を書く日を選んでください",
+  "showCalendar": "カレンダーを表示",
+  "backToCalendar": "カレンダーに戻る",
+  "back": "戻る",
+  "pressEscToReturn": "ESCキーでカレンダーに戻る",
+  "entryMode": "日記記入モード",
+  "escToReturn": "ESCで戻る",
   "clickToEdit": "クリックして日記を記入",
   "hideForm": "フォームを隠す",
   "editing": "編集中",
@@ -580,6 +587,8 @@
   "quickWrite": "クイック記入",
   "quickWritePlaceholder": "今日は何が気になりますか？ここから書き始めてください...",
   "generateJournalAudio": "日記オーディオを生成",
-  "manageVoices": "音声を管理",
-  "hasAudio": "オーディオあり"
+  "manageVoices": "音声管理",
+  "hasAudio": "音声あり",
+  "confirmDeleteJournal": "この日記エントリを削除してもよろしいですか？",
+  "errorDeleting": "削除エラー"
 }

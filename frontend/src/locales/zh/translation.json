@@ -436,6 +436,7 @@
   "journalContent": "内容",
   "contentRequired": "需要内容",
   "mood": "心情",
+  "howDoYouFeelToday": "你今天感觉如何？",
   "tags": "标签",
   "saveEntry": "保存条目",
   "generateVoice": "生成语音",
@@ -501,7 +502,13 @@
   "enterContent": "写下您的想法或使用录音按钮...",
   "premiumSupport": "高级支持",
   "stepProgress": "步骤 {{current}} / {{total}}",
-  "selectPastDate": "点击过去的日期填写日记",
+  "selectPastDate": "选择一天来填写日记",
+  "showCalendar": "显示日历",
+  "backToCalendar": "返回日历",
+  "back": "返回",
+  "pressEscToReturn": "按 ESC 返回日历",
+  "entryMode": "日记写作模式",
+  "escToReturn": "ESC 返回",
   "clickToEdit": "点击填写日记",
   "hideForm": "隐藏表单",
   "editing": "编辑",
@@ -570,6 +577,8 @@
   "quickWrite": "快速写入",
   "quickWritePlaceholder": "今天什么让你烦恼？从这里开始写...",
   "generateJournalAudio": "生成日记音频",
-  "manageVoices": "管理语音",
-  "hasAudio": "有音频"
+  "manageVoices": "管理声音",
+  "hasAudio": "有音频",
+  "confirmDeleteJournal": "您确定要删除此日记条目吗？",
+  "errorDeleting": "删除错误"
 }

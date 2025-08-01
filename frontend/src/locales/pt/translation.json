@@ -215,6 +215,7 @@
   "journalDate": "Data",
   "journalContent": "Conteúdo",
   "mood": "Humor",
+  "howDoYouFeelToday": "Como você se sente hoje?",
   "tags": "Tags",
   "addTag": "Adicionar tag...",
   "happy": "Feliz",
@@ -504,7 +505,13 @@
   "adminNotes": "Notas do administrador",
   "deletedMeditation": "Meditação excluída",
   "notifications": "Notificações",
-  "selectPastDate": "Clique em um dia passado para preencher uma entrada do diário",
+  "selectPastDate": "Escolha um dia para preencher o diário",
+  "showCalendar": "Mostrar calendário",
+  "backToCalendar": "Voltar ao calendário",
+  "back": "Voltar",
+  "pressEscToReturn": "Pressione ESC para voltar ao calendário",
+  "entryMode": "Modo de escrita do diário",
+  "escToReturn": "ESC para voltar",
   "clickToEdit": "Clique para preencher o diário",
   "hideForm": "Ocultar formulário",
   "editing": "Editando",
@@ -581,5 +588,7 @@
   "quickWritePlaceholder": "O que está te preocupando hoje? Comece a escrever aqui...",
   "generateJournalAudio": "Gerar Áudio do Diário",
   "manageVoices": "Gerenciar vozes",
-  "hasAudio": "Tem áudio"
+  "hasAudio": "Tem áudio",
+  "confirmDeleteJournal": "Tem certeza de que deseja excluir esta entrada do diário?",
+  "errorDeleting": "Erro ao excluir"
 }

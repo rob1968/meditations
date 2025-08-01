@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import axios from 'axios';
@@ -55,7 +55,10 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
   
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState('browse'); // 'write', 'browse', 'voice', 'calendar', 'addictions'
+  const [activeTab, setActiveTab] = useState('calendar'); // 'write', 'browse', 'voice', 'calendar', 'addictions'
+  
+  // Ref to track if calendar has been initialized to prevent re-loading today's entry
+  const calendarInitialized = useRef(false);
   
   // Function to highlight search text in content
   const highlightSearchText = (text, searchTerm) => {
@@ -92,16 +95,33 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     tags: [], // Empty array, not null
     date: new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format
   });
+  
+  // Track original content to detect changes
+  const [originalContent, setOriginalContent] = useState('');
+  
+  // Track save success for feedback
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  
+  // Control calendar visibility
+  const [showCalendar, setShowCalendar] = useState(true);
+  
+  // Textarea ref for auto-scroll functionality
+  const textareaRef = useRef(null);
+  
+  // Check if content has been changed
+  const hasContentChanged = () => {
+    return formData.content.trim() !== originalContent.trim();
+  };
 
   const moods = [
-    { value: 'happy', emoji: '🌞', label: t('happy', 'Blij'), description: 'Vrolijk en positief', color: '#FFD700', bg: 'linear-gradient(135deg, #FFD700, #FFA500)' },
-    { value: 'calm', emoji: '🌊', label: t('calm', 'Rustig'), description: 'Kalm en sereen', color: '#87CEEB', bg: 'linear-gradient(135deg, #87CEEB, #4682B4)' },
-    { value: 'peaceful', emoji: '🕊️', label: t('peaceful', 'Vreedzaam'), description: 'Vreedzaam en harmonieus', color: '#98FB98', bg: 'linear-gradient(135deg, #98FB98, #32CD32)' },
-    { value: 'grateful', emoji: '🙏', label: t('grateful', 'Dankbaar'), description: 'Vol waardering', color: '#DDA0DD', bg: 'linear-gradient(135deg, #DDA0DD, #9370DB)' },
-    { value: 'reflective', emoji: '🌙', label: t('reflective', 'Reflectief'), description: 'Nadenkend en contemplatief', color: '#C0C0C0', bg: 'linear-gradient(135deg, #C0C0C0, #708090)' },
-    { value: 'energetic', emoji: '⚡', label: t('energetic', 'Energiek'), description: 'Vol energie en motivatie', color: '#FF6347', bg: 'linear-gradient(135deg, #FF6347, #DC143C)' },
-    { value: 'stressed', emoji: '🌋', label: t('stressed', 'Gestrest'), description: 'Onder druk en gespannen', color: '#FF4500', bg: 'linear-gradient(135deg, #FF4500, #B22222)' },
-    { value: 'anxious', emoji: '🌪️', label: t('anxious', 'Bezorgd'), description: 'Ongerust en nerveus', color: '#708090', bg: 'linear-gradient(135deg, #708090, #2F4F4F)' }
+    { value: 'happy', emoji: '😊', label: t('happy', 'Blij'), description: t('happyDesc', 'Ik voel me vrolijk en optimistisch'), color: '#FFD700', bg: 'linear-gradient(135deg, #FFD700, #FFA500)' },
+    { value: 'calm', emoji: '😌', label: t('calm', 'Rustig'), description: t('calmDesc', 'Ik ben ontspannen en vredig'), color: '#87CEEB', bg: 'linear-gradient(135deg, #87CEEB, #4682B4)' },
+    { value: 'peaceful', emoji: '😇', label: t('peaceful', 'Vreedzaam'), description: t('peacefulDesc', 'Ik voel innerlijke rust en harmonie'), color: '#98FB98', bg: 'linear-gradient(135deg, #98FB98, #32CD32)' },
+    { value: 'grateful', emoji: '🥰', label: t('grateful', 'Dankbaar'), description: t('gratefulDesc', 'Ik ben dankbaar voor wat ik heb'), color: '#DDA0DD', bg: 'linear-gradient(135deg, #DDA0DD, #9370DB)' },
+    { value: 'reflective', emoji: '🤔', label: t('reflective', 'Reflectief'), description: t('reflectiveDesc', 'Ik denk na over het leven'), color: '#C0C0C0', bg: 'linear-gradient(135deg, #C0C0C0, #708090)' },
+    { value: 'energetic', emoji: '😄', label: t('energetic', 'Energiek'), description: t('energeticDesc', 'Ik voel me vol energie en motivatie'), color: '#FF6347', bg: 'linear-gradient(135deg, #FF6347, #DC143C)' },
+    { value: 'stressed', emoji: '😫', label: t('stressed', 'Gestrest'), description: t('stressedDesc', 'Ik voel me onder druk staan'), color: '#FF4500', bg: 'linear-gradient(135deg, #FF4500, #B22222)' },
+    { value: 'anxious', emoji: '😰', label: t('anxious', 'Bezorgd'), description: t('anxiousDesc', 'Ik maak me zorgen over dingen'), color: '#708090', bg: 'linear-gradient(135deg, #708090, #2F4F4F)' }
   ];
 
   useEffect(() => {
@@ -118,13 +138,15 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     
     if (hasTodaysEntry && todaysEntry) {
       // Auto-load today's existing entry data
+      const content = todaysEntry.content || '';
       setFormData({
         title: todaysEntry.title,
-        content: todaysEntry.content,
+        content: content,
         mood: todaysEntry.mood || '',
         tags: todaysEntry.tags || [],
         date: todaysEntry.date ? new Date(todaysEntry.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
       });
+      setOriginalContent(content); // Track original content
       setEditingEntry(todaysEntry);
       setShowCreateForm(true);
     } else if (!hasTodaysEntry) {
@@ -136,10 +158,86 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         tags: [],
         date: new Date().toISOString().split('T')[0]
       });
+      setOriginalContent(''); // Reset original content for new entry
       setEditingEntry(null);
       setShowCreateForm(true);
     }
   }, [user, hasTodaysEntry, todaysEntry, activeTab]);
+
+  // Function to load today's entry for calendar
+  const loadTodayForCalendar = async () => {
+    if (!user) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Always set today as selected date first
+    setSelectedDate(today);
+    
+    // Fetch today's entry directly
+    try {
+      const response = await axios.get(getFullUrl(`/api/journal/user/${user.id}/today`));
+      console.log('Calendar: Fetched today\'s entry:', response.data);
+      
+      if (response.data.hasEntry && response.data.entry) {
+        // Load today's existing entry data for calendar view
+        const entry = response.data.entry;
+        setFormData({
+          title: entry.title || '',
+          content: entry.content || '',
+          mood: entry.mood || '',
+          tags: entry.tags || [],
+          date: today
+        });
+        setEditingEntry(entry);
+        setTodaysEntry(entry);
+        setHasTodaysEntry(true);
+      } else {
+        // Setup for new entry on today's date
+        console.log('Calendar: No entry for today, setting up empty form');
+        setFormData({
+          title: '',
+          content: '',
+          mood: '',
+          tags: [],
+          date: today
+        });
+        setEditingEntry(null);
+        setTodaysEntry(null);
+        setHasTodaysEntry(false);
+      }
+    } catch (error) {
+      console.error('Calendar: Error fetching today\'s entry:', error);
+      // Setup empty form on error
+      setFormData({
+        title: '',
+        content: '',
+        mood: '',
+        tags: [],
+        date: today
+      });
+      setEditingEntry(null);
+    }
+  };
+
+  // Auto-load today's entry for calendar tab
+  useEffect(() => {
+    if (!user || activeTab !== 'calendar') return;
+    
+    // Only load if calendar hasn't been initialized yet or if we're returning to calendar
+    if (!calendarInitialized.current || !selectedDate) {
+      loadTodayForCalendar();
+      calendarInitialized.current = true;
+    }
+  }, [user, activeTab]);
+
+  // Reset selectedDate when switching away from calendar tab
+  useEffect(() => {
+    if (activeTab !== 'calendar') {
+      // Reset calendar state when leaving calendar tab
+      setSelectedDate('');
+      calendarInitialized.current = false;
+    }
+  }, [activeTab]);
 
   // Check audio recording support on component mount
   useEffect(() => {
@@ -239,6 +337,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       tags: [], // Empty array, not null
       date: new Date().toISOString().split('T')[0]
     });
+    setOriginalContent(''); // Reset original content when resetting form
     setShowCreateForm(false);
     setShowDatePicker(false);
     setEditingEntry(null);
@@ -253,17 +352,20 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
   const handleDateSelection = async (date) => {
     setSelectedDate(date);
+    setShowCalendar(false); // Hide calendar when date is selected
     const entry = await fetchEntryForDate(date);
     
     if (entry) {
       // Edit existing entry for this date - use the selected date, not the entry date
+      const content = entry.content || '';
       setFormData({
         title: entry.title,
-        content: entry.content,
+        content: content,
         mood: entry.mood || '',
         tags: entry.tags || [],
         date: date // Use the selected date string directly
       });
+      setOriginalContent(content); // Track the original content
       setEditingEntry(entry);
     } else {
       // Create new entry for this date
@@ -274,13 +376,12 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         tags: [],
         date: date
       });
+      setOriginalContent(''); // Reset original content for new entry
       setEditingEntry(null);
     }
     
     setShowDatePicker(false);
-    setShowCreateForm(true);
-    // Switch to write tab for editing
-    setActiveTab('write');
+    // Stay in calendar view with inline writing interface - no need to open expanded form
   };
 
   const fetchUserVoices = async () => {
@@ -580,17 +681,39 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
       if (response.data.success) {
         setJustSaved(true); // Prevent auto-reopening form
-        resetForm(); // Close form immediately for better UX
+        
+        // Update original content to reflect saved state
+        setOriginalContent(formData.content);
+        
+        // Update editingEntry if this was a new entry that got created
+        if (!editingEntry && response.data.entry) {
+          setEditingEntry(response.data.entry);
+        }
+        
         setError('');
+        
+        // Show success feedback only for new entries, not updates
+        if (!editingEntry) {
+          setShowSaveSuccess(true);
+          setTimeout(() => {
+            setShowSaveSuccess(false);
+          }, 2000);
+        }
         
         // Refresh data in background without showing loading states
         fetchEntries(false);
         fetchTodaysEntry();
         
+        // Show calendar again after save to display highlighted date
+        setShowCalendar(true);
+        
         // Reset justSaved flag after a short delay
         setTimeout(() => {
           setJustSaved(false);
         }, 100);
+        
+        // Keep the form open so user can see the updated text
+        // Don't call resetForm() here anymore
       }
     } catch (error) {
       console.error('Error saving journal entry:', error);
@@ -599,13 +722,15 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   };
 
   const handleEditEntry = (entry) => {
+    const content = entry.content || '';
     setFormData({
       title: entry.title,
-      content: entry.content,
+      content: content,
       mood: entry.mood || '',
       tags: entry.tags || [],
       date: entry.date ? new Date(entry.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
     });
+    setOriginalContent(content); // Track the original content
     setEditingEntry(entry);
     setShowCreateForm(true);
   };
@@ -964,6 +1089,18 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
             ...prev,
             content: prev.content ? `${prev.content}\n\n${transcribedText}` : transcribedText
           }));
+          
+          // Auto-scroll to bottom after transcription
+          setTimeout(() => {
+            if (textareaRef.current) {
+              textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+              textareaRef.current.focus();
+              // Set cursor to end of text
+              const textLength = textareaRef.current.value.length;
+              textareaRef.current.setSelectionRange(textLength, textLength);
+            }
+          }, 100);
+          
           setError('');
         } else {
           setError(t('noSpeechDetectedRetry', 'Geen spraak gedetecteerd. Probeer opnieuw te spreken.'));
@@ -1249,6 +1386,28 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     }
   }, [user, activeTab]);
 
+  // Keyboard shortcuts for calendar navigation
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      // ESC key to go back to calendar when in calendar tab and calendar is hidden
+      if (event.key === 'Escape' && activeTab === 'calendar' && !showCalendar) {
+        setShowCalendar(true);
+        // Reset form if no changes were made
+        if (!hasContentChanged()) {
+          setSelectedDate('');
+          setFormData({ title: '', content: '', mood: '', tags: '' });
+          setEditingEntry(null);
+        }
+      }
+    };
+
+    // Only add event listener when in calendar tab
+    if (activeTab === 'calendar') {
+      document.addEventListener('keydown', handleKeyPress);
+      return () => document.removeEventListener('keydown', handleKeyPress);
+    }
+  }, [activeTab, showCalendar, hasContentChanged]);
+
   if (isLoading) {
     return (
       <div className="journal-container">
@@ -1478,15 +1637,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                   <button 
                     className="save-quick-btn"
                     onClick={handleSaveEntry}
-                    disabled={!formData.content.trim()}
+                    disabled={!formData.content.trim() || (editingEntry && !hasContentChanged())}
                   >
-                    💾 {t('save', 'Opslaan')}
-                  </button>
-                  <button 
-                    className="expand-btn"
-                    onClick={() => setShowCreateForm(true)}
-                  >
-                    ⤢ {t('expand', 'Uitbreiden')}
+                    💾 {editingEntry ? t('update', 'Bijwerken') : t('save', 'Opslaan')}
                   </button>
                 </div>
               </div>
@@ -2158,8 +2311,23 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         {/* Calendar Tab */}
         {activeTab === 'calendar' && (
           <div className="calendar-tab-content">
+            {/* Button to show calendar when hidden - fallback if header button is not visible */}
+            {!showCalendar && !selectedDate && (
+              <div className="show-calendar-section">
+                <button 
+                  className="show-calendar-btn"
+                  onClick={() => setShowCalendar(true)}
+                >
+                  📅 {t('showCalendar', 'Toon kalender')}
+                </button>
+                <p className="calendar-help-text">
+                  {t('pressEscToReturn', 'Druk op ESC om terug te keren naar de kalender')}
+                </p>
+              </div>
+            )}
+            
             {/* Mini Calendar for History */}
-            <div className="journal-calendar">
+            {showCalendar && <div className="journal-calendar">
               <div className="calendar-header">
                 <div className="calendar-navigation">
                   <button 
@@ -2180,13 +2348,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                   </button>
                 </div>
                 <div className="calendar-actions">
-                  <button 
-                    className="calendar-today-btn"
-                    onClick={goToCurrentMonth}
-                    title={t('currentMonth', 'Huidige maand')}
-                  >
-                    {t('today', 'Vandaag')}
-                  </button>
                 </div>
                 <p>{t('selectPastDate', 'Klik op een vorige dag om een dagboek in te vullen')}</p>
               </div>
@@ -2217,6 +2378,185 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                       {dayObj ? dayObj.day : ''}
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>}
+            
+            {/* Today's Writing Interface */}
+            <div className={`today-writing-section ${!showCalendar && selectedDate ? 'entry-mode' : 'calendar-mode'}`}>
+              <div className="today-writing-header">
+                <div className="writing-header-content">
+                  {/* Back to Calendar button - positioned at top left */}
+                  {!showCalendar && (
+                    <button 
+                      className="back-to-calendar-btn"
+                      onClick={() => {
+                        setShowCalendar(true);
+                        // Optionally reset form if no changes were made
+                        if (!hasContentChanged()) {
+                          setSelectedDate('');
+                          setFormData({ title: '', content: '', mood: '', tags: '' });
+                          setEditingEntry(null);
+                        }
+                      }}
+                      title={t('backToCalendar', 'Terug naar kalender')}
+                    >
+                      ← {t('back', 'Terug')}
+                    </button>
+                  )}
+                  
+                  <div className="today-date">
+                    {(() => {
+                      const displayDate = selectedDate || new Date().toISOString().split('T')[0];
+                      return new Date(displayDate).toLocaleDateString('nl-NL', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      });
+                    })()}
+                  </div>
+                  
+                </div>
+              </div>
+              
+              <div className="quick-write-interface">
+                <div className="quick-write-form">
+                  
+                  {/* Mood selector moved above textarea */}
+                  <div className="mood-quick-select mood-above-text">
+                    <span className="mood-label">{t('howDoYouFeelToday', 'Hoe voel je je vandaag?')}</span>
+                    <div className="mood-options-inline">
+                      {moods.slice(0, 6).map(mood => (
+                        <button
+                          key={mood.value}
+                          className={`mood-option-quick ${formData.mood === mood.value ? 'selected' : ''}`}
+                          onClick={async () => {
+                            setFormData({...formData, mood: mood.value});
+                            // Auto-save mood selection
+                            if (formData.content.trim()) {
+                              await handleSaveEntry();
+                            }
+                          }}
+                          title={mood.label}
+                        >
+                          {mood.emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="textarea-container">
+                    <textarea
+                      ref={textareaRef}
+                      placeholder={t('writeHere', 'Schrijf hier je gedachten, gevoelens of ervaringen van vandaag...')}
+                      value={formData.content}
+                      onChange={(e) => {
+                        setFormData({...formData, content: e.target.value});
+                        if (editingEntry && e.target.value !== lastSavedContent) {
+                          // Auto-save logic can be added here
+                        }
+                      }}
+                      className={`quick-content-textarea ${recordingState === 'processing' ? 'processing' : ''}`}
+                      rows={6}
+                      disabled={recordingState === 'processing'}
+                    />
+                    
+                    {/* Spinner overlay during transcription */}
+                    {recordingState === 'processing' && (
+                      <div className="textarea-spinner-overlay">
+                        <div className="spinner-content">
+                          <div className="loading-spinner">
+                            <div className="spinner"></div>
+                          </div>
+                          <span className="processing-text">{t('processing', 'Verwerken...')}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="quick-write-actions">
+                    {/* Voice Recording Button */}
+                    <div className="voice-recording-quick">
+                      {audioSupported && recordingState === 'idle' && (
+                        <button
+                          type="button"
+                          className="voice-quick-btn"
+                          onClick={startRecording}
+                          title={t('voiceToText', 'Spraak naar tekst')}
+                        >
+                          🎤
+                        </button>
+                      )}
+                      
+                      {recordingState === 'recording' && (
+                        <div className="recording-indicator-quick">
+                          <button
+                            type="button"
+                            className="stop-recording-btn-quick"
+                            onClick={stopRecording}
+                            title={t('stopRecording', 'Stop opname')}
+                          >
+                            ⏹️ {recordingTime}s
+                          </button>
+                        </div>
+                      )}
+                      
+                      {recordingState === 'processing' && (
+                        <div className="processing-indicator-quick">
+                          <span className="processing-text">🔄 {t('processing', 'Verwerken...')}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="quick-save-actions">
+                      <button
+                        className="save-entry-btn"
+                        onClick={handleSaveEntry}
+                        disabled={!formData.content.trim() || (editingEntry && !hasContentChanged())}
+                      >
+                        💾 {editingEntry ? t('update', 'Bijwerken') : t('save', 'Opslaan')}
+                      </button>
+                      
+                      {showSaveSuccess && (
+                        <span className="save-success-indicator">
+                          ✅ {t('saved', 'Opgeslagen!')}
+                        </span>
+                      )}
+                      
+                      {editingEntry && (
+                        <button
+                          className="delete-entry-btn"
+                          onClick={async () => {
+                            if (window.confirm(t('confirmDeleteJournal', 'Weet je zeker dat je deze dagboek entry wilt verwijderen?'))) {
+                              try {
+                                await axios.delete(getFullUrl(`/api/journal/${editingEntry._id}?userId=${user.id}`));
+                                // Reset form and refresh
+                                resetForm();
+                                fetchEntries();
+                                const today = new Date().toISOString().split('T')[0];
+                                if (selectedDate === today) {
+                                  // If deleting today's entry, refresh today's status
+                                  loadTodayForCalendar();
+                                }
+                              } catch (error) {
+                                console.error('Error deleting entry:', error);
+                                setError(t('errorDeleting', 'Fout bij verwijderen van entry'));
+                              }
+                            }
+                          }}
+                        >
+                          🗑️ {t('delete', 'Verwijderen')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {formData.content.trim() && (
+                    <div className="word-count-display">
+                      {countWords(formData.content)} {t('words', 'woorden')}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2391,16 +2731,23 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                 <button 
                   className="save-btn-primary" 
                   onClick={handleSaveEntry}
-                  disabled={!formData.content.trim()}
+                  disabled={!formData.content.trim() || (editingEntry && !hasContentChanged())}
                 >
-                  💾 {t('save', 'Opslaan')}
+                  💾 {editingEntry ? t('update', 'Bijwerken') : t('save', 'Opslaan')}
                 </button>
+                
+                {showSaveSuccess && (
+                  <span className="save-success-indicator">
+                    ✅ {t('saved', 'Opgeslagen!')}
+                  </span>
+                )}
                 <button 
                   className="save-and-close-btn" 
                   onClick={async () => {
                     await handleSaveEntry();
                     setShowCreateForm(false);
                   }}
+                  disabled={!formData.content.trim() || (editingEntry && !hasContentChanged())}
                 >
                   ✅ {t('saveAndClose', 'Opslaan & Sluiten')}
                 </button>

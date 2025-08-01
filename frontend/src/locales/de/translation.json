@@ -198,6 +198,7 @@
   "journalDate": "Datum",
   "journalContent": "Inhalt",
   "mood": "Stimmung",
+  "howDoYouFeelToday": "Wie fühlst du dich heute?",
   "tags": "Tags",
   "addTag": "Tag hinzufügen...",
   "happy": "Glücklich",
@@ -487,7 +488,13 @@
   "failedToLoadFullEntry": "Vollständiger Eintrag konnte nicht geladen werden",
   "onlyTodayEntry": "Nur das heutige Tagebuch kann bearbeitet werden",
   "stepProgress": "Schritt {{current}} von {{total}}",
-  "selectPastDate": "Klicken Sie auf einen vergangenen Tag, um einen Tagebucheintrag auszufüllen",
+  "selectPastDate": "Wählen Sie einen Tag für das Tagebuch",
+  "showCalendar": "Kalender anzeigen",
+  "backToCalendar": "Zurück zum Kalender",
+  "back": "Zurück",
+  "pressEscToReturn": "Drücken Sie ESC, um zum Kalender zurückzukehren",
+  "entryMode": "Tagebuch-Schreibmodus",
+  "escToReturn": "ESC zum Zurückkehren",
   "clickToEdit": "Klicken Sie, um das Tagebuch auszufüllen",
   "hideForm": "Formular ausblenden",
   "editing": "Bearbeiten",
@@ -564,5 +571,8 @@
   "quickWritePlaceholder": "Was beschäftigt Sie heute? Beginnen Sie hier zu schreiben...",
   "generateJournalAudio": "Tagebuch Audio erstellen",
   "manageVoices": "Stimmen verwalten",
-  "hasAudio": "Hat Ton"
+  "hasAudio": "Hat Ton",
+  "confirmDeleteJournal": "Sind Sie sicher, dass Sie diesen Tagebucheintrag löschen möchten?",
+  "errorDeleting": "Fehler beim Löschen",
+  "saved": "Gespeichert!"
 }
