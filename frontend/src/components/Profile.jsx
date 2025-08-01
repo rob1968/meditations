@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl, API_ENDPOINTS } from '../config/api';
 import { getSortedCountries } from '../data/countries';
+import PiPayment from './PiPayment';
 
 const Profile = ({ user, onLogout, onBackToCreate }) => {
   const [stats, setStats] = useState(null);
@@ -12,6 +13,7 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreditHistory, setShowCreditHistory] = useState(false);
+  const [showPiPayment, setShowPiPayment] = useState(false);
   
   // Edit mode states
   const [isEditMode, setIsEditMode] = useState(false);
@@ -20,6 +22,21 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
   const [saveMessage, setSaveMessage] = useState('');
   
   const { t, i18n } = useTranslation();
+  
+  // Handle Pi payment completion
+  const handlePaymentComplete = (newCreditBalance) => {
+    // Update credits in state
+    setCredits(prevCredits => ({
+      ...prevCredits,
+      credits: newCreditBalance
+    }));
+    
+    // Close payment dialog
+    setShowPiPayment(false);
+    
+    // Show success message
+    alert(t('paymentSuccess', 'Payment successful! Credits have been added to your account.'));
+  };
   
   // Get sorted countries for the current language
   const countries = getSortedCountries(i18n.language);
@@ -236,8 +253,9 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
                 <h3>💎 {t('credits', 'Credits')}</h3>
                 <button 
                   className="credits-purchase-btn"
-                  onClick={() => alert(t('paymentComingSoon', 'Payment system coming soon!'))}
+                  onClick={() => setShowPiPayment(true)}
                 >
+                  <span style={{ fontSize: '16px', marginRight: '8px' }}>π</span>
                   {t('buyCredits', 'Buy Credits')}
                 </button>
               </div>
@@ -592,6 +610,15 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
           {t('logout', 'Logout')}
         </button>
       </div>
+      
+      {/* Pi Payment Modal */}
+      {showPiPayment && (
+        <PiPayment
+          user={user}
+          onPaymentComplete={handlePaymentComplete}
+          onClose={() => setShowPiPayment(false)}
+        />
+      )}
     </div>
   );
 };

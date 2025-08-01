@@ -14,6 +14,7 @@ import {
   isPiBrowser, 
   isPiSDKAvailable, 
   waitForPiSDK, 
+  initializePiSDK,
   authenticateWithPi, 
   getPiUser,
   debugPiEnvironment 
@@ -38,17 +39,19 @@ class PiAuthService {
       // Debug current environment
       debugPiEnvironment();
       
-      if (!isPiBrowser()) {
-        console.log('[PiAuth Service] Not in Pi Browser, Pi authentication not available');
-        return false;
-      }
+      // Pi authentication available in all browsers
+      console.log('[PiAuth Service] Pi authentication available');
 
       // Wait for SDK to load with proper timing like working example
       console.log('[PiAuth Service] Checking Pi SDK...');
       await waitForPiSDK(5000); // 5 second timeout
       
+      // Initialize Pi SDK properly (this was missing!)
+      console.log('[PiAuth Service] Initializing Pi SDK...');
+      await initializePiSDK();
+      
       // Add a 500ms delay like the working example to ensure SDK is ready
-      console.log('[PiAuth Service] SDK loaded, waiting 500ms for readiness...');
+      console.log('[PiAuth Service] SDK initialized, waiting 500ms for readiness...');
       await new Promise(resolve => setTimeout(resolve, 500));
       
       this.isInitialized = true;
@@ -63,7 +66,7 @@ class PiAuthService {
 
   // Check if Pi authentication is available
   isAvailable() {
-    return this.isInitialized && isPiBrowser() && isPiSDKAvailable();
+    return this.isInitialized && isPiSDKAvailable();
   }
 
   // Authenticate user with Pi Network following working example pattern
@@ -368,7 +371,6 @@ class PiAuthService {
   // Get authentication status info
   getAuthStatus() {
     return {
-      isPiBrowser: isPiBrowser(),
       isSDKAvailable: isPiSDKAvailable(),
       isInitialized: this.isInitialized,
       isAvailable: this.isAvailable(),

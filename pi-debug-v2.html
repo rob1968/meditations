@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi Authentication Debug v2</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+        .debug-container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .debug-item { margin: 10px 0; padding: 10px; background: #f8f9fa; border-left: 4px solid #007bff; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .warning { border-left-color: #ffc107; background: #fff3cd; }
+        button { padding: 10px 20px; margin: 10px 5px; cursor: pointer; border: none; border-radius: 4px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .logs { max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 10px; margin: 10px 0; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>🥧 Pi Authentication Debug v2</h1>
+        <p>Testing Pi SDK initialization and authentication with latest fixes</p>
+        
+        <div id="status" class="debug-item">
+            Status: Initializing...
+        </div>
+        
+        <div>
+            <button class="btn-primary" onclick="testSDKLoading()">1. Test SDK Loading</button>
+            <button class="btn-primary" onclick="initializeSDK()">2. Initialize SDK</button>
+            <button class="btn-success" onclick="testAuthentication()">3. Test Authentication</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+        
+        <div class="logs" id="logs"></div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let logContainer = document.getElementById('logs');
+        let statusContainer = document.getElementById('status');
+        let resultsContainer = document.getElementById('results');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logEntry.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : type === 'warning' ? 'orange' : 'black';
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function updateStatus(message, type = 'info') {
+            statusContainer.innerHTML = message;
+            statusContainer.className = `debug-item ${type}`;
+        }
+        
+        function clearLogs() {
+            logContainer.innerHTML = '';
+            resultsContainer.innerHTML = '';
+        }
+        
+        // Step 1: Test SDK Loading
+        function testSDKLoading() {
+            log('=== Testing Pi SDK Loading ===');
+            
+            // Check if Pi object exists
+            if (typeof window.Pi === 'undefined') {
+                log('❌ window.Pi is undefined - SDK not loaded', 'error');
+                updateStatus('❌ Pi SDK not loaded', 'error');
+                return false;
+            }
+            
+            log('✅ window.Pi is available', 'success');
+            log('Available methods: ' + Object.keys(window.Pi).join(', '));
+            
+            // Check critical methods
+            const requiredMethods = ['init', 'authenticate', 'createPayment'];
+            let allMethodsAvailable = true;
+            
+            requiredMethods.forEach(method => {
+                if (typeof window.Pi[method] === 'function') {
+                    log(`✅ Pi.${method} is available`, 'success');
+                } else {
+                    log(`❌ Pi.${method} is missing`, 'error');
+                    allMethodsAvailable = false;
+                }
+            });
+            
+            if (allMethodsAvailable) {
+                updateStatus('✅ Pi SDK loaded successfully', 'success');
+                return true;
+            } else {
+                updateStatus('❌ Pi SDK incomplete', 'error');
+                return false;
+            }
+        }
+        
+        // Step 2: Initialize SDK
+        async function initializeSDK() {
+            log('=== Initializing Pi SDK ===');
+            
+            if (!testSDKLoading()) {
+                log('Cannot initialize - SDK not loaded properly', 'error');
+                return;
+            }
+            
+            try {
+                log('Calling Pi.init()...');
+                window.Pi.init({
+                    version: "2.0"
+                    // No sandbox parameter = production mode
+                });
+                
+                log('✅ Pi.init() completed successfully', 'success');
+                updateStatus('✅ Pi SDK initialized', 'success');
+                
+                // Small delay to ensure initialization
+                await new Promise(resolve => setTimeout(resolve, 500));
+                log('Ready for authentication');
+                
+            } catch (error) {
+                log(`❌ Pi.init() failed: ${error.message}`, 'error');
+                updateStatus('❌ SDK initialization failed', 'error');
+                throw error;
+            }
+        }
+        
+        // Step 3: Test Authentication
+        async function testAuthentication() {
+            log('=== Testing Pi Authentication ===');
+            
+            try {
+                // Ensure SDK is initialized first
+                await initializeSDK();
+                
+                log('Starting Pi.authenticate()...');
+                updateStatus('🔄 Authenticating with Pi Network...', 'warning');
+                
+                // Set up authentication with timeout
+                const authTimeout = 30000; // 30 seconds
+                const authPromise = new Promise((resolve, reject) => {
+                    window.Pi.authenticate(['payments', 'username'], function onIncompletePaymentFound(payment) {
+                        log('Incomplete payment found: ' + JSON.stringify(payment), 'warning');
+                    }).then(auth => {
+                        resolve(auth);
+                    }).catch(err => {
+                        reject(err);
+                    });
+                });
+                
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Authentication timeout after 30 seconds')), authTimeout)
+                );
+                
+                const auth = await Promise.race([authPromise, timeoutPromise]);
+                
+                log('✅ Pi Authentication successful!', 'success');
+                log('User data: ' + JSON.stringify({
+                    uid: auth.user?.uid || '[MISSING]',
+                    username: auth.user?.username || '[MISSING]',
+                    hasAccessToken: !!auth.accessToken
+                }), 'success');
+                
+                updateStatus('✅ Pi Authentication successful!', 'success');
+                
+                // Display results
+                resultsContainer.innerHTML = `
+                    <div class="debug-item success">
+                        <h3>✅ Authentication Successful!</h3>
+                        <p><strong>Pi User ID:</strong> ${auth.user?.uid || 'N/A'}</p>
+                        <p><strong>Pi Username:</strong> ${auth.user?.username || 'N/A'}</p>
+                        <p><strong>Access Token:</strong> ${auth.accessToken ? '[PRESENT]' : '[MISSING]'}</p>
+                        <p><strong>Next:</strong> Ready to send to backend!</p>
+                    </div>
+                `;
+                
+                // Test backend authentication
+                await testBackendAuth(auth);
+                
+            } catch (error) {
+                log(`❌ Authentication failed: ${error.message}`, 'error');
+                updateStatus('❌ Authentication failed', 'error');
+                
+                resultsContainer.innerHTML = `
+                    <div class="debug-item error">
+                        <h3>❌ Authentication Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Possible causes:</strong></p>
+                        <ul>
+                            <li>User cancelled authentication</li>
+                            <li>Pi Network connectivity issues</li>
+                            <li>Browser compatibility</li>
+                            <li>Pi SDK configuration error</li>
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+        
+        // Test backend authentication
+        async function testBackendAuth(piAuth) {
+            log('=== Testing Backend Authentication ===');
+            
+            try {
+                const requestData = {
+                    piUserId: piAuth.user?.uid,
+                    piUsername: piAuth.user?.username,
+                    accessToken: piAuth.accessToken,
+                    authMethod: 'pi'
+                };
+                
+                log('Sending Pi auth data to backend...');
+                
+                const response = await fetch('/api/auth/pi-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    log('✅ Backend authentication successful!', 'success');
+                    log('User created/logged in: ' + result.user.username, 'success');
+                    
+                    resultsContainer.innerHTML += `
+                        <div class="debug-item success" style="margin-top: 10px;">
+                            <h3>✅ Backend Authentication Successful!</h3>
+                            <p><strong>Username:</strong> ${result.user.username}</p>
+                            <p><strong>User ID:</strong> ${result.user.id}</p>
+                            <p><strong>Credits:</strong> ${result.credits?.credits || 0}</p>
+                            <p><strong>Status:</strong> Ready for Pi payments!</p>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(result.error || 'Backend authentication failed');
+                }
+                
+            } catch (error) {
+                log(`❌ Backend authentication failed: ${error.message}`, 'error');
+                
+                resultsContainer.innerHTML += `
+                    <div class="debug-item error" style="margin-top: 10px;">
+                        <h3>❌ Backend Authentication Failed</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Initialize on page load
+        window.onload = function() {
+            log('Page loaded, ready for testing');
+            updateStatus('Ready for testing - click buttons in order', 'warning');
+        };
+    </script>
+</body>
+</html>

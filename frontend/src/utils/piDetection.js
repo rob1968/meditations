@@ -7,24 +7,9 @@
  * - Safe Pi SDK method calls with fallbacks
  */
 
-// Check if we're running in Pi Browser
+// Check if we're running in Pi Browser - deprecated function, always returns false
 export const isPiBrowser = () => {
-  // Check for Pi Browser user agent
-  const userAgent = navigator.userAgent.toLowerCase();
-  const isPiUserAgent = userAgent.includes('pi browser') || 
-                        userAgent.includes('pi-browser') ||
-                        userAgent.includes('pi network');
-  
-  // Check for Pi SDK availability
-  const hasPiSDK = typeof window !== 'undefined' && window.Pi;
-  
-  // Additional environment checks
-  const hasPiEnvironment = typeof window !== 'undefined' && (
-    window.location.hostname.includes('pi') ||
-    window.navigator.userAgent.includes('Pi')
-  );
-  
-  return isPiUserAgent || (hasPiSDK && hasPiEnvironment);
+  return false;
 };
 
 // Check if Pi SDK is loaded and available
@@ -61,9 +46,36 @@ export const waitForPiSDK = (timeout = 5000) => {
   });
 };
 
+// Initialize Pi SDK with proper configuration
+export const initializePiSDK = () => {
+  return new Promise((resolve, reject) => {
+    if (typeof window.Pi === 'undefined') {
+      console.error('[Pi Init] Pi SDK (window.Pi) is undefined. SDK script likely failed to load.');
+      reject(new Error('Pi SDK not loaded. Please ensure the SDK script can load.'));
+      return;
+    }
+    
+    try {
+      console.log('[Pi Init] Initializing Pi SDK...');
+      
+      // Initialize Pi SDK (this is the missing piece!)
+      window.Pi.init({
+        version: "2.0", // Specify the Pi SDK version
+        // sandbox: false  // Use production mode (removed sandbox parameter as requested)
+      });
+      
+      console.log('[Pi Init] Pi SDK initialized successfully');
+      resolve(true);
+    } catch (error) {
+      console.error('[Pi Init] Error initializing Pi SDK:', error);
+      reject(error);
+    }
+  });
+};
+
 // Safe Pi SDK authentication wrapper following working example pattern
 export const authenticateWithPi = (scopes = ['payments', 'username']) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     // Ensure Pi SDK is loaded before attempting to use it
     if (typeof window.Pi === 'undefined') {
       console.error('[Pi Auth] Pi SDK (window.Pi) is undefined. SDK script likely failed to load.');
@@ -74,14 +86,18 @@ export const authenticateWithPi = (scopes = ['payments', 'username']) => {
     console.log('[Pi Auth] Pi SDK (window.Pi) is loaded:', window.Pi);
     console.log('[Pi Auth] Starting Pi authentication with scopes:', scopes);
     
-    // Callback for incomplete payments (required by Pi SDK)
-    function onIncompletePaymentFound(payment) {
-      console.log('[Pi Auth] Incomplete payment found:', payment);
-      // Handle incomplete payments if needed
-      // For now, we'll just log it since we're focusing on authentication
-    }
-    
     try {
+      // Initialize Pi SDK first if not already done
+      console.log('[Pi Auth] Ensuring Pi SDK is initialized...');
+      await initializePiSDK();
+      
+      // Callback for incomplete payments (required by Pi SDK)
+      function onIncompletePaymentFound(payment) {
+        console.log('[Pi Auth] Incomplete payment found:', payment);
+        // Handle incomplete payments if needed
+        // For now, we'll just log it since we're focusing on authentication
+      }
+      
       // Authenticate the user following the working example pattern
       console.log('[Pi Auth] Attempting Pi.authenticate...');
       window.Pi.authenticate(scopes, onIncompletePaymentFound)
@@ -166,7 +182,6 @@ export const createPiPayment = (paymentData) => {
 // Debug utility to check Pi environment
 export const debugPiEnvironment = () => {
   const debug = {
-    isPiBrowser: isPiBrowser(),
     isPiSDKAvailable: isPiSDKAvailable(),
     userAgent: navigator.userAgent,
     hostname: window.location.hostname,
@@ -183,6 +198,7 @@ export default {
   isPiBrowser,
   isPiSDKAvailable,
   waitForPiSDK,
+  initializePiSDK,
   authenticateWithPi,
   getPiUser,
   createPiPayment,
