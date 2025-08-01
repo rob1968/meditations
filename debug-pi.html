@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pi Auth Debug</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-log { 
+            background: #f0f0f0; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        button { 
+            background: #6B46C1; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px;
+            margin: 5px;
+        }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Pi Authentication Debug</h1>
+    <div id="logs"></div>
+    
+    <button onclick="testDirectAPI()">Test Direct API</button>
+    <button onclick="testPiAuth()">Test Pi Authentication</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+
+    <script>
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = 'debug-log ' + type;
+            entry.textContent = `[${new Date().toISOString()}] ${message}`;
+            logs.appendChild(entry);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // Test direct API connection
+        async function testDirectAPI() {
+            log('Testing direct API connection...');
+            
+            try {
+                const response = await fetch('https://meditation.pihappy.me/api/meditation/voices', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                log(`API Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`Received ${data.length} voices`, 'success');
+                } else {
+                    log(`API Error: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`Network Error: ${error.message}`, 'error');
+                log(`Error Type: ${error.name}`, 'error');
+                if (error.stack) {
+                    log(`Stack: ${error.stack}`, 'error');
+                }
+            }
+        }
+
+        // Test Pi authentication with timeout
+        async function testPiAuth() {
+            log('Testing Pi authentication...');
+            
+            // Check if Pi SDK is available
+            if (typeof Pi === 'undefined') {
+                log('Pi SDK not loaded!', 'error');
+                return;
+            }
+            
+            log('Pi SDK is loaded', 'success');
+            
+            try {
+                // Initialize Pi SDK
+                log('Initializing Pi SDK...');
+                Pi.init({ version: "2.0" });
+                log('Pi SDK initialized', 'success');
+                
+                // Authenticate with timeout
+                log('Starting authentication (15 second timeout)...');
+                
+                const authPromise = Pi.authenticate(['username', 'payments', 'wallet_address'], {
+                    onIncompletePaymentFound: (payment) => {
+                        log(`Incomplete payment found: ${JSON.stringify(payment)}`);
+                    }
+                });
+                
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Authentication timeout after 15 seconds')), 15000);
+                });
+                
+                // Race between auth and timeout
+                const auth = await Promise.race([authPromise, timeoutPromise]);
+                
+                log('Authentication successful!', 'success');
+                log(`User: ${JSON.stringify(auth.user)}`);
+                log(`Access Token: ${auth.accessToken ? 'Present' : 'Missing'}`);
+                
+                // Test backend call
+                log('Testing backend Pi login...');
+                const response = await fetch('https://meditation.pihappy.me/api/auth/pi-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        piUserId: auth.user.uid,
+                        piUsername: auth.user.username,
+                        accessToken: auth.accessToken,
+                        authMethod: 'pi'
+                    })
+                });
+                
+                log(`Backend Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                const data = await response.json();
+                log(`Backend Data: ${JSON.stringify(data)}`);
+                
+            } catch (error) {
+                log(`Pi Auth Error: ${error.message}`, 'error');
+                log(`Error Type: ${error.name}`, 'error');
+                if (error.code) {
+                    log(`Error Code: ${error.code}`, 'error');
+                }
+                if (error.stack) {
+                    log(`Stack: ${error.stack}`, 'error');
+                }
+                
+                // Additional troubleshooting info
+                if (error.message.includes('timeout')) {
+                    log('TROUBLESHOOTING: Authentication popup may be blocked or not appearing', 'error');
+                    log('Try: Close Pi Browser completely and reopen', 'error');
+                    log('Try: Clear Pi Browser cache and cookies', 'error');
+                }
+            }
+        }
+
+        // Check Pi environment on load
+        window.addEventListener('load', () => {
+            log('Page loaded');
+            log(`User Agent: ${navigator.userAgent}`);
+            log(`Pi SDK Available: ${typeof Pi !== 'undefined' ? 'Yes' : 'No'}`);
+            log(`Window.Pi: ${typeof window.Pi !== 'undefined' ? 'Yes' : 'No'}`);
+        });
+    </script>
+    
+    <!-- Include Pi SDK -->
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+</body>
+</html>

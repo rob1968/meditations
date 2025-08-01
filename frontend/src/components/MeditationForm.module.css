@@ -1,0 +1,252 @@
+/* MeditationForm Component - Mobile First */
+.formCard {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  display: block;
+  animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.subtitle {
+  color: #6b7280;
+  font-size: 16px;
+  font-weight: 400;
+  margin: 0;
+}
+
+.form {
+  width: 100%;
+}
+
+.meditationTypes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.typeButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  min-height: 48px;
+  justify-content: center;
+}
+
+.typeIcon {
+  font-size: 16px;
+}
+
+.durationContainer {
+  position: relative;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.durationSlider {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #e5e7eb 0%, #667eea 0%, #667eea 100%, #e5e7eb 100%);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.durationSlider::-webkit-slider-thumb {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.durationSlider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.durationSlider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.durationSlider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.durationLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.durationLabel {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.generateButton {
+  margin-top: 8px;
+}
+
+.loading {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+/* Tablet and up */
+@media (min-width: 768px) {
+  .formCard {
+    max-width: 600px;
+  }
+  
+  .header {
+    margin-bottom: 40px;
+  }
+  
+  .icon {
+    font-size: 56px;
+  }
+  
+  .title {
+    font-size: 32px;
+  }
+  
+  .subtitle {
+    font-size: 18px;
+  }
+  
+  .meditationTypes {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  
+  .typeButton {
+    padding: 14px 18px;
+    font-size: 15px;
+    min-height: 52px;
+  }
+  
+  .durationSlider {
+    height: 10px;
+  }
+  
+  .durationSlider::-webkit-slider-thumb {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .durationSlider::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .durationLabel {
+    font-size: 13px;
+  }
+  
+  .formRow {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .formCard {
+    max-width: 700px;
+  }
+  
+  .title {
+    font-size: 36px;
+  }
+  
+  .meditationTypes {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 18px;
+  }
+  
+  .typeButton {
+    padding: 16px 20px;
+    font-size: 16px;
+    min-height: 56px;
+  }
+  
+  .durationSlider {
+    height: 12px;
+  }
+  
+  .durationSlider::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .durationSlider::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .durationLabel {
+    font-size: 14px;
+  }
+  
+  .formRow {
+    gap: 24px;
+  }
+}
