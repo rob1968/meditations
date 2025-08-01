@@ -713,17 +713,15 @@ const App = () => {
   // Initialize Pi authentication and check for existing user session
   useEffect(() => {
     const initializeApp = async () => {
-      // Check if we're in Pi Browser environment
-      const piDetected = isPiBrowser();
-      setIsPiEnvironment(piDetected);
+      // Always attempt to initialize Pi authentication
+      setIsPiEnvironment(false); // Pi browser detection disabled
       
-      if (piDetected) {
-        console.log('Pi Browser detected - initializing Pi authentication service...');
-        try {
-          const initialized = await piAuthService.initialize();
-          setPiAuthInitialized(initialized);
-          
-          if (initialized) {
+      console.log('Initializing Pi authentication service...');
+      try {
+        const initialized = await piAuthService.initialize();
+        setPiAuthInitialized(initialized);
+        
+        if (initialized) {
             console.log('Pi authentication service initialized successfully');
             
             // Check if user was previously authenticated with Pi
@@ -752,7 +750,6 @@ const App = () => {
           console.error('Error initializing Pi authentication:', error);
           setPiAuthInitialized(false);
         }
-      }
       
       // Check for existing traditional user session
       const storedUser = localStorage.getItem('user');

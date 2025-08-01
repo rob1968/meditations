@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl } from '../config/api';
+import PiPayment from './PiPayment';
 
 const Credits = ({ user }) => {
   const [credits, setCredits] = useState(null);
   const [creditHistory, setCreditHistory] = useState([]);
   const [elevenlabsStats, setElevenlabsStats] = useState(null);
   const [showCreditHistory, setShowCreditHistory] = useState(false);
+  const [showPiPayment, setShowPiPayment] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation();
 
@@ -100,6 +102,21 @@ const Credits = ({ user }) => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  // Handle Pi payment completion
+  const handlePaymentComplete = (newCreditBalance) => {
+    // Update credits in state
+    setCredits(prevCredits => ({
+      ...prevCredits,
+      credits: newCreditBalance
+    }));
+    
+    // Close payment dialog
+    setShowPiPayment(false);
+    
+    // Show success message
+    alert(t('paymentSuccess', 'Payment successful! Credits have been added to your account.'));
+  };
+
   if (isLoading) {
     return (
       <div className="credits-section">
@@ -116,8 +133,9 @@ const Credits = ({ user }) => {
         <h3>💎 {t('credits', 'Credits')}</h3>
         <button 
           className="credits-purchase-btn"
-          onClick={() => alert(t('paymentComingSoon', 'Payment system coming soon!'))}
+          onClick={() => setShowPiPayment(true)}
         >
+          <span style={{ fontSize: '16px', marginRight: '8px' }}>π</span>
           {t('buyCredits', 'Buy Credits')}
         </button>
       </div>
@@ -265,6 +283,15 @@ const Credits = ({ user }) => {
             </div>
           )}
         </div>
+      )}
+      
+      {/* Pi Payment Modal */}
+      {showPiPayment && (
+        <PiPayment
+          user={user}
+          onPaymentComplete={handlePaymentComplete}
+          onClose={() => setShowPiPayment(false)}
+        />
       )}
     </div>
   );

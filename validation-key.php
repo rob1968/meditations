@@ -4,7 +4,7 @@ header('Content-Type: text/plain');
 header('Cache-Control: public, max-age=3600');
 
 // Read the validation key from the .env file or use the static value
-$validation_key = 'e9ab4e70062f0f03a03f2e7be0d6f536690d28a03ccdc86892107e131516eaec58ae98d059f7f9f81d2fd956e18ba2945562bea7f01e711d1743e45120baf9f7';
+$validation_key = '45e6320f7d680a58948a62eb150ed2687d390fb11b8e986d9710e28282467ee96ae00d97e546116eccd85a0c0dc5cf21e810a4291206a4729f7c67ace71f57ac';
 
 echo $validation_key;
 ?>

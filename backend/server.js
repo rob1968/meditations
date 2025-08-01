@@ -18,6 +18,8 @@ const communityRoute = require('./routes/community');
 const notificationsRoute = require('./routes/notifications');
 const journalRoute = require('./routes/journal');
 const addictionsRoute = require('./routes/addictions');
+const piPaymentsRoute = require('./routes/piPayments');
+const piPaymentService = require('./services/piPaymentService');
 const app = express();
 
 // Create a write stream (in append mode) for logging
@@ -73,6 +75,7 @@ app.use('/api/community', communityRoute);
 app.use('/api/notifications', notificationsRoute);
 app.use('/api/journal', journalRoute);
 app.use('/api/addictions', addictionsRoute);
+app.use('/api/pi-payments', piPaymentsRoute);
 
 // Add a route for fetching voices
 app.use('/api/voices', meditationRoute);
@@ -83,8 +86,18 @@ app.use('/api/google-tts-info', googleTTSInfoRoute);
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-}).then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.log("❌ MongoDB connection error:", err));
+}).then(() => {
+  console.log("✅ MongoDB connected");
+  
+  // Initialize Pi Payment Service after MongoDB connection
+  piPaymentService.initialize().then(initialized => {
+    if (initialized) {
+      console.log("✅ Pi Payment Service initialized");
+    } else {
+      console.log("⚠️  Pi Payment Service initialization failed - check configuration");
+    }
+  });
+}).catch(err => console.log("❌ MongoDB connection error:", err));
 
 const PORT = process.env.PORT || 5002;
 const HOST = process.env.HOST || '0.0.0.0'; // Listen on all interfaces

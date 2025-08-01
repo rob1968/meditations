@@ -30,13 +30,13 @@ const Auth = ({ onLogin }) => {
   // Check Pi Browser and initialize Pi authentication on component mount
   useEffect(() => {
     const initializePiAuth = async () => {
-      if (isPiBrowser()) {
-        console.log('Pi Browser detected, initializing Pi authentication...');
-        setShowPiAuth(true);
-        
-        try {
-          const initialized = await piAuthService.initialize();
-          if (initialized) {
+      // Always attempt Pi authentication initialization
+      console.log('Initializing Pi authentication...');
+      setShowPiAuth(true);
+      
+      try {
+        const initialized = await piAuthService.initialize();
+        if (initialized) {
             const status = piAuthService.getAuthStatus();
             setPiAuthStatus(status);
             console.log('Pi authentication service initialized:', status);
@@ -48,10 +48,6 @@ const Auth = ({ onLogin }) => {
           console.error('Error initializing Pi authentication:', error);
           setShowPiAuth(false);
         }
-      } else {
-        console.log('Not in Pi Browser, using traditional authentication');
-        setShowPiAuth(false);
-      }
     };
 
     initializePiAuth();
@@ -250,7 +246,7 @@ const Auth = ({ onLogin }) => {
                 borderRadius: '4px'
               }}>
                 <p><strong>[Debug Info - Pi Auth]</strong></p>
-                <p>Pi Browser: {isPiBrowser() ? 'Yes' : 'No'}</p>
+                <p>Pi Browser: Deprecated (always No)</p>
                 <p>SDK Loaded: {piAuthStatus?.isSDKAvailable ? 'Yes' : 'No'}</p>
                 <p>Service Initialized: {piAuthStatus?.isInitialized ? 'Yes' : 'No'}</p>
                 <p>Authentication Available: {piAuthStatus?.isAvailable ? 'Yes' : 'No'}</p>
@@ -435,7 +431,7 @@ const Auth = ({ onLogin }) => {
               </button>
             </p>
             
-            {isPiBrowser() && (
+            {showPiAuth && (
               <div className="pi-auth-option">
                 <hr />
                 <p>{t('piAvailable', 'Pi Network authentication is available')}</p>

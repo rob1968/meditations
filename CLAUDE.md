@@ -93,3 +93,13 @@ cd frontend && npm install && npm start   # Frontend only
    - **Sentence-Level Pacing**: Extra pauses added after each sentence for natural flow
    - **Professional Language**: Warm, nurturing guidance with specialized meditation terminology
    - **Automatic Fallback**: Local templates also follow professional coach style with integrated pauses
+
+8. **Pi Network Payment Integration**:
+   - **Backend SDK**: Uses official `pi-backend@0.1.3` and `@stellar/stellar-sdk` for blockchain payments
+   - **Payment Service**: `/backend/services/piPaymentService.js` handles Pi Network payment lifecycle
+   - **Payment API**: `/api/pi-payments/*` endpoints for create, submit, complete, cancel operations
+   - **Frontend Component**: `PiPayment.jsx` provides user interface for credit purchases
+   - **Credit Packages**: Multiple credit packages (10, 25, 50, 100) with Pi pricing
+   - **Blockchain Integration**: Payments processed through Pi Network's Stellar-based blockchain
+   - **Configuration**: Requires `PI_WALLET_PRIVATE_SEED` environment variable (starts with 'S')
+   - **Payment Flow**: Create → Submit to blockchain → Complete → Add credits to user account

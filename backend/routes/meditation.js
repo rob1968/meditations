@@ -251,11 +251,70 @@ router.post('/', upload.single('customBackground'), async (req, res) => {
   console.log('req.file:', req.file);
   console.log('=====================================');
   
-  const { text, voiceId, background, language, audioLanguage, meditationType, userId, useBackgroundMusic, voiceProvider = 'elevenlabs', speechTempo = 0.75, saveBackground, customName, savedBackgroundId, savedBackgroundUserId, savedBackgroundFilename } = req.body;
+  let { text, voiceId, background, language, audioLanguage, meditationType, userId, useBackgroundMusic, voiceProvider = 'elevenlabs', speechTempo = 0.75, saveBackground, customName, savedBackgroundId, savedBackgroundUserId, savedBackgroundFilename } = req.body;
   const apiKey = process.env.ELEVEN_LABS_API_KEY;
   
   // Debug log to verify tempo slider value
   console.log(`🎵 TEMPO CONTROL: speechTempo received = ${speechTempo} (type: ${typeof speechTempo}), voiceProvider = ${voiceProvider}`);
+
+  // Generate text if not provided
+  if (!text || text.trim() === '') {
+    console.log('No text provided, generating AI text...');
+    const { generateMeditation } = require('../templates/meditationTemplates');
+    
+    try {
+      // Try templates first
+      const generatedText = generateMeditation(meditationType || 'sleep', 5, language);
+      
+      if (generatedText) {
+        text = generatedText;
+        console.log(`Generated meditation text using templates: ${meditationType} in ${language}`);
+      } else {
+        // Fallback to Claude API
+        const claudeApiKey = process.env.ANTHROPIC_API_KEY;
+        
+        if (!claudeApiKey) {
+          throw new Error('No text provided and Claude API key is not configured for text generation');
+        }
+
+        console.log(`Template generation failed, using Claude API fallback for: ${meditationType} in ${language}`);
+        
+        // Initialize Claude client as fallback
+        const Anthropic = require('@anthropic-ai/sdk');
+        const anthropic = new Anthropic({
+          apiKey: claudeApiKey,
+        });
+
+        const prompts = {
+          en: {
+            sleep: `Create a calming sleep meditation script for someone who wants to fall asleep peacefully. Make it warm, nurturing, and about 5 minutes when spoken slowly. Include progressive relaxation, breathing exercises, and peaceful visualizations. Use a gentle, soothing tone throughout.`
+          }
+        };
+
+        const prompt = prompts[language]?.[meditationType] || prompts.en.sleep;
+
+        const response = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 4000,
+          temperature: 0.7,
+          messages: [
+            {
+              role: 'user',
+              content: `You are a meditation expert. ${prompt}
+
+CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-commentary about length limitations.`
+            }
+          ]
+        });
+
+        text = response.content[0].text.trim();
+        console.log(`Generated meditation text using Claude API: ${meditationType} in ${language}`);
+      }
+    } catch (error) {
+      console.error('Error generating meditation text:', error.message);
+      throw new Error('Failed to generate meditation text. Please provide text or check API configuration.');
+    }
+  }
 
   // Map speechTempo (0.75-1.10) to ElevenLabs speed range (0.7-1.2)
   const mapToElevenLabsSpeed = (tempo) => {

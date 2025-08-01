@@ -1,8 +1,6 @@
 <?php
 // Simple PHP proxy for API requests to avoid mixed content issues
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+// Don't set CORS headers here - let the backend handle them
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -15,7 +13,7 @@ $apiPath = str_replace('/api.php', '', $apiPath);
 $apiPath = ltrim($apiPath, '/');
 
 // Build the backend URL
-$backendUrl = 'http://127.0.0.1:5002/' . $apiPath;
+$backendUrl = 'http://127.0.0.1:5003/' . $apiPath;
 
 // Get the request method and body
 $method = $_SERVER['REQUEST_METHOD'];
