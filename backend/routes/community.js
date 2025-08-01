@@ -142,7 +142,8 @@ const getNotificationTexts = (language, type, meditationType) => {
     }
   };
   
-  return texts[language] || texts.en;
+  const languageTexts = texts[language] || texts.en;
+  return languageTexts[type] || languageTexts.approved;
 };
 
 // Configure multer for file uploads

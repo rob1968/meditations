@@ -4,8 +4,6 @@
   margin: 0 auto;
   padding: 20px;
   padding-bottom: calc(80px + var(--space-lg)); /* Space for bottom navigation */
-  max-height: calc(100vh - 160px); /* Account for header and bottom nav */
-  overflow-y: auto;
 }
 
 .wizard-header {

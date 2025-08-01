@@ -7,43 +7,7 @@
   z-index: 2;
 }
 
-.languageSelector {
-  position: absolute;
-  top: -60px;
-  right: 0;
-  min-width: 200px;
-  z-index: 10;
-}
-
-.languageSelector .field {
-  margin-bottom: 0;
-}
-
-.languageSelector .label {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 12px;
-  margin-bottom: 6px;
-}
-
-.languageSelector select {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 14px;
-  padding: 8px 12px;
-  min-height: auto;
-}
-
-.languageSelector select:focus {
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
-}
-
-.languageSelector option {
-  background: #667eea;
-  color: white;
-}
+/* Language selector removed - moved to profile page */
 
 .error {
   margin-top: 16px;
@@ -63,19 +27,6 @@
     max-width: 600px;
   }
   
-  .languageSelector {
-    top: -70px;
-    min-width: 220px;
-  }
-  
-  .languageSelector .label {
-    font-size: 13px;
-  }
-  
-  .languageSelector select {
-    font-size: 15px;
-    padding: 10px 16px;
-  }
   
   .error {
     margin-top: 20px;
@@ -89,10 +40,6 @@
     max-width: 700px;
   }
   
-  .languageSelector {
-    top: -80px;
-    min-width: 240px;
-  }
   
   .error {
     margin-top: 24px;
