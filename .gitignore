@@ -17,6 +17,7 @@ dist/
 */dist/
 
 # Logs
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -44,80 +45,39 @@ tmp/
 *.tmp
 *.temp
 
-# Generated files
-public/meditation_result.mp3
-*.mp3.tmp
-
-# Package manager files
-yarn.lock
-pnpm-lock.yaml
-
-# Debug
-.npm/
-
-# Misc
+# Cache
 .cache/
 .parcel-cache/
-.next/
-.nuxt/
-.docusaurus/
-.serverless/
-.fusebox/
-.dynamodb/
-.tern-port
-.vscode-test/
-.yarn/
 
-# Python (if added later)
+# Backend specific
+backend/access.log
+backend/routes/error.log
+backend/temp/
+backend/public/
+
+# Frontend specific
+frontend/.cache/
+frontend/build/
+
+# Audio files (generated)
+assets/meditations/
+assets/audio/
+
+# Custom backgrounds
+backend/custom-backgrounds/
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
 
-# Database
-*.sqlite
-*.sqlite3
-*.db
-
-# Backup files
-*.bak
-*.backup
+# Misc
+*.swp
+*.swo
 *~
-
-# SSL Certificates
-*.pem
-*.key
-*.crt
-
-# AWS
-.aws/
-
-# Azure
-.azure/
-
-# Google Cloud credentials
-*.json
-!package*.json
-pihappy-*.json
-
-# Test files
-test-*.js
-**/test-*.js
-
-# Access logs
-access.log
-error.log
-
-# Generated audio files (large)
-assets/meditations/*.mp3
-backend/user-meditations/*/
-backend/custom-backgrounds/*/
-
-# Deployment files (for security)
-ecosystem.config.js
-deploy*.sh
-build-production.sh
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.iml
