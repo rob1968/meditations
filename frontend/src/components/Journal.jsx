@@ -55,7 +55,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
   
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState('calendar'); // 'write', 'browse', 'voice', 'calendar', 'addictions'
+  const [activeTab, setActiveTab] = useState('calendar'); // 'calendar', 'browse', 'voice', 'addictions'
   
   // Ref to track if calendar has been initialized to prevent re-loading today's entry
   const calendarInitialized = useRef(false);
@@ -132,37 +132,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     }
   }, [user, searchTags, searchText]);
 
-  // Separate useEffect for auto-loading today's entry data when available
-  useEffect(() => {
-    if (!user || justSaved || activeTab !== 'write') return;
-    
-    if (hasTodaysEntry && todaysEntry) {
-      // Auto-load today's existing entry data
-      const content = todaysEntry.content || '';
-      setFormData({
-        title: todaysEntry.title,
-        content: content,
-        mood: todaysEntry.mood || '',
-        tags: todaysEntry.tags || [],
-        date: todaysEntry.date ? new Date(todaysEntry.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-      });
-      setOriginalContent(content); // Track original content
-      setEditingEntry(todaysEntry);
-      setShowCreateForm(true);
-    } else if (!hasTodaysEntry) {
-      // Auto-setup for new entry if no existing entry
-      setFormData({
-        title: '',
-        content: '',
-        mood: '',
-        tags: [],
-        date: new Date().toISOString().split('T')[0]
-      });
-      setOriginalContent(''); // Reset original content for new entry
-      setEditingEntry(null);
-      setShowCreateForm(true);
-    }
-  }, [user, hasTodaysEntry, todaysEntry, activeTab]);
 
   // Function to load today's entry for calendar
   const loadTodayForCalendar = async () => {
@@ -1537,11 +1506,11 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       {/* Tab Navigation */}
       <div className="journal-tabs">
         <button 
-          className={`tab ${activeTab === 'write' ? 'active' : ''}`}
-          onClick={() => setActiveTab('write')}
+          className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
+          onClick={() => setActiveTab('calendar')}
         >
-          <span className="tab-icon">✏️</span>
-          <span className="tab-label">{t('write', 'Schrijven')}</span>
+          <span className="tab-icon">📅</span>
+          <span className="tab-label">{t('calendar', 'Kalender')}</span>
         </button>
         <button 
           className={`tab ${activeTab === 'browse' ? 'active' : ''}`}
@@ -1558,13 +1527,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
           <span className="tab-label">{t('audio', 'Audio')}</span>
         </button>
         <button 
-          className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
-          onClick={() => setActiveTab('calendar')}
-        >
-          <span className="tab-icon">📅</span>
-          <span className="tab-label">{t('calendar', 'Kalender')}</span>
-        </button>
-        <button 
           className={`tab ${activeTab === 'addictions' ? 'active' : ''}`}
           onClick={() => setActiveTab('addictions')}
         >
@@ -1575,104 +1537,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
       {/* Tab Content */}
       <div className="journal-tab-content">
-        {/* Write Tab */}
-        {activeTab === 'write' && (
-          <div className="write-tab-content">
-            {/* Quick Write Mode */}
-            <div className="quick-write-card">
-              <div className="card-header">
-                <h3>{t('quickWrite', 'Snel schrijven')}</h3>
-                <span className="today-date">{formatDate(new Date().toISOString().split('T')[0])}</span>
-              </div>
-              
-              {/* Quick mood selector */}
-              <div className="quick-mood-selector">
-                {moods.slice(0, 4).map(mood => (
-                  <button
-                    key={mood.value}
-                    type="button"
-                    className={`mood-quick-btn ${formData.mood === mood.value ? 'active' : ''}`}
-                    onClick={() => setFormData({...formData, mood: mood.value})}
-                    title={mood.label}
-                  >
-                    {mood.emoji}
-                  </button>
-                ))}
-                <button 
-                  className="mood-more-btn"
-                  onClick={() => setShowCreateForm(true)}
-                >
-                  +
-                </button>
-              </div>
-
-              {/* Quick write textarea */}
-              <textarea
-                value={formData.content}
-                onChange={(e) => setFormData({...formData, content: e.target.value})}
-                placeholder={t('quickWritePlaceholder', 'Wat houd je vandaag bezig? Begin hier met schrijven...')}
-                className="quick-write-textarea"
-                rows="6"
-                maxLength="5000"
-              />
-
-              {/* Quick actions */}
-              <div className="quick-actions">
-                <div className="writing-tools-quick">
-                  {audioSupported && recordingState === 'idle' && (
-                    <button
-                      type="button"
-                      className="voice-quick-btn"
-                      onClick={startRecording}
-                      title={t('voiceToText', 'Spraak naar tekst')}
-                    >
-                      🎤
-                    </button>
-                  )}
-                  <span className="word-count-quick">
-                    {countWords(formData.content)} {t('words', 'woorden')}
-                  </span>
-                </div>
-                <div className="save-actions">
-                  <button 
-                    className="save-quick-btn"
-                    onClick={handleSaveEntry}
-                    disabled={!formData.content.trim() || (editingEntry && !hasContentChanged())}
-                  >
-                    💾 {editingEntry ? t('update', 'Bijwerken') : t('save', 'Opslaan')}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Today's Entry Status */}
-            {hasTodaysEntry && (
-              <div className="todays-entry-status">
-                <div className="status-icon">✅</div>
-                <div className="status-content">
-                  <h4>{t('todaysEntryComplete', 'Vandaag al geschreven!')}</h4>
-                  <p>{t('entryLength', 'Lengte')}: {countWords(todaysEntry?.content || '')} {t('words', 'woorden')}</p>
-                  <button 
-                    className="edit-today-btn"
-                    onClick={() => {
-                      setFormData({
-                        title: todaysEntry.title,
-                        content: todaysEntry.content,
-                        mood: todaysEntry.mood || '',
-                        tags: todaysEntry.tags || [],
-                        date: todaysEntry.date ? new Date(todaysEntry.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-                      });
-                      setEditingEntry(todaysEntry);
-                      setShowCreateForm(true);
-                    }}
-                  >
-                    ✏️ {t('editEntry', 'Bewerken')}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Browse Tab */}
         {activeTab === 'browse' && (
@@ -1756,12 +1620,12 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                 <div className="empty-state">
                   <div className="empty-icon">📝</div>
                   <h3>{t('noEntries', 'Nog geen dagboek entries')}</h3>
-                  <p>{t('startWriting', 'Begin met schrijven in de "Schrijven" tab')}</p>
+                  <p>{t('startWritingCalendar', 'Begin met schrijven in de "Kalender" tab')}</p>
                   <button 
                     className="start-writing-btn"
-                    onClick={() => setActiveTab('write')}
+                    onClick={() => setActiveTab('calendar')}
                   >
-                    ✏️ {t('startWriting', 'Begin met schrijven')}
+                    📅 {t('goToCalendar', 'Ga naar Kalender')}
                   </button>
                 </div>
               ) : (

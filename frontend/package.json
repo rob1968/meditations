@@ -6,6 +6,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "build:production": "REACT_APP_ENV=production react-scripts build",
+    "build:deploy": "react-scripts build && cp -r build/* ../",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

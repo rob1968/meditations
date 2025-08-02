@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl } from '../config/api';
-import PiPayment from './PiPayment';
+import PiPaymentNew from './PiPaymentNew';
 
 const Credits = ({ user }) => {
   const [credits, setCredits] = useState(null);
@@ -287,7 +287,7 @@ const Credits = ({ user }) => {
       
       {/* Pi Payment Modal */}
       {showPiPayment && (
-        <PiPayment
+        <PiPaymentNew
           user={user}
           onPaymentComplete={handlePaymentComplete}
           onClose={() => setShowPiPayment(false)}

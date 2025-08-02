@@ -713,72 +713,81 @@ const App = () => {
   // Initialize Pi authentication and check for existing user session
   useEffect(() => {
     const initializeApp = async () => {
-      // Always attempt to initialize Pi authentication
+      console.log('[App] Starting app initialization...');
+      
+      // First, check for existing traditional user session before Pi authentication
+      const storedUser = localStorage.getItem('user');
+      const authMethod = localStorage.getItem('authMethod');
+      
+      if (storedUser && storedUser !== 'undefined' && storedUser !== 'null') {
+        try {
+          const userData = JSON.parse(storedUser);
+          
+          // If user is already logged in (any method), don't try auto-authentication
+          if (userData && userData.id) {
+            console.log('[App] User already logged in:', userData.username, 'via', authMethod || 'traditional');
+            setUser(userData);
+            
+            if (userData.preferredLanguage) {
+              i18n.changeLanguage(userData.preferredLanguage);
+              localStorage.setItem('selectedLanguage', userData.preferredLanguage);
+            }
+            return; // Exit early - user is already authenticated
+          }
+        } catch (error) {
+          console.error('[App] Error parsing stored user:', error);
+          localStorage.removeItem('user');
+          localStorage.removeItem('authMethod');
+        }
+      }
+      
+      // Always attempt to initialize Pi authentication for future use
       setIsPiEnvironment(false); // Pi browser detection disabled
       
-      console.log('Initializing Pi authentication service...');
+      console.log('[App] Initializing Pi authentication service...');
       try {
         const initialized = await piAuthService.initialize();
         setPiAuthInitialized(initialized);
         
         if (initialized) {
-            console.log('Pi authentication service initialized successfully');
-            
-            // Check if user was previously authenticated with Pi
-            const authMethod = localStorage.getItem('authMethod');
-            if (authMethod === 'pi') {
-              console.log('Previous Pi authentication detected - attempting auto-login...');
-              try {
-                const result = await piAuthService.autoAuthenticate();
-                if (result.success) {
-                  console.log('Pi auto-authentication successful');
-                  setUser(result.user);
-                  if (result.user.preferredLanguage) {
-                    i18n.changeLanguage(result.user.preferredLanguage);
-                    localStorage.setItem('selectedLanguage', result.user.preferredLanguage);
-                  }
-                  return; // Exit early since we've authenticated
-                }
-              } catch (error) {
-                console.log('Pi auto-authentication failed:', error.message);
-                // Clear Pi auth data and fall through to traditional auth check
-                localStorage.removeItem('authMethod');
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error initializing Pi authentication:', error);
-          setPiAuthInitialized(false);
-        }
-      
-      // Check for existing traditional user session
-      const storedUser = localStorage.getItem('user');
-      if (storedUser && storedUser !== 'undefined' && storedUser !== 'null') {
-        try {
-          const userData = JSON.parse(storedUser);
-          const authMethod = localStorage.getItem('authMethod');
+          console.log('[App] Pi authentication service initialized successfully');
           
-          // Only auto-login traditional users, Pi users are handled above
-          if (authMethod !== 'pi') {
-            setUser(userData);
-            
-            if (userData && userData.preferredLanguage) {
-              i18n.changeLanguage(userData.preferredLanguage);
-              localStorage.setItem('selectedLanguage', userData.preferredLanguage);
+          // Only attempt auto-login if user was previously authenticated with Pi
+          // and no current session exists
+          if (authMethod === 'pi') {
+            console.log('[App] Previous Pi authentication detected - attempting auto-login...');
+            try {
+              const result = await piAuthService.autoAuthenticate();
+              if (result.success) {
+                console.log('[App] Pi auto-authentication successful');
+                setUser(result.user);
+                if (result.user.preferredLanguage) {
+                  i18n.changeLanguage(result.user.preferredLanguage);
+                  localStorage.setItem('selectedLanguage', result.user.preferredLanguage);
+                }
+                return; // Exit early since we've authenticated
+              }
+            } catch (error) {
+              console.log('[App] Pi auto-authentication failed:', error.message);
+              // Clear Pi auth data and continue
+              localStorage.removeItem('authMethod');
+              localStorage.removeItem('user');
             }
           }
-        } catch (error) {
-          console.error('Error parsing stored user:', error);
-          localStorage.removeItem('user');
-          localStorage.removeItem('authMethod');
         }
-      } else {
-        // Fallback: Load saved language preference from localStorage if no user preferred language
-        const savedLanguage = localStorage.getItem('selectedLanguage');
-        if (savedLanguage) {
-          i18n.changeLanguage(savedLanguage);
-        }
+      } catch (error) {
+        console.error('[App] Error initializing Pi authentication:', error);
+        setPiAuthInitialized(false);
       }
+      
+      // Fallback: Load saved language preference from localStorage if no user preferred language
+      const savedLanguage = localStorage.getItem('selectedLanguage');
+      if (savedLanguage) {
+        console.log('[App] Loading saved language preference:', savedLanguage);
+        i18n.changeLanguage(savedLanguage);
+      }
+      
+      console.log('[App] App initialization completed');
     };
     
     initializeApp();
@@ -835,21 +844,39 @@ const App = () => {
   };
 
   const handleLogout = () => {
+    console.log('[App] Starting logout process...');
+    
     // Check if user was authenticated with Pi and logout from Pi service
     const authMethod = localStorage.getItem('authMethod');
-    if (authMethod === 'pi' && piAuthService.isAuthenticated()) {
-      console.log('Logging out Pi user...');
-      piAuthService.logout();
+    if (authMethod === 'pi') {
+      console.log('[App] Logging out Pi user...');
+      try {
+        piAuthService.logout();
+        console.log('[App] Pi service logout completed');
+      } catch (error) {
+        console.error('[App] Error during Pi logout:', error);
+      }
     }
     
     // Clear all authentication data
     localStorage.removeItem('user');
     localStorage.removeItem('authToken');
     localStorage.removeItem('authMethod');
+    
+    // Clear Pi-specific auto-login flags to prevent immediate re-authentication
+    localStorage.setItem('piLogoutIntentional', 'true');
+    
+    // Reset all state
     setUser(null);
     setUserCredits(null);
-    handleTabChange('create');
-    console.log('User logged out');
+    setActiveTab('create');
+    
+    // Force page reload to ensure clean state (especially for Pi Network)
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+    
+    console.log('[App] User logged out and page will reload');
     // Note: We keep the language preference even after logout
   };
 

@@ -83,18 +83,28 @@ class PiAuthService {
       this.isAuthenticating = true;
       console.log('[PiAuth Service] Starting Pi authentication...');
 
-      // Use the working scopes from the example: payments and username
-      const scopes = ['payments', 'username'];
+      // Use the working scopes from the example: payments, username, and wallet_address
+      const scopes = ['payments', 'username', 'wallet_address'];
       console.log('[PiAuth Service] Using scopes:', scopes);
 
-      // Authenticate with Pi Network with reasonable timeout
-      const authTimeout = 30000; // 30 seconds - give more time like original
+      // Authenticate with Pi Network with increased timeout
+      const authTimeout = 60000; // 60 seconds - increase timeout for slower connections
+      console.log(`[PiAuth Service] Starting authentication with ${authTimeout/1000}s timeout...`);
+      
+      const authStartTime = Date.now();
       const authPromise = authenticateWithPi(scopes);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Pi authentication timeout after 30 seconds')), authTimeout)
+        setTimeout(() => {
+          const elapsed = Date.now() - authStartTime;
+          console.error(`[PiAuth Service] Authentication timed out after ${elapsed}ms`);
+          reject(new Error(`Pi authentication timeout after ${authTimeout/1000} seconds`));
+        }, authTimeout)
       );
 
       const piAuth = await Promise.race([authPromise, timeoutPromise]);
+      
+      const authDuration = Date.now() - authStartTime;
+      console.log(`[PiAuth Service] Authentication completed in ${authDuration}ms`);
       
       console.log('Pi authentication successful:', {
         hasUser: !!piAuth.user,
@@ -180,7 +190,11 @@ class PiAuthService {
       
       // Provide more specific error messages based on error type
       if (error.message.includes('timeout')) {
-        throw new Error('Pi authentication timed out. Please try again.');
+        console.error('[PiAuth Service] Timeout error details:', {
+          message: error.message,
+          stack: error.stack
+        });
+        throw new Error('Pi authentication timed out. Please try again. If the problem persists, check your internet connection.');
       } else if (error.message.includes('user cancelled') || error.message.includes('cancelled')) {
         throw new Error('Pi authentication was cancelled by user.');
       } else if (error.message.includes('network') || error.message.includes('Network')) {
@@ -198,8 +212,8 @@ class PiAuthService {
     try {
       console.log('Authenticating Pi user with backend...');
 
-      // Create axios request with timeout
-      const backendTimeout = 15000; // 15 seconds
+      // Create axios request with increased timeout
+      const backendTimeout = 30000; // 30 seconds - increase for slower backend responses
       const requestConfig = {
         timeout: backendTimeout,
         headers: {

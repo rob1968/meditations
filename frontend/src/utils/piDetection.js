@@ -74,7 +74,7 @@ export const initializePiSDK = () => {
 };
 
 // Safe Pi SDK authentication wrapper following working example pattern
-export const authenticateWithPi = (scopes = ['payments', 'username']) => {
+export const authenticateWithPi = (scopes = ['payments', 'username', 'wallet_address']) => {
   return new Promise(async (resolve, reject) => {
     // Ensure Pi SDK is loaded before attempting to use it
     if (typeof window.Pi === 'undefined') {
@@ -99,14 +99,30 @@ export const authenticateWithPi = (scopes = ['payments', 'username']) => {
       }
       
       // Authenticate the user following the working example pattern
-      console.log('[Pi Auth] Attempting Pi.authenticate...');
+      console.log('[Pi Auth] Attempting Pi.authenticate...', {
+        timestamp: new Date().toISOString(),
+        scopes: scopes
+      });
+      
+      const authStartTime = Date.now();
       window.Pi.authenticate(scopes, onIncompletePaymentFound)
         .then(auth => {
-          console.log('[Pi Auth] Pi Authentication successful (frontend):', auth);
+          const duration = Date.now() - authStartTime;
+          console.log('[Pi Auth] Pi Authentication successful (frontend):', {
+            duration: `${duration}ms`,
+            hasAuth: !!auth,
+            hasUser: !!auth?.user,
+            hasAccessToken: !!auth?.accessToken
+          });
           resolve(auth);
         })
         .catch(err => {
-          console.error('[Pi Auth] Pi.authenticate call failed:', err);
+          const duration = Date.now() - authStartTime;
+          console.error('[Pi Auth] Pi.authenticate call failed:', {
+            error: err,
+            duration: `${duration}ms`,
+            message: err.message || err
+          });
           reject(new Error(`Pi Authentication failed: ${err.message || err}`));
         });
     } catch (error) {

@@ -2,9 +2,36 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = false, onBackClick, unreadCount = 0, onInboxClick, onCreateClick }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
   const profileDropdownRef = useRef(null);
+
+  // Available UI languages
+  const uiLanguages = [
+    { value: 'en', label: '🇺🇸 English', flag: '🇺🇸' },
+    { value: 'nl', label: '🇳🇱 Nederlands', flag: '🇳🇱' },
+    { value: 'de', label: '🇩🇪 Deutsch', flag: '🇩🇪' },
+    { value: 'fr', label: '🇫🇷 Français', flag: '🇫🇷' },
+    { value: 'es', label: '🇪🇸 Español', flag: '🇪🇸' },
+    { value: 'it', label: '🇮🇹 Italiano', flag: '🇮🇹' },
+    { value: 'pt', label: '🇵🇹 Português', flag: '🇵🇹' },
+    { value: 'ru', label: '🇷🇺 Русский', flag: '🇷🇺' },
+    { value: 'zh', label: '🇨🇳 中文', flag: '🇨🇳' },
+    { value: 'ja', label: '🇯🇵 日本語', flag: '🇯🇵' },
+    { value: 'ko', label: '🇰🇷 한국어', flag: '🇰🇷' },
+    { value: 'hi', label: '🇮🇳 हिन्दी', flag: '🇮🇳' },
+    { value: 'ar', label: '🇸🇦 العربية', flag: '🇸🇦' }
+  ];
+
+  const currentLanguage = uiLanguages.find(lang => lang.value === i18n.language) || uiLanguages[0];
+
+  // Handle language change
+  const handleLanguageChange = (languageValue) => {
+    i18n.changeLanguage(languageValue);
+    localStorage.setItem('selectedLanguage', languageValue);
+    setLanguageOpen(false);
+  };
 
 
   // Close profile menu when clicking outside
@@ -12,6 +39,7 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
     const handleClickOutside = (event) => {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setProfileMenuOpen(false);
+        setLanguageOpen(false);
       }
     };
 
@@ -136,6 +164,39 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
                         </div>
                       </button>
                     ))}
+                  </div>
+                  
+                  {/* Language Selector Section */}
+                  <div className="profile-panel-language-section">
+                    <div className="panel-language-header">
+                      <span className="language-icon">🌐</span>
+                      <span>{t('selectUILanguage', 'UI Language')}</span>
+                    </div>
+                    <div className="panel-language-selector">
+                      <div 
+                        className={`panel-language-button ${languageOpen ? 'open' : ''}`} 
+                        onClick={() => setLanguageOpen(!languageOpen)}
+                      >
+                        <span>{currentLanguage.flag}</span>
+                        <span>{currentLanguage.label.split(' ')[1]}</span>
+                        <span className="language-arrow">▼</span>
+                      </div>
+                      {languageOpen && (
+                        <div className="panel-language-options">
+                          {uiLanguages.map(language => (
+                            <div 
+                              key={language.value}
+                              className={`panel-language-option ${i18n.language === language.value ? 'selected' : ''}`}
+                              onClick={() => handleLanguageChange(language.value)}
+                            >
+                              <span className="language-flag">{language.flag}</span>
+                              <span className="language-name">{language.label.split(' ')[1]}</span>
+                              {i18n.language === language.value && <span className="selected-check">✓</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </>

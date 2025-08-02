@@ -1,87 +1,55 @@
 /**
- * Pi Network Payment Routes
+ * Pi Network Payment Routes (Direct API Implementation)
  * 
- * Handles Pi Network payment operations:
- * - Create payments for meditation credits
- * - Submit payments to Pi blockchain
+ * Handles Pi Network payment operations without pi-backend package:
+ * - Approve payments for meditation credits
  * - Complete payments and update user credits
- * - Handle payment callbacks and webhooks
+ * - Direct communication with Pi Network API
  */
 
 const express = require('express');
 const router = express.Router();
+const fetch = require('node-fetch');
 const User = require('../models/User');
-const piPaymentService = require('../services/piPaymentService');
 
-// Create Pi payment for meditation credits
-router.post('/create', async (req, res) => {
-  try {
-    const { userId, amount, creditsAmount } = req.body;
-
-    // Validation
-    if (!userId || !amount || !creditsAmount) {
-      return res.status(400).json({
-        success: false,
-        error: 'userId, amount, and creditsAmount are required'
-      });
-    }
-
-    // Validate user exists
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    // Ensure user has Pi Network authentication
-    if (!user.piUserId || user.authMethod !== 'pi') {
-      return res.status(400).json({
-        success: false,
-        error: 'Pi Network authentication required for Pi payments'
-      });
-    }
-
-    // Check if Pi Payment Service is ready
-    if (!piPaymentService.isReady()) {
-      return res.status(503).json({
-        success: false,
-        error: 'Pi Payment Service not available'
-      });
-    }
-
-    console.log(`Creating Pi payment for Pi user ID: ${user.piUserId}, App user ID: ${userId}`);
-
-    // Create payment using Pi Network user ID (not app user ID)
-    const paymentResult = await piPaymentService.createMeditationPayment(
-      user.piUserId,  // Use Pi Network user ID instead of app user ID
-      amount,
-      {
-        creditsAmount: creditsAmount,
-        userEmail: user.email,
-        appUserId: userId,  // Store app user ID for reference
-        piUsername: user.piUsername,
-        timestamp: new Date().toISOString()
-      }
-    );
-
-    res.json({
-      success: true,
-      ...paymentResult
-    });
-
-  } catch (error) {
-    console.error('Error creating Pi payment:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+// Helper function to call Pi Network API
+async function callPiAPI(endpoint, method = 'GET', body = null) {
+  const apiKey = process.env.PI_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error('PI_API_KEY not configured');
   }
-});
 
-// Submit payment to Pi blockchain
-router.post('/submit', async (req, res) => {
+  const options = {
+    method: method,
+    headers: {
+      'Authorization': `Key ${apiKey}`,
+      'Content-Type': 'application/json',
+    }
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  try {
+    const response = await fetch(`https://api.minepi.com/v2/${endpoint}`, options);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error(`Pi API error for ${endpoint}:`, data);
+      throw new Error(data.error_message || `Pi API error: ${response.status}`);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error(`Error calling Pi API ${endpoint}:`, error);
+    throw error;
+  }
+}
+
+// Approve payment endpoint
+router.post('/approve', async (req, res) => {
   try {
     const { paymentId } = req.body;
 
@@ -92,22 +60,20 @@ router.post('/submit', async (req, res) => {
       });
     }
 
-    if (!piPaymentService.isReady()) {
-      return res.status(503).json({
-        success: false,
-        error: 'Pi Payment Service not available'
-      });
-    }
-
-    const submitResult = await piPaymentService.submitPayment(paymentId);
-
+    console.log(`Approving Pi payment: ${paymentId}`);
+    
+    // Call Pi API to approve payment
+    const result = await callPiAPI(`payments/${paymentId}/approve`, 'POST');
+    
+    console.log(`Payment ${paymentId} approved successfully`);
+    
     res.json({
       success: true,
-      ...submitResult
+      payment: result
     });
 
   } catch (error) {
-    console.error('Error submitting Pi payment:', error);
+    console.error('Error approving Pi payment:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -115,55 +81,76 @@ router.post('/submit', async (req, res) => {
   }
 });
 
-// Complete payment and add credits to user
+// Complete payment and add credits
 router.post('/complete', async (req, res) => {
   try {
     const { paymentId, txid, userId, creditsAmount } = req.body;
 
-    if (!paymentId || !txid || !userId || !creditsAmount) {
+    if (!paymentId || !txid) {
       return res.status(400).json({
         success: false,
-        error: 'paymentId, txid, userId, and creditsAmount are required'
+        error: 'paymentId and txid are required'
       });
     }
 
-    if (!piPaymentService.isReady()) {
-      return res.status(503).json({
-        success: false,
-        error: 'Pi Payment Service not available'
-      });
-    }
-
-    // Complete payment with Pi Network
-    const completeResult = await piPaymentService.completePayment(paymentId, txid);
-
-    if (completeResult.success) {
-      // Add credits to user account
-      const user = await User.findById(userId);
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: 'User not found'
-        });
+    console.log(`Completing Pi payment: ${paymentId} with txid: ${txid}`);
+    
+    // Call Pi API to complete payment
+    const result = await callPiAPI(`payments/${paymentId}/complete`, 'POST', { txid });
+    
+    console.log(`Payment ${paymentId} completed successfully`);
+    
+    // If userId and creditsAmount provided, add credits to user
+    if (userId && creditsAmount) {
+      try {
+        const user = await User.findById(userId);
+        if (user) {
+          // Add credits using the built-in method that also tracks transaction history
+          user.addCredits(parseInt(creditsAmount), 'purchase', `Pi Network payment - ${creditsAmount} credits (π${result.amount || 'N/A'})`);
+          await user.save();
+          
+          console.log(`Added ${creditsAmount} credits to user ${userId}. New balance: ${user.credits}`);
+          
+          return res.json({
+            success: true,
+            payment: result,
+            newCreditBalance: user.credits,
+            creditsAdded: creditsAmount
+          });
+        }
+      } catch (saveError) {
+        // Handle ParallelSaveError by retrying once
+        if (saveError.name === 'ParallelSaveError') {
+          console.log('ParallelSaveError detected, retrying...');
+          try {
+            const freshUser = await User.findById(userId);
+            if (freshUser) {
+              freshUser.addCredits(parseInt(creditsAmount), 'purchase', `Pi Network payment - ${creditsAmount} credits (π${result.amount || 'N/A'})`);
+              await freshUser.save();
+              
+              console.log(`Added ${creditsAmount} credits to user ${userId} (retry). New balance: ${freshUser.credits}`);
+              
+              return res.json({
+                success: true,
+                payment: result,
+                newCreditBalance: freshUser.credits,
+                creditsAdded: creditsAmount
+              });
+            }
+          } catch (retryError) {
+            console.error('Retry failed:', retryError);
+            throw retryError;
+          }
+        } else {
+          throw saveError;
+        }
       }
-
-      user.credits = (user.credits || 0) + parseInt(creditsAmount);
-      await user.save();
-
-      console.log(`Added ${creditsAmount} credits to user ${userId}. New balance: ${user.credits}`);
-
-      res.json({
-        success: true,
-        payment: completeResult.payment,
-        newCreditBalance: user.credits,
-        creditsAdded: creditsAmount
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        error: 'Failed to complete payment with Pi Network'
-      });
     }
+    
+    res.json({
+      success: true,
+      payment: result
+    });
 
   } catch (error) {
     console.error('Error completing Pi payment:', error);
@@ -178,19 +165,15 @@ router.post('/complete', async (req, res) => {
 router.get('/status/:paymentId', async (req, res) => {
   try {
     const { paymentId } = req.params;
-
-    if (!piPaymentService.isReady()) {
-      return res.status(503).json({
-        success: false,
-        error: 'Pi Payment Service not available'
-      });
-    }
-
-    const paymentResult = await piPaymentService.getPayment(paymentId);
-
+    
+    console.log(`Getting Pi payment status: ${paymentId}`);
+    
+    // Call Pi API to get payment status
+    const result = await callPiAPI(`payments/${paymentId}`);
+    
     res.json({
       success: true,
-      ...paymentResult
+      payment: result
     });
 
   } catch (error) {
@@ -202,60 +185,32 @@ router.get('/status/:paymentId', async (req, res) => {
   }
 });
 
-// Cancel payment
-router.post('/cancel', async (req, res) => {
-  try {
-    const { paymentId } = req.body;
-
-    if (!paymentId) {
-      return res.status(400).json({
-        success: false,
-        error: 'paymentId is required'
-      });
-    }
-
-    if (!piPaymentService.isReady()) {
-      return res.status(503).json({
-        success: false,
-        error: 'Pi Payment Service not available'
-      });
-    }
-
-    const cancelResult = await piPaymentService.cancelPayment(paymentId);
-
-    res.json({
-      success: true,
-      ...cancelResult
-    });
-
-  } catch (error) {
-    console.error('Error cancelling Pi payment:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
+// TEMPORARY: Handle old /create endpoint calls and redirect to new flow
+router.post('/create', async (req, res) => {
+  console.log('WARNING: Old /create endpoint called - returning redirect instructions');
+  
+  res.json({
+    success: false,
+    error: 'CACHE_ISSUE: Please refresh your browser completely. The payment system has been updated.',
+    action: 'refresh_browser',
+    instructions: 'Close Pi Browser completely and reopen the app to use the new payment system.'
+  });
 });
 
-// Get incomplete payments for recovery
-router.get('/incomplete', async (req, res) => {
+// Check Pi API configuration
+router.get('/check-config', async (req, res) => {
   try {
-    if (!piPaymentService.isReady()) {
-      return res.status(503).json({
-        success: false,
-        error: 'Pi Payment Service not available'
-      });
-    }
-
-    const incompleteResult = await piPaymentService.getIncompletePayments();
-
+    const apiKey = process.env.PI_API_KEY;
+    
     res.json({
       success: true,
-      ...incompleteResult
+      apiKeyConfigured: !!apiKey,
+      apiKeyLength: apiKey ? apiKey.length : 0,
+      sandboxMode: process.env.PI_SANDBOX_MODE === 'true'
     });
-
+    
   } catch (error) {
-    console.error('Error getting incomplete Pi payments:', error);
+    console.error('Error checking Pi config:', error);
     res.status(500).json({
       success: false,
       error: error.message

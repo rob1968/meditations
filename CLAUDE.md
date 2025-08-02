@@ -27,7 +27,7 @@ This is a full-stack meditation audio generation application that:
 - **Components**: 
   - `MeditationForm.jsx` - User input form
   - `AudioPlayer.jsx` - Audio playback interface
-- **API URL**: Hardcoded to `http://localhost:5003`
+- **API URL**: Uses relative URLs (`/api/`) - proxied through Plesk Nginx to backend on port 5002
 - **i18n**: Multi-language support via react-i18next
 
 ## Common Commands
@@ -72,7 +72,7 @@ cd frontend && npm install && npm start   # Frontend only
 
 1. **FFmpeg Path**: The FFmpeg executable path is Windows-specific and hardcoded. When deploying or running on different systems, update the path in `backend/routes/meditation.js`
 
-2. **API Endpoint**: Frontend expects backend at `http://localhost:5003`. Update in `frontend/src/MeditationForm.jsx` for production.
+2. **API Endpoint**: Frontend uses relative API URLs (`/api/`) which are proxied through Plesk Nginx configuration to backend on port 5002. Plesk "Additional nginx directives" must include proper proxy configuration.
 
 3. **Temp File Cleanup**: The application creates temporary audio files in `/temp`. Ensure proper cleanup mechanisms are in place.
 
@@ -95,11 +95,12 @@ cd frontend && npm install && npm start   # Frontend only
    - **Automatic Fallback**: Local templates also follow professional coach style with integrated pauses
 
 8. **Pi Network Payment Integration**:
-   - **Backend SDK**: Uses official `pi-backend@0.1.3` and `@stellar/stellar-sdk` for blockchain payments
-   - **Payment Service**: `/backend/services/piPaymentService.js` handles Pi Network payment lifecycle
+   - **Direct API Integration**: Uses direct Pi API calls to `sandbox.minepi.com` without pi-backend dependency
+   - **Payment Routes**: `/backend/routes/piPayments.js` handles all Pi Network payment operations
    - **Payment API**: `/api/pi-payments/*` endpoints for create, submit, complete, cancel operations
-   - **Frontend Component**: `PiPayment.jsx` provides user interface for credit purchases
+   - **Frontend Component**: `PiPaymentNew.jsx` provides user interface for credit purchases with auto-close
    - **Credit Packages**: Multiple credit packages (10, 25, 50, 100) with Pi pricing
-   - **Blockchain Integration**: Payments processed through Pi Network's Stellar-based blockchain
-   - **Configuration**: Requires `PI_WALLET_PRIVATE_SEED` environment variable (starts with 'S')
-   - **Payment Flow**: Create → Submit to blockchain → Complete → Add credits to user account
+   - **Authentication**: Uses Pi Network SDK for browser-based authentication
+   - **Configuration**: Requires `PI_API_KEY` and `PI_WALLET_PRIVATE_SEED` environment variables
+   - **Payment Flow**: Authenticate → Create payment → Submit → Complete → Add credits to user account
+   - **Auto-login**: Automatic Pi Network detection and login for seamless user experience

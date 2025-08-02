@@ -19,7 +19,6 @@ const notificationsRoute = require('./routes/notifications');
 const journalRoute = require('./routes/journal');
 const addictionsRoute = require('./routes/addictions');
 const piPaymentsRoute = require('./routes/piPayments');
-const piPaymentService = require('./services/piPaymentService');
 const app = express();
 
 // Create a write stream (in append mode) for logging
@@ -81,15 +80,6 @@ mongoose.connect(process.env.MONGODB_URI, {
   useUnifiedTopology: true,
 }).then(() => {
   console.log("✅ MongoDB connected");
-  
-  // Initialize Pi Payment Service after MongoDB connection
-  piPaymentService.initialize().then(initialized => {
-    if (initialized) {
-      console.log("✅ Pi Payment Service initialized");
-    } else {
-      console.log("⚠️  Pi Payment Service initialization failed - check configuration");
-    }
-  });
 }).catch(err => console.log("❌ MongoDB connection error:", err));
 
 const PORT = process.env.PORT || 5004;

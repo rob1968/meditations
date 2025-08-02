@@ -739,7 +739,13 @@ router.post('/pi-login', async (req, res) => {
   try {
     const { piUserId, piUsername, accessToken, authMethod } = req.body;
     
-    console.log('Pi authentication request:', { piUserId, piUsername, authMethod });
+    console.log('Pi authentication request:', { 
+      piUserId, 
+      piUsername, 
+      authMethod,
+      userIdType: typeof piUserId,
+      userIdLength: piUserId ? piUserId.length : 0
+    });
     
     // Enhanced validation for Pi authentication data
     if (!piUserId || typeof piUserId !== 'string' || piUserId.trim().length === 0) {
@@ -823,21 +829,54 @@ router.post('/pi-login', async (req, res) => {
         username: verifyResponse.data.username
       });
       
-      // Verify that the user data matches
-      if (verifyResponse.data.uid !== sanitizedPiUserId) {
-        console.error('Pi user ID mismatch:', {
-          claimed: sanitizedPiUserId,
-          verified: verifyResponse.data.uid
+      // Check if Pi API returned valid data
+      if (!verifyResponse.data.uid || !verifyResponse.data.username) {
+        console.warn('Pi API returned incomplete data:', {
+          uid: verifyResponse.data.uid,
+          username: verifyResponse.data.username,
+          rawResponse: verifyResponse.data
         });
-        return res.status(401).json({
-          success: false,
-          error: 'Pi user verification failed: User ID mismatch',
-          errorCode: 'PI_USER_ID_MISMATCH'
-        });
+        
+        // In sandbox mode, Pi API might not return complete data
+        // For development purposes, we'll allow authentication with provided credentials
+        if (process.env.PI_SANDBOX_MODE === 'true') {
+          console.warn('Sandbox mode: Accepting authentication despite incomplete Pi API response');
+          // Use the provided credentials since Pi sandbox API is unreliable
+          verifiedUsername = sanitizedPiUsername;
+        } else {
+          // In production, require valid Pi API response
+          return res.status(401).json({
+            success: false,
+            error: 'Pi API verification failed: Incomplete user data received',
+            errorCode: 'PI_API_INCOMPLETE_DATA'
+          });
+        }
+      } else {
+        // Verify that the user data matches
+        // Allow for case-insensitive comparison and trim whitespace
+        const claimedId = sanitizedPiUserId.toLowerCase().trim();
+        const verifiedId = (verifyResponse.data.uid || '').toString().toLowerCase().trim();
+        
+        if (claimedId !== verifiedId) {
+          console.error('Pi user ID mismatch:', {
+            claimed: sanitizedPiUserId,
+            claimedLower: claimedId,
+            verified: verifyResponse.data.uid,
+            verifiedLower: verifiedId,
+            claimedLength: claimedId.length,
+            verifiedLength: verifiedId.length
+          });
+          
+          return res.status(401).json({
+            success: false,
+            error: 'Pi user verification failed: User ID mismatch',
+            errorCode: 'PI_USER_ID_MISMATCH'
+          });
+        }
+        
+        // Update username if Pi Platform API returns a different one
+        verifiedUsername = verifyResponse.data.username || sanitizedPiUsername;
       }
-      
-      // Update username if Pi Platform API returns a different one
-      verifiedUsername = verifyResponse.data.username || sanitizedPiUsername;
       
     } catch (verifyError) {
       console.error('Pi Platform API verification failed:', verifyError.message);
@@ -1023,6 +1062,148 @@ router.post('/pi-login', async (req, res) => {
 router.get('/validation-key', (req, res) => {
   res.set('Content-Type', 'text/plain');
   res.send(process.env.PI_VALIDATION_KEY || 'e9ab4e70062f0f03a03f2e7be0d6f536690d28a03ccdc86892107e131516eaec58ae98d059f7f9f81d2fd956e18ba2945562bea7f01e711d1743e45120baf9f7');
+});
+
+// Delete user account and all associated data
+router.delete('/delete-account/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { confirmUsername } = req.body;
+
+    console.log('[Auth] Account deletion request for userId:', userId);
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'User ID is required'
+      });
+    }
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Verify username confirmation
+    if (confirmUsername !== user.username) {
+      return res.status(400).json({
+        success: false,
+        error: 'Username confirmation does not match'
+      });
+    }
+
+    // Delete user's meditations
+    const deletedMeditations = await Meditation.deleteMany({ userId: userId });
+    console.log('[Auth] Deleted', deletedMeditations.deletedCount, 'meditations for user:', user.username);
+
+    // TODO: Delete user's custom backgrounds, voice clones, journal entries, etc.
+    // This would require implementing deletion in other models as well
+
+    // Delete the user
+    await User.findByIdAndDelete(userId);
+
+    console.log('[Auth] Account deleted successfully for user:', user.username);
+
+    res.json({
+      success: true,
+      message: 'Account deleted successfully',
+      deletedData: {
+        meditations: deletedMeditations.deletedCount
+      }
+    });
+
+  } catch (error) {
+    console.error('[Auth] Error deleting account:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete account'
+    });
+  }
+});
+
+// Complete Pi user registration with additional profile information
+router.post('/complete-pi-registration', async (req, res) => {
+  try {
+    const { userId, birthDate, age, country, countryCode, city, gender, preferredLanguage, bio } = req.body;
+
+    console.log('[Auth] Completing Pi user registration for userId:', userId);
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'User ID is required'
+      });
+    }
+
+    // Find and update the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Update user profile with provided information
+    if (birthDate) {
+      user.birthDate = new Date(birthDate);
+      user.age = age;
+    }
+    if (country) {
+      user.location.country = country;
+      user.location.countryCode = countryCode;
+    }
+    if (city) {
+      user.location.city = city;
+    }
+    if (gender) {
+      user.gender = gender;
+    }
+    if (preferredLanguage) {
+      user.preferredLanguage = preferredLanguage;
+    }
+    if (bio) {
+      user.bio = bio;
+    }
+
+    // Mark profile as updated
+    user.profileUpdatedAt = new Date();
+
+    await user.save();
+
+    console.log('[Auth] Pi user registration completed successfully for:', user.username);
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        username: user.username,
+        piUserId: user.piUserId,
+        piUsername: user.piUsername,
+        credits: user.credits,
+        birthDate: user.birthDate,
+        age: user.age,
+        location: user.location,
+        gender: user.gender,
+        preferredLanguage: user.preferredLanguage,
+        bio: user.bio,
+        authMethod: 'pi',
+        createdAt: user.createdAt,
+        profileUpdatedAt: user.profileUpdatedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('[Auth] Error completing Pi registration:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to complete registration'
+    });
+  }
 });
 
 module.exports = router;

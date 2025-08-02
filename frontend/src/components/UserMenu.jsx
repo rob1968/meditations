@@ -16,15 +16,44 @@ const UserMenu = ({
   onViewJournal,
   onLogout 
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
   const menuRef = useRef(null);
+
+  // Available UI languages
+  const uiLanguages = [
+    { value: 'en', label: '🇺🇸 English', flag: '🇺🇸' },
+    { value: 'nl', label: '🇳🇱 Nederlands', flag: '🇳🇱' },
+    { value: 'de', label: '🇩🇪 Deutsch', flag: '🇩🇪' },
+    { value: 'fr', label: '🇫🇷 Français', flag: '🇫🇷' },
+    { value: 'es', label: '🇪🇸 Español', flag: '🇪🇸' },
+    { value: 'it', label: '🇮🇹 Italiano', flag: '🇮🇹' },
+    { value: 'pt', label: '🇵🇹 Português', flag: '🇵🇹' },
+    { value: 'ru', label: '🇷🇺 Русский', flag: '🇷🇺' },
+    { value: 'zh', label: '🇨🇳 中文', flag: '🇨🇳' },
+    { value: 'ja', label: '🇯🇵 日本語', flag: '🇯🇵' },
+    { value: 'ko', label: '🇰🇷 한국어', flag: '🇰🇷' },
+    { value: 'hi', label: '🇮🇳 हिन्दी', flag: '🇮🇳' },
+    { value: 'ar', label: '🇸🇦 العربية', flag: '🇸🇦' }
+  ];
+
+  const currentLanguage = uiLanguages.find(lang => lang.value === i18n.language) || uiLanguages[0];
+
+  // Handle language change
+  const handleLanguageChange = (languageValue) => {
+    i18n.changeLanguage(languageValue);
+    localStorage.setItem('selectedLanguage', languageValue);
+    setLanguageOpen(false);
+    setIsOpen(false); // Close main menu too
+  };
 
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setIsOpen(false);
+        setLanguageOpen(false);
       }
     };
 
@@ -151,6 +180,39 @@ const UserMenu = ({
                   }
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Language Selector Section */}
+          <div className="user-menu-language-section">
+            <div className="menu-language-header">
+              <span className="language-icon">🌐</span>
+              <span>{t('selectUILanguage', 'UI Language')}</span>
+            </div>
+            <div className="menu-language-selector">
+              <div 
+                className={`menu-language-button ${languageOpen ? 'open' : ''}`} 
+                onClick={() => setLanguageOpen(!languageOpen)}
+              >
+                <span>{currentLanguage.flag}</span>
+                <span>{currentLanguage.label.split(' ')[1]}</span>
+                <span className="language-arrow">▼</span>
+              </div>
+              {languageOpen && (
+                <div className="menu-language-options">
+                  {uiLanguages.map(language => (
+                    <div 
+                      key={language.value}
+                      className={`menu-language-option ${i18n.language === language.value ? 'selected' : ''}`}
+                      onClick={() => handleLanguageChange(language.value)}
+                    >
+                      <span className="language-flag">{language.flag}</span>
+                      <span className="language-name">{language.label.split(' ')[1]}</span>
+                      {i18n.language === language.value && <span className="selected-check">✓</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

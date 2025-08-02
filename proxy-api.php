@@ -25,7 +25,7 @@ $apiPath = str_replace('/proxy-api.php', '', $requestUri);
 $apiPath = parse_url($apiPath, PHP_URL_PATH);
 
 // Build backend URL
-$backendUrl = 'http://127.0.0.1:5004' . $apiPath;
+$backendUrl = 'http://127.0.0.1:5002' . $apiPath;
 
 // Add query parameters if they exist
 if (!empty($_SERVER['QUERY_STRING'])) {

@@ -34,35 +34,18 @@ const PiPayment = ({ user, onPaymentComplete, onClose }) => {
     setPaymentStatus('Creating payment...');
 
     try {
-      // Create payment on backend
-      const response = await fetch(getFullUrl('/api/pi-payments/create'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          amount: packageInfo.price,
-          creditsAmount: packageInfo.credits
-        }),
-      });
+      // Store payment info
+      const paymentInfo = {
+        amount: packageInfo.price,
+        credits: packageInfo.credits,
+        userId: user.id
+      };
 
-      const result = await response.json();
+      setCurrentPayment(paymentInfo);
+      setPaymentStatus('Creating Pi payment...');
       
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to create payment');
-      }
-
-      setCurrentPayment({
-        paymentId: result.paymentId,
-        amount: result.amount,
-        credits: packageInfo.credits
-      });
-
-      setPaymentStatus('Payment created. Processing...');
-      
-      // Create Pi payment on frontend
-      await processPiPayment(result.paymentId, packageInfo);
+      // Create Pi payment directly on frontend
+      await processPiPayment(paymentInfo);
 
     } catch (error) {
       console.error('Error creating Pi payment:', error);
@@ -74,7 +57,7 @@ const PiPayment = ({ user, onPaymentComplete, onClose }) => {
   };
 
   // Process Pi payment using Pi SDK
-  const processPiPayment = async (paymentId, packageInfo) => {
+  const processPiPayment = async (packageInfo) => {
     try {
       setPaymentStatus('Opening Pi payment...');
 
@@ -83,16 +66,16 @@ const PiPayment = ({ user, onPaymentComplete, onClose }) => {
         amount: packageInfo.price,
         memo: `${packageInfo.credits} Meditation Credits`,
         metadata: {
-          paymentId: paymentId,
-          creditsAmount: packageInfo.credits
+          creditsAmount: packageInfo.credits,
+          userId: packageInfo.userId
         }
       }, {
         onReadyForServerApproval: async (paymentId) => {
           console.log('Payment ready for server approval:', paymentId);
-          setPaymentStatus('Submitting to blockchain...');
+          setPaymentStatus('Approving payment...');
           
-          // Submit payment to Pi blockchain via backend
-          const submitResponse = await fetch(getFullUrl('/api/pi-payments/submit'), {
+          // Approve payment via backend
+          const approveResponse = await fetch(getFullUrl('/api/pi-payments/approve'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -100,10 +83,10 @@ const PiPayment = ({ user, onPaymentComplete, onClose }) => {
             body: JSON.stringify({ paymentId }),
           });
 
-          const submitResult = await submitResponse.json();
+          const approveResult = await approveResponse.json();
           
-          if (!submitResult.success) {
-            throw new Error(submitResult.error || 'Failed to submit payment');
+          if (!approveResult.success) {
+            throw new Error(approveResult.error || 'Failed to approve payment');
           }
         },
         onReadyForServerCompletion: async (paymentId, txid) => {
