@@ -1128,14 +1128,31 @@ router.delete('/delete-account/:userId', async (req, res) => {
 // Complete Pi user registration with additional profile information
 router.post('/complete-pi-registration', async (req, res) => {
   try {
-    const { userId, birthDate, age, country, countryCode, city, gender, preferredLanguage, bio } = req.body;
+    const { userId, username, birthDate, age, country, countryCode, city, gender, preferredLanguage, bio } = req.body;
 
-    console.log('[Auth] Completing Pi user registration for userId:', userId);
+    console.log('[Auth] Completing Pi user registration for userId:', userId, 'with username:', username);
 
     if (!userId) {
       return res.status(400).json({
         success: false,
         error: 'User ID is required'
+      });
+    }
+    
+    // Validate username
+    if (!username || username.length < 3 || username.length > 20) {
+      return res.status(400).json({
+        success: false,
+        error: 'Username must be between 3 and 20 characters'
+      });
+    }
+    
+    // Check if username already exists
+    const existingUser = await User.findOne({ username: username.toLowerCase() });
+    if (existingUser && existingUser._id.toString() !== userId) {
+      return res.status(409).json({
+        success: false,
+        error: 'Username already exists. Please choose a different username.'
       });
     }
 
@@ -1147,6 +1164,9 @@ router.post('/complete-pi-registration', async (req, res) => {
         error: 'User not found'
       });
     }
+    
+    // Update username
+    user.username = username.trim();
 
     // Update user profile with provided information
     if (birthDate) {

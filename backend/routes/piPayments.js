@@ -119,26 +119,38 @@ router.post('/complete', async (req, res) => {
           });
         }
       } catch (saveError) {
-        // Handle ParallelSaveError by retrying once
+        // Handle ParallelSaveError with atomic operation
         if (saveError.name === 'ParallelSaveError') {
-          console.log('ParallelSaveError detected, retrying...');
+          console.log('ParallelSaveError detected, using atomic update...');
           try {
-            const freshUser = await User.findById(userId);
-            if (freshUser) {
-              freshUser.addCredits(parseInt(creditsAmount), 'purchase', `Pi Network payment - ${creditsAmount} credits (π${result.amount || 'N/A'})`);
-              await freshUser.save();
-              
-              console.log(`Added ${creditsAmount} credits to user ${userId} (retry). New balance: ${freshUser.credits}`);
-              
-              return res.json({
-                success: true,
-                payment: result,
-                newCreditBalance: freshUser.credits,
-                creditsAdded: creditsAmount
-              });
-            }
+            // Use findByIdAndUpdate for atomic operation to avoid race conditions
+            const updatedUser = await User.findByIdAndUpdate(
+              userId,
+              { 
+                $inc: { credits: parseInt(creditsAmount) },
+                $push: {
+                  creditHistory: {
+                    type: 'purchase',
+                    amount: parseInt(creditsAmount),
+                    description: `Pi Network payment - ${creditsAmount} credits (π${result.amount || 'N/A'})`,
+                    date: new Date(),
+                    relatedId: paymentId
+                  }
+                }
+              },
+              { new: true, runValidators: true }
+            );
+            
+            console.log(`Added ${creditsAmount} credits to user ${userId} (atomic update). New balance: ${updatedUser.credits}`);
+            
+            return res.json({
+              success: true,
+              payment: result,
+              newCreditBalance: updatedUser.credits,
+              creditsAdded: creditsAmount
+            });
           } catch (retryError) {
-            console.error('Retry failed:', retryError);
+            console.error('Atomic update failed:', retryError);
             throw retryError;
           }
         } else {

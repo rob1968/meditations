@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { getFullUrl, API_ENDPOINTS } from '../config/api';
 import { getSortedCountries } from '../data/countries';
 import PageHeader from './PageHeader';
-import { isPiBrowser } from '../utils/piDetection';
 import piAuthService from '../services/piAuth';
 
 const Auth = ({ onLogin }) => {
@@ -19,65 +18,29 @@ const Auth = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isPiAuthenticated, setIsPiAuthenticated] = useState(false);
-  const [showPiAuth, setShowPiAuth] = useState(false);
-  const [piAuthStatus, setPiAuthStatus] = useState(null);
   const [needsRegistration, setNeedsRegistration] = useState(false);
   const [piUserData, setPiUserData] = useState(null);
-  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
-  const [isAutoAuthenticating, setIsAutoAuthenticating] = useState(false);
+  const [isCheckingPiAuth, setIsCheckingPiAuth] = useState(true);
+  const [piCheckCompleted, setPiCheckCompleted] = useState(false);
+  const [showTraditionalAuth, setShowTraditionalAuth] = useState(false);
   const { t, i18n } = useTranslation();
 
   // Get sorted countries for the current language
   const countries = getSortedCountries(i18n.language);
 
-  // Initialize Pi authentication and attempt auto-login
+  // Automatic Pi Network detection and initialization
   useEffect(() => {
-    const initializePiAuth = async () => {
-      console.log('[Auth] Initializing Pi authentication...');
-      setShowPiAuth(true);
+    const initializeAuth = async () => {
+      console.log('[Auth] Starting authentication initialization...');
       
-      try {
-        const initialized = await piAuthService.initialize();
-        if (initialized) {
-          const status = piAuthService.getAuthStatus();
-          setPiAuthStatus(status);
-          console.log('[Auth] Pi authentication service initialized:', status);
-          
-          // Temporarily disable auto-login to allow manual Pi authentication with registration
-          // await attemptAutoLogin();
-        } else {
-          console.log('[Auth] Pi authentication service failed to initialize');
-          setShowPiAuth(false);
-        }
-      } catch (error) {
-        console.error('[Auth] Error initializing Pi authentication:', error);
-        setShowPiAuth(false);
-      }
-    };
-
-    const attemptAutoLogin = async () => {
-      if (autoLoginAttempted) return;
-      
-      // Check if user intentionally logged out - if so, don't auto-login
-      const logoutIntentional = localStorage.getItem('piLogoutIntentional');
-      if (logoutIntentional === 'true') {
-        console.log('[Auth] Skipping auto-login due to intentional logout');
-        localStorage.removeItem('piLogoutIntentional'); // Clear flag
-        setAutoLoginAttempted(true);
-        setIsAutoAuthenticating(false);
-        return;
-      }
-      
-      // Check if user is already logged in from another tab/session
+      // First check for existing user session
       const existingUser = localStorage.getItem('user');
       if (existingUser && existingUser !== 'undefined' && existingUser !== 'null') {
         try {
           const userData = JSON.parse(existingUser);
           if (userData && userData.id) {
-            console.log('[Auth] User already logged in, skipping auto-authentication');
-            setAutoLoginAttempted(true);
-            setIsAutoAuthenticating(false);
+            console.log('[Auth] User already logged in, auto-logging in');
+            setIsCheckingPiAuth(false);
             onLogin(userData);
             return;
           }
@@ -87,50 +50,61 @@ const Auth = ({ onLogin }) => {
           localStorage.removeItem('authMethod');
         }
       }
-      
-      setAutoLoginAttempted(true);
-      setIsAutoAuthenticating(true);
+
+      // No existing session, try automatic Pi Network detection
+      console.log('[Auth] No existing session, checking Pi Network...');
+      setIsCheckingPiAuth(true);
       
       try {
+        // Initialize Pi authentication service with timeout
+        const initialized = await Promise.race([
+          piAuthService.initialize(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Pi init timeout')), 5000)) // 5 second init timeout
+        ]);
+        if (!initialized) {
+          throw new Error('Pi service initialization failed');
+        }
+
+        // Attempt automatic Pi authentication with shorter timeout for faster fallback
         console.log('[Auth] Attempting automatic Pi authentication...');
-        const result = await piAuthService.autoAuthenticate();
+        const piResult = await Promise.race([
+          piAuthService.autoAuthenticate(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Pi auto-auth timeout')), 10000)) // 10 second timeout
+        ]);
         
-        if (result.success) {
-          console.log('[Auth] Automatic Pi authentication successful:', result.user.username);
+        if (piResult.success) {
+          console.log('[Auth] Automatic Pi authentication successful:', piResult.user.username);
           
           // Check if user needs to complete registration
-          const user = result.user;
+          const user = piResult.user;
           const needsProfile = !user.birthDate || !user.country || !user.gender || !user.preferredLanguage;
           
           if (needsProfile) {
             console.log('[Auth] New Pi user detected - showing registration fields');
             setNeedsRegistration(true);
             setPiUserData(user);
-            setIsPiAuthenticated(true);
-            setIsAutoAuthenticating(false);
           } else {
             console.log('[Auth] Existing Pi user - logging in directly');
-            localStorage.setItem('user', JSON.stringify(user));
+            localStorage.setItem('user', JSON.stringify(piResult.user));
+            localStorage.setItem('authToken', piResult.token);
             localStorage.setItem('authMethod', 'pi');
-            setIsPiAuthenticated(true);
-            onLogin(user);
+            onLogin(piResult.user);
           }
         } else {
-          console.log('[Auth] Automatic Pi authentication failed:', result.reason);
-          setIsAutoAuthenticating(false);
+          console.log('[Auth] Pi authentication not available:', piResult.reason);
+          setShowTraditionalAuth(true);
         }
       } catch (error) {
-        console.log('[Auth] Auto-authentication error:', error.message);
-        setIsAutoAuthenticating(false);
-        // Set an error message for user feedback
-        if (error.message.includes('timeout') || error.message.includes('network')) {
-          setError('Network connection issue. Please check your internet connection and try again.');
-        }
+        console.log('[Auth] Pi authentication failed, showing traditional auth:', error.message);
+        setShowTraditionalAuth(true);
+      } finally {
+        setIsCheckingPiAuth(false);
+        setPiCheckCompleted(true);
       }
     };
 
-    initializePiAuth();
-  }, [autoLoginAttempted, onLogin]);
+    initializeAuth();
+  }, [onLogin]);
   
   // Available languages
   const availableLanguages = [
@@ -171,84 +145,36 @@ const Auth = ({ onLogin }) => {
     }
   };
 
-  // Handle Pi Network authentication with enhanced debugging
-  const handlePiAuth = async () => {
+  // Traditional login function (Pi detection now happens automatically at startup)
+  const handleLogin = async (e) => {
+    e.preventDefault();
     setIsLoading(true);
     setError('');
 
     try {
-      console.log('[Auth Component] Starting Pi authentication...');
-      
-      // Update debug status during authentication
-      const updateStatus = () => {
-        const status = piAuthService.getAuthStatus();
-        setPiAuthStatus(status);
-      };
-      
-      // Update status before authentication
-      updateStatus();
-      
-      const result = await piAuthService.authenticateUser();
-      
-      // Update status after authentication attempt
-      updateStatus();
-      
-      if (result.success) {
-        console.log('[Auth Component] Pi authentication successful:', result);
-        
-        // Check if user needs to complete registration
-        const user = result.user;
-        const needsProfile = !user.birthDate || !user.country || !user.gender || !user.preferredLanguage;
-        
-        if (needsProfile) {
-          console.log('[Auth Component] New Pi user detected - showing registration fields');
-          setNeedsRegistration(true);
-          setPiUserData(user);
-          setIsPiAuthenticated(true);
-        } else {
-          console.log('[Auth Component] Existing Pi user - logging in directly');
-          // Store user data and token in localStorage
-          localStorage.setItem('user', JSON.stringify(result.user));
-          localStorage.setItem('authToken', result.token);
-          localStorage.setItem('authMethod', 'pi');
-          
-          setIsPiAuthenticated(true);
-          onLogin(result.user);
-        }
-      } else {
-        throw new Error('Pi authentication failed');
-      }
+      console.log('[Auth] Processing traditional authentication...');
+      await handleTraditionalAuth();
     } catch (error) {
-      console.error('[Auth Component] Pi authentication error:', error);
-      setError(error.message || t('piAuthFailed', 'Pi authentication failed'));
-      
-      // Update status after error
-      const status = piAuthService.getAuthStatus();
-      setPiAuthStatus(status);
+      console.error('[Auth] Traditional authentication failed:', error);
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle traditional authentication
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    // Validation for registration
-    if (!isLogin) {
-      if (birthDate) {
-        const age = calculateAge(birthDate);
-        if (age < 13 || age > 120) {
-          setError(t('invalidAge', 'You must be between 13 and 120 years old'));
-          setIsLoading(false);
-          return;
+  // Traditional authentication function
+  const handleTraditionalAuth = async () => {
+    try {
+      // Validation for registration
+      if (!isLogin) {
+        if (birthDate) {
+          const age = calculateAge(birthDate);
+          if (age < 13 || age > 120) {
+            throw new Error(t('invalidAge', 'You must be between 13 and 120 years old'));
+          }
         }
       }
-    }
 
-    try {
       const endpoint = isLogin ? API_ENDPOINTS.LOGIN : API_ENDPOINTS.REGISTER;
       const requestData = isLogin 
         ? { username: username.trim() }
@@ -272,24 +198,35 @@ const Auth = ({ onLogin }) => {
       
       // Call parent callback
       onLogin(response.data.user);
-      
     } catch (error) {
-      console.error('Auth error:', error);
-      if (error.response?.data?.error) {
-        setError(error.response.data.error);
+      console.error('Traditional auth error:', error);
+      
+      // Handle specific HTTP status codes
+      if (error.response?.status === 409) {
+        throw new Error(t('usernameExists', 'Username already exists. Please choose a different username.'));
+      } else if (error.response?.status === 404) {
+        throw new Error(t('userNotFound', 'Username not found. Please check your username or register.'));
+      } else if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
       } else {
-        setError(isLogin ? t('loginFailed', 'Login failed') : t('registrationFailed', 'Registration failed'));
+        throw new Error(isLogin ? t('loginFailed', 'Login failed') : t('registrationFailed', 'Registration failed'));
       }
-    } finally {
-      setIsLoading(false);
     }
   };
+
 
   // Complete Pi user registration with additional profile information
   const completePiRegistration = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+
+    // Validate username
+    if (!username || username.length < 3 || username.length > 20) {
+      setError(t('usernameRequired', 'Username must be between 3 and 20 characters'));
+      setIsLoading(false);
+      return;
+    }
 
     // Validation for registration
     if (birthDate) {
@@ -306,6 +243,7 @@ const Auth = ({ onLogin }) => {
       
       const updateData = {
         userId: piUserData.id,
+        username: username.trim(),
         birthDate: birthDate || null,
         age: birthDate ? calculateAge(birthDate) : null,
         country: country || null,
@@ -328,7 +266,9 @@ const Auth = ({ onLogin }) => {
       
     } catch (error) {
       console.error('[Auth] Pi registration completion error:', error);
-      if (error.response?.data?.error) {
+      if (error.response?.status === 409) {
+        setError(t('usernameExists', 'Username already exists. Please choose a different username.'));
+      } else if (error.response?.data?.error) {
         setError(error.response.data.error);
       } else {
         setError(t('registrationFailed', 'Registration failed'));
@@ -352,6 +292,27 @@ const Auth = ({ onLogin }) => {
     setPiUserData(null);
   };
 
+  // Show loading screen while checking Pi Network
+  if (isCheckingPiAuth) {
+    return (
+      <div className="auth-container">
+        <div className="auth-language-header">
+          <PageHeader />
+        </div>
+        <div className="auth-card">
+          <div className="auth-header">
+            <h2>{t('checkingPiNetwork', 'Checking Pi Network...')}</h2>
+            <p>{t('pleaseWait', 'Please wait while we check for Pi Network authentication')}</p>
+          </div>
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+            <p>{t('connectingPi', 'Connecting to Pi Network...')}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="auth-container">
       <div className="auth-language-header">
@@ -360,53 +321,20 @@ const Auth = ({ onLogin }) => {
       <div className="auth-card">
         <div className="auth-header">
           <h2>
-            {isAutoAuthenticating 
-              ? t('autoAuthenticating', 'Connecting with Pi Network...') 
-              : needsRegistration 
-                ? t('completePiProfile', 'Complete your Pi Profile')
-                : showPiAuth 
-                  ? t('piAuthTitle', 'Pi Network Authentication') 
-                  : (isLogin ? t('login', 'Login') : t('register', 'Register'))
+            {needsRegistration 
+              ? t('completePiProfile', 'Complete your Pi Profile')
+              : (isLogin ? t('login', 'Login') : t('register', 'Register'))
             }
           </h2>
           <p>
-            {isAutoAuthenticating 
-              ? t('autoAuthSubtitle', 'Please wait while we connect you automatically')
-              : needsRegistration 
-                ? t('completePiProfileSubtitle', `Welcome ${piUserData?.username}! Please complete your profile (optional)`)
-                : showPiAuth 
-                  ? t('piAuthSubtitle', 'Access with your Pi Network account') 
-                  : (isLogin ? t('loginSubtitle', 'Welcome back') : t('registerSubtitle', 'Create your account'))
+            {needsRegistration 
+              ? t('completePiProfileSubtitle', `Welcome ${piUserData?.username}! Please complete your profile (optional)`)
+              : (isLogin ? t('loginSubtitle', 'Welcome back') : t('registerSubtitle', 'Create your account'))
             }
           </p>
         </div>
 
-        {isAutoAuthenticating ? (
-          // Auto-authentication in progress
-          <div className="auto-auth-section">
-            <div className="auto-auth-status">
-              <div className="loading-spinner">
-                <div className="spinner"></div>
-                <p>{t('connectingPi', 'Connecting to Pi Network...')}</p>
-              </div>
-            </div>
-            
-            <div style={{ 
-              border: '1px dashed blue', 
-              padding: '10px', 
-              margin: '10px 0', 
-              fontSize: '12px', 
-              backgroundColor: '#f0f0ff',
-              borderRadius: '4px'
-            }}>
-              <p><strong>[Debug Info - Auto Pi Auth]</strong></p>
-              <p>Auto-authentication: In Progress</p>
-              <p>SDK Available: {piAuthStatus?.isSDKAvailable ? 'Yes' : 'No'}</p>
-              <p>Service Initialized: {piAuthStatus?.isInitialized ? 'Yes' : 'No'}</p>
-              <p>Status: Attempting automatic login...</p>
-            </div>
-          </div>
-        ) : needsRegistration ? (
+        {needsRegistration ? (
           // Pi User Profile Completion
           <form onSubmit={completePiRegistration} className="auth-form">
             <div className="pi-user-info" style={{
@@ -418,7 +346,25 @@ const Auth = ({ onLogin }) => {
               textAlign: 'center'
             }}>
               <span style={{ fontSize: '20px', marginRight: '8px' }}>π</span>
-              <strong>{t('loggedInAsPi', 'Logged in as')}: {piUserData?.username}</strong>
+              <strong>{t('loggedInAsPi', 'Logged in as Pi')}: @{piUserData?.username}</strong>
+            </div>
+
+            <div className="form-group">
+              <label>{t('chooseUsername', 'Choose Username')} *</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder={t('enterUsername', 'Enter your app username')}
+                required
+                minLength={3}
+                maxLength={20}
+                pattern="^[a-zA-Z0-9_-]+$"
+                className="auth-input"
+              />
+              <small style={{ color: '#666', fontSize: '12px' }}>
+                {t('usernameHelp', 'This will be your display name in the app (3-20 characters, letters/numbers only)')}
+              </small>
             </div>
 
             <div className="form-group">
@@ -540,71 +486,9 @@ const Auth = ({ onLogin }) => {
               </button>
             </div>
           </form>
-        ) : showPiAuth ? (
-          // Pi Network Authentication
-          <div className="pi-auth-section">
-            <div className="pi-auth-info">
-              <div className="pi-status">
-                <span className="pi-indicator">π</span>
-                <span>{t('piDetected', 'Pi Browser Detected')}</span>
-              </div>
-              
-              {/* Enhanced Visual Debugging like working example */}
-              <div style={{ 
-                border: '1px dashed blue', 
-                padding: '10px', 
-                margin: '10px 0', 
-                fontSize: '12px', 
-                backgroundColor: '#f0f0ff',
-                borderRadius: '4px'
-              }}>
-                <p><strong>[Debug Info - Pi Auth]</strong></p>
-                <p>Pi Browser: Deprecated (always No)</p>
-                <p>SDK Loaded: {piAuthStatus?.isSDKAvailable ? 'Yes' : 'No'}</p>
-                <p>Service Initialized: {piAuthStatus?.isInitialized ? 'Yes' : 'No'}</p>
-                <p>Authentication Available: {piAuthStatus?.isAvailable ? 'Yes' : 'No'}</p>
-                <p>Authentication in Progress: {piAuthStatus?.isAuthenticating ? 'Yes' : 'No'}</p>
-                <p>Current Status: {isLoading ? 'Loading/Authenticating...' : 'Ready'}</p>
-                {error && <p style={{ color: 'red', fontWeight: 'bold' }}>Error: {error}</p>}
-              </div>
-            </div>
-            
-            <button 
-              type="button"
-              onClick={handlePiAuth}
-              disabled={isLoading || !piAuthStatus?.isAvailable}
-              className="pi-auth-button"
-            >
-              {isLoading ? (
-                <div className="loading-spinner">
-                  <div className="spinner"></div>
-                  {t('piAuthenticating', 'Authenticating with Pi...')}
-                </div>
-              ) : (
-                <>
-                  <span className="pi-logo">π</span>
-                  {t('loginWithPi', 'Login with Pi Network')}
-                </>
-              )}
-            </button>
-            
-            {error && <div className="error-message">{error}</div>}
-            
-            <div className="auth-fallback">
-              <hr />
-              <p>{t('piAuthFallback', 'Having trouble with Pi authentication?')}</p>
-              <button 
-                type="button"
-                onClick={() => setShowPiAuth(false)}
-                className="fallback-button"
-              >
-                {t('useTraditionalAuth', 'Use traditional login instead')}
-              </button>
-            </div>
-          </div>
-        ) : (
-          // Traditional Authentication Form
-          <form onSubmit={handleSubmit} className="auth-form">
+        ) : showTraditionalAuth ? (
+          // Traditional Authentication Form (shown when Pi Network is not available)
+          <form onSubmit={handleLogin} className="auth-form">
           <div className="form-group">
             <label>{t('username', 'Username')}</label>
             <input
@@ -726,9 +610,9 @@ const Auth = ({ onLogin }) => {
             )}
           </button>
         </form>
-        )}
+        ) : null}
 
-        {!showPiAuth && (
+        {!needsRegistration && showTraditionalAuth && (
           <div className="auth-switch">
             <p>
               {isLogin ? t('noAccount', "Don't have an account?") : t('haveAccount', 'Already have an account?')}
@@ -743,21 +627,6 @@ const Auth = ({ onLogin }) => {
                 {isLogin ? t('register', 'Register') : t('login', 'Login')}
               </button>
             </p>
-            
-            {showPiAuth && (
-              <div className="pi-auth-option">
-                <hr />
-                <p>{t('piAvailable', 'Pi Network authentication is available')}</p>
-                <button 
-                  type="button"
-                  onClick={() => setShowPiAuth(true)}
-                  className="pi-switch-button"
-                >
-                  <span className="pi-logo">π</span>
-                  {t('switchToPi', 'Use Pi Network instead')}
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
