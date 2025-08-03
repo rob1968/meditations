@@ -15,8 +15,11 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const [editingEntry, setEditingEntry] = useState(null);
   const [playingEntryId, setPlayingEntryId] = useState(null);
   const [generatingAudio, setGeneratingAudio] = useState(null);
-  const [searchTags, setSearchTags] = useState('');
   const [searchText, setSearchText] = useState('');
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isSliding, setIsSliding] = useState(false);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [transcribing, setTranscribing] = useState(false);
@@ -94,7 +97,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     title: '',
     content: '',
     mood: '', // Empty string, not null
-    tags: [], // Empty array, not null
     date: new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format
   });
   
@@ -116,6 +118,10 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   
   // Control calendar visibility
   const [showCalendar, setShowCalendar] = useState(true);
+  
+  // Filter states
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedMood, setSelectedMood] = useState('');
   
   // Textarea ref for auto-scroll functionality
   const textareaRef = useRef(null);
@@ -141,6 +147,42 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     });
   };
 
+  // Filter entries based on selected month and mood
+  const getFilteredEntries = () => {
+    let filtered = entries;
+
+    // Filter by month
+    if (selectedMonth) {
+      filtered = filtered.filter(entry => {
+        const entryDate = new Date(entry.date);
+        const entryMonth = `${entryDate.getFullYear()}-${String(entryDate.getMonth() + 1).padStart(2, '0')}`;
+        return entryMonth === selectedMonth;
+      });
+    }
+
+    // Filter by mood
+    if (selectedMood) {
+      filtered = filtered.filter(entry => entry.mood === selectedMood);
+    }
+
+    return filtered;
+  };
+
+  // Generate month options for the last 12 months
+  const getMonthOptions = () => {
+    const months = [];
+    const currentDate = new Date();
+    
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthLabel = date.toLocaleDateString('nl-NL', { year: 'numeric', month: 'long' });
+      months.push({ key: monthKey, label: monthLabel });
+    }
+    
+    return months;
+  };
+
   const moods = [
     { value: 'happy', emoji: '😊', label: t('happy', 'Blij'), description: t('happyDesc', 'Ik voel me vrolijk en optimistisch'), color: '#FFD700', bg: 'linear-gradient(135deg, #FFD700, #FFA500)' },
     { value: 'calm', emoji: '😌', label: t('calm', 'Rustig'), description: t('calmDesc', 'Ik ben ontspannen en vredig'), color: '#87CEEB', bg: 'linear-gradient(135deg, #87CEEB, #4682B4)' },
@@ -158,7 +200,33 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       fetchTodaysEntry();
       fetchUserVoices();
     }
-  }, [user, searchTags, searchText]);
+  }, [user]);
+
+  // Keyboard navigation for slider
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (activeTab !== 'browse') return;
+      
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          goToPrevSlide();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          goToNextSlide();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, currentSlide, entries.length, isSliding]);
+
+  // Reset slide when entries change
+  useEffect(() => {
+    setCurrentSlide(0);
+  }, [entries]);
 
 
   // Function to load today's entry for calendar
@@ -182,7 +250,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
           title: entry.title || '',
           content: entry.content || '',
           mood: entry.mood || '',
-          tags: entry.tags || [],
           date: today
         });
         setEditingEntry(entry);
@@ -195,7 +262,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
           title: '',
           content: '',
           mood: '',
-          tags: [],
           date: today
         });
         setEditingEntry(null);
@@ -209,7 +275,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         title: '',
         content: '',
         mood: '',
-        tags: [],
         date: today
       });
       setEditingEntry(null);
@@ -267,11 +332,12 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         setIsLoading(true);
       }
       const params = new URLSearchParams();
-      if (searchTags) params.append('tags', searchTags);
       if (searchText) params.append('searchText', searchText);
       
       const response = await axios.get(getFullUrl(`/api/journal/user/${user.id}?${params}`));
-      setEntries(response.data.entries);
+      // Sort entries from oldest to newest for horizontal scroll (left = old, right = new)
+      const sortedEntries = response.data.entries.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setEntries(sortedEntries);
     } catch (error) {
       console.error('Error fetching journal entries:', error);
       setError(t('failedToLoadEntries', 'Failed to load journal entries'));
@@ -331,7 +397,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       title: '',
       content: '',
       mood: '', // Empty string, not null
-      tags: [], // Empty array, not null
       date: new Date().toISOString().split('T')[0]
     });
     setOriginalContent(''); // Reset original content when resetting form
@@ -359,7 +424,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         title: entry.title,
         content: content,
         mood: entry.mood || '',
-        tags: entry.tags || [],
         date: date // Use the selected date string directly
       });
       setOriginalContent(content); // Track the original content
@@ -370,7 +434,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         title: '',
         content: '',
         mood: '',
-        tags: [],
         date: date
       });
       setOriginalContent(''); // Reset original content for new entry
@@ -655,10 +718,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         payload.mood = formData.mood.trim();
       }
 
-      // Only include tags if they exist
-      if (formData.tags && formData.tags.length > 0) {
-        payload.tags = formData.tags.filter(tag => tag.trim()).map(tag => tag.trim());
-      }
 
       console.log('Saving journal entry:', {
         isEditing: !!editingEntry,
@@ -725,7 +784,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       title: entry.title,
       content: content,
       mood: entry.mood || '',
-      tags: entry.tags || [],
       date: entry.date ? new Date(entry.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
     });
     setOriginalContent(content); // Track the original content
@@ -1146,27 +1204,57 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     }
   };
 
-  const addTag = (tagInput) => {
-    const newTag = tagInput.trim();
-    if (newTag && !formData.tags.includes(newTag)) {
-      setFormData({
-        ...formData,
-        tags: [...formData.tags, newTag]
-      });
-    }
-  };
-
-  const removeTag = (tagToRemove) => {
-    setFormData({
-      ...formData,
-      tags: formData.tags.filter(tag => tag !== tagToRemove)
-    });
-  };
 
   // Count words in text
   const countWords = (text) => {
     if (!text.trim()) return 0;
     return text.trim().split(/\s+/).length;
+  };
+
+  // Slider navigation functions
+  const goToSlide = (slideIndex) => {
+    if (!isSliding && slideIndex >= 0 && slideIndex < entries.length) {
+      setIsSliding(true);
+      setCurrentSlide(slideIndex);
+      setTimeout(() => setIsSliding(false), 300);
+    }
+  };
+
+  const goToPrevSlide = () => {
+    if (currentSlide > 0) {
+      goToSlide(currentSlide - 1);
+    }
+  };
+
+  const goToNextSlide = () => {
+    if (currentSlide < entries.length - 1) {
+      goToSlide(currentSlide + 1);
+    }
+  };
+
+  // Touch/Swipe handling
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && currentSlide < entries.length - 1) {
+      goToNextSlide();
+    }
+    if (isRightSwipe && currentSlide > 0) {
+      goToPrevSlide();
+    }
   };
 
   // Auto-save functionality
@@ -1188,9 +1276,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         payload.mood = formData.mood.trim();
       }
 
-      if (formData.tags && formData.tags.length > 0) {
-        payload.tags = formData.tags.filter(tag => tag.trim()).map(tag => tag.trim());
-      }
 
       let response;
       if (editingEntry && editingEntry._id) {
@@ -1226,7 +1311,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     }, 2000); // 2 seconds delay
 
     return () => clearTimeout(timeoutId);
-  }, [formData.content, formData.mood, formData.tags, user, showCreateForm, autoSave]);
+  }, [formData.content, formData.mood, user, showCreateForm, autoSave]);
 
   // Addictions functions
   const fetchAddictions = async () => {
@@ -1395,7 +1480,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         // Reset form if no changes were made
         if (!hasContentChanged()) {
           setSelectedDate('');
-          setFormData({ title: '', content: '', mood: '', tags: '' });
+          setFormData({ title: '', content: '', mood: '' });
           setEditingEntry(null);
         }
       }
@@ -1561,7 +1646,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
           className={`tab ${activeTab === 'addictions' ? 'active' : ''}`}
           onClick={() => setActiveTab('addictions')}
         >
-          <span className="tab-icon">🚭</span>
+          <span className="tab-icon">🔒</span>
           <span className="tab-label">{t('addictions', 'Verslavingen')}</span>
         </button>
       </div>
@@ -1572,81 +1657,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         {/* Browse Tab */}
         {activeTab === 'browse' && (
           <div className="browse-tab-content">
-            {/* Search and Filters */}
-            <div className="browse-controls">
-              <div className="search-bar">
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="text"
-                    placeholder={t('searchContent', 'Zoek in tekst...')}
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    className="search-input"
-                    style={{ marginBottom: '10px' }}
-                  />
-                  {searchText && (
-                    <button
-                      onClick={() => setSearchText('')}
-                      style={{
-                        position: 'absolute',
-                        right: '10px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '18px',
-                        color: '#666'
-                      }}
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="text"
-                    placeholder={t('searchTags', 'Zoek op tags...')}
-                    value={searchTags}
-                    onChange={(e) => setSearchTags(e.target.value)}
-                    className="search-input"
-                  />
-                  {searchTags && (
-                    <button
-                      onClick={() => setSearchTags('')}
-                      style={{
-                        position: 'absolute',
-                        right: '10px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '18px',
-                        color: '#666'
-                      }}
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="mood-filters">
-                {moods.slice(0, 6).map(mood => (
-                  <button
-                    key={mood.value}
-                    className="mood-filter-btn"
-                    onClick={() => setSearchTags(mood.value)}
-                    title={mood.label}
-                  >
-                    {mood.emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
 
-            {/* Entries Timeline */}
-            <div className="entries-timeline">
+            {/* Entries Slider */}
+            <div className="entries-slider-container">
               {entries.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon">📝</div>
@@ -1660,51 +1673,110 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                   </button>
                 </div>
               ) : (
-                entries.map((entry) => (
-                  <div key={entry._id} className="timeline-entry">
-                    <div className="entry-date">{formatDate(entry.date)}</div>
-                    <div className="entry-card">
-                      <div className="entry-header">
-                        {entry.mood && (
-                          <div className="entry-mood">
-                            {moods.find(m => m.value === entry.mood)?.emoji}
-                          </div>
-                        )}
-                        <div className="entry-meta">
-                          {entry.audioFile && (
-                            <span className="audio-indicator">🎵</span>
-                          )}
-                          <span className="word-count">{countWords(entry.content)} {t('words', 'woorden')}</span>
-                        </div>
-                      </div>
-                      <h3 className="entry-title" style={{ margin: '10px 0', fontSize: '1.1em', fontWeight: 'bold' }}>
-                        {highlightSearchText(entry.title, searchText)}
-                      </h3>
-                      <div className="entry-preview">
-                        {entry.content.length > 150 ? 
-                          <>{highlightSearchText(entry.content.substring(0, 150), searchText)}...</> : 
-                          highlightSearchText(entry.content, searchText)
-                        }
-                      </div>
-                      <div className="entry-actions-quick">
-                        <button 
-                          className="read-more-btn"
-                          onClick={() => handleEditEntry(entry)}
+                <>
+                  {/* Filter Section */}
+                  <div className="filter-section">
+                    {/* Filter Row - Month and Mood side by side */}
+                    <div className="filter-row">
+                      {/* Month Filter */}
+                      <div className="month-filter">
+                        <select 
+                          value={selectedMonth} 
+                          onChange={(e) => setSelectedMonth(e.target.value)}
+                          className="month-select"
                         >
-                          {t('readMore', 'Lees verder')}
-                        </button>
-                        {entry.audioFile && (
-                          <button 
-                            className="play-btn-quick"
-                            onClick={() => handlePlayAudio(entry)}
-                          >
-                            {playingEntryId === entry._id ? '⏸️' : '▶️'}
-                          </button>
-                        )}
+                          <option value="">{t('allMonths', 'Alle maanden')}</option>
+                          {getMonthOptions().map(month => (
+                            <option key={month.key} value={month.key}>
+                              {month.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Mood Dropdown */}
+                      <div className="mood-dropdown">
+                        <select 
+                          value={selectedMood} 
+                          onChange={(e) => setSelectedMood(e.target.value)}
+                          className="mood-select"
+                        >
+                          <option value="">{t('allMoods', 'Alle stemmingen')}</option>
+                          {moods.map(mood => (
+                            <option key={mood.value} value={mood.value}>
+                              {mood.emoji} {mood.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
+
                   </div>
-                ))
+
+                  {/* Mood Grid */}
+                  <div className="mood-grid">
+                    {getFilteredEntries().map((entry, index) => (
+                      <div 
+                        key={entry._id} 
+                        className="mood-grid-card"
+                        data-mood={entry.mood || 'neutral'}
+                        style={{ '--card-index': index }}
+                      >
+                        {/* Mood Badge */}
+                        <div className="mood-badge" data-mood={entry.mood || 'neutral'}>
+                          {moods.find(m => m.value === entry.mood)?.emoji || '😐'}
+                        </div>
+
+                        {/* Card Content */}
+                        <div className="mood-card-content">
+                          <div className="mood-card-header">
+                            <div className="mood-card-meta">
+                              <span title="Aantal woorden">
+                                📝 {countWords(entry.content)}
+                              </span>
+                              <span title="Leestijd">
+                                ⏱️ {Math.ceil(countWords(entry.content) / 200)}m
+                              </span>
+                            </div>
+                          </div>
+
+                          <h3 className="mood-card-title">
+                            {entry.title}
+                          </h3>
+
+                          <div className="mood-card-preview">
+                            {entry.content.split(' ').slice(0, 12).join(' ')}{entry.content.split(' ').length > 12 ? '...' : ''}
+                          </div>
+
+                          <div className="mood-card-actions">
+                            <button 
+                              className="mood-action-btn primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditEntry(entry);
+                              }}
+                            >
+                              📖
+                            </button>
+                            {entry.audioFile && (
+                              <button 
+                                className="mood-action-btn secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePlayAudio(entry);
+                                }}
+                                title={playingEntryId === entry._id ? 'Pauzeer audio' : 'Speel audio af'}
+                              >
+                                {playingEntryId === entry._id ? '⏸️' : '▶️'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                </>
               )}
             </div>
           </div>
@@ -2290,7 +2362,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                         // Optionally reset form if no changes were made
                         if (!hasContentChanged()) {
                           setSelectedDate('');
-                          setFormData({ title: '', content: '', mood: '', tags: '' });
+                          setFormData({ title: '', content: '', mood: '' });
                           setEditingEntry(null);
                         }
                       }}
@@ -2300,17 +2372,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                     </button>
                   )}
                   
-                  <div className="today-date">
-                    {(() => {
-                      const displayDate = selectedDate || new Date().toISOString().split('T')[0];
-                      return new Date(displayDate).toLocaleDateString('nl-NL', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      });
-                    })()}
-                  </div>
                   
                 </div>
               </div>
@@ -2600,29 +2661,6 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                 maxLength="5000"
               />
 
-              {/* Tags Section */}
-              <div className="tags-section">
-                <label>{t('tags', 'Tags')}:</label>
-                <input
-                  type="text"
-                  placeholder={t('addTag', 'Voeg tag toe...')}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addTag(e.target.value);
-                      e.target.value = '';
-                    }
-                  }}
-                />
-                <div className="tags-list">
-                  {formData.tags.map((tag, index) => (
-                    <span key={index} className="tag">
-                      #{tag}
-                      <button onClick={() => removeTag(tag)}>×</button>
-                    </span>
-                  ))}
-                </div>
-              </div>
 
               {/* Action Buttons */}
               <div className="form-actions-expanded">

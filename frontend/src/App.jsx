@@ -59,7 +59,7 @@ const App = () => {
   
   // User authentication state
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('create');
+  const [activeTab, setActiveTab] = useState('journal');
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileSection, setProfileSection] = useState('profile');
   const [isPiEnvironment, setIsPiEnvironment] = useState(false);
@@ -840,7 +840,7 @@ const App = () => {
     }
     
     console.log('User logged in:', userData.authMethod || 'traditional', userData.username);
-    handleTabChange('create');
+    handleTabChange('journal');
   };
 
   const handleLogout = () => {

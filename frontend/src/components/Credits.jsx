@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl } from '../config/api';
 import PiPaymentNew from './PiPaymentNew';
+import Alert from './Alert';
 
 const Credits = ({ user }) => {
   const [credits, setCredits] = useState(null);
@@ -11,7 +12,13 @@ const Credits = ({ user }) => {
   const [showCreditHistory, setShowCreditHistory] = useState(false);
   const [showPiPayment, setShowPiPayment] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [alertState, setAlertState] = useState({ show: false, message: '', type: 'success' });
   const { t } = useTranslation();
+  
+  // Helper function to show alerts
+  const showAlert = (message, type = 'success') => {
+    setAlertState({ show: true, message, type });
+  };
 
   // Credit tier packages
   const creditTiers = [
@@ -114,7 +121,7 @@ const Credits = ({ user }) => {
     setShowPiPayment(false);
     
     // Show success message
-    alert(t('paymentSuccess', 'Payment successful! Credits have been added to your account.'));
+    showAlert(t('paymentSuccess', 'Payment successful! Credits have been added to your account.'), 'success');
   };
 
   if (isLoading) {
@@ -252,7 +259,7 @@ const Credits = ({ user }) => {
               
               <button 
                 className="tier-select-btn"
-                onClick={() => alert(`${t('paymentComingSoon', 'Payment system coming soon!')} - ${tier.name} (${tier.price})`)}
+                onClick={() => showAlert(`${t('paymentComingSoon', 'Payment system coming soon!')} - ${tier.name} (${tier.price})`, 'info')}
               >
                 {t('selectPackage', 'Select Package')}
               </button>
@@ -293,6 +300,15 @@ const Credits = ({ user }) => {
           onClose={() => setShowPiPayment(false)}
         />
       )}
+      
+      {/* Alert Component */}
+      <Alert 
+        message={alertState.message}
+        type={alertState.type}
+        visible={alertState.show}
+        onClose={() => setAlertState({ show: false, message: '', type: 'success' })}
+        position="fixed"
+      />
     </div>
   );
 };

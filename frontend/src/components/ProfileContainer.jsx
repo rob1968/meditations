@@ -5,16 +5,23 @@ import { getFullUrl } from '../config/api';
 import ProfileInfo from './ProfileInfo';
 import Credits from './Credits';
 import Statistics from './Statistics';
+import Alert from './Alert';
 
 const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'profile', onUserUpdate }) => {
   const { t } = useTranslation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmUsername, setDeleteConfirmUsername] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [alertState, setAlertState] = useState({ show: false, message: '', type: 'success' });
+  
+  // Helper function to show alerts
+  const showAlert = (message, type = 'success') => {
+    setAlertState({ show: true, message, type });
+  };
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmUsername !== user.username) {
-      alert(t('usernameConfirmationMismatch', 'Username confirmation does not match'));
+      showAlert(t('usernameConfirmationMismatch', 'Username confirmation does not match'), 'warning');
       return;
     }
 
@@ -25,12 +32,12 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
       });
 
       if (response.data.success) {
-        alert(t('accountDeletedSuccessfully', 'Account deleted successfully'));
-        onLogout();
+        showAlert(t('accountDeletedSuccessfully', 'Account deleted successfully'), 'success');
+        setTimeout(() => onLogout(), 2000);
       }
     } catch (error) {
       console.error('Delete account error:', error);
-      alert(t('deleteAccountError', 'Could not delete account. Please try again.'));
+      showAlert(t('deleteAccountError', 'Could not delete account. Please try again.'), 'error');
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -204,6 +211,15 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
           </div>
         </div>
       )}
+      
+      {/* Alert Component */}
+      <Alert 
+        message={alertState.message}
+        type={alertState.type}
+        visible={alertState.show}
+        onClose={() => setAlertState({ show: false, message: '', type: 'success' })}
+        position="fixed"
+      />
     </div>
   );
 };

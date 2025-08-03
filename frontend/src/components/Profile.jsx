@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { getFullUrl, API_ENDPOINTS } from '../config/api';
 import { getSortedCountries } from '../data/countries';
 import PiPaymentNew from './PiPaymentNew';
+import Alert from './Alert';
 
 const Profile = ({ user, onLogout, onBackToCreate }) => {
   const [stats, setStats] = useState(null);
@@ -26,8 +27,14 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
   const [deleteConfirmUsername, setDeleteConfirmUsername] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [alertState, setAlertState] = useState({ show: false, message: '', type: 'success' });
   
   const { t, i18n } = useTranslation();
+  
+  // Helper function to show alerts
+  const showAlert = (message, type = 'success') => {
+    setAlertState({ show: true, message, type });
+  };
   
   // Handle Pi payment completion
   const handlePaymentComplete = (newCreditBalance) => {
@@ -41,7 +48,7 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
     setShowPiPayment(false);
     
     // Show success message
-    alert(t('paymentSuccess', 'Payment successful! Credits have been added to your account.'));
+    showAlert(t('paymentSuccess', 'Payment successful! Credits have been added to your account.'), 'success');
   };
   
   // Get sorted countries for the current language
@@ -196,10 +203,10 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
         localStorage.clear();
         
         // Show success message
-        alert(t('accountDeleted', 'Your account has been permanently deleted'));
+        showAlert(t('accountDeleted', 'Your account has been permanently deleted'), 'success');
         
-        // Redirect to login
-        window.location.reload();
+        // Redirect to login after delay
+        setTimeout(() => window.location.reload(), 2000);
       } else {
         throw new Error(response.data.error || 'Delete failed');
       }
@@ -477,6 +484,22 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
             )}
 
             <div className="profile-info-card">
+              {/* Username (Read-only) */}
+              <div className="profile-field">
+                <div className="field-icon">👤</div>
+                <div className="field-content">
+                  <label className="field-label">{t('username', 'Username')}</label>
+                  <div className="field-value">
+                    {user.username}
+                    {user.piUsername && user.piUsername !== user.username && (
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '14px', marginLeft: '8px' }}>
+                        (π {user.piUsername})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Age (Read-only) */}
               {user.age && (
                 <div className="profile-field">
@@ -790,6 +813,15 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
           onClose={() => setShowPiPayment(false)}
         />
       )}
+      
+      {/* Alert Component */}
+      <Alert 
+        message={alertState.message}
+        type={alertState.type}
+        visible={alertState.show}
+        onClose={() => setAlertState({ show: false, message: '', type: 'success' })}
+        position="fixed"
+      />
     </div>
   );
 };

@@ -7,9 +7,50 @@
  * - Safe Pi SDK method calls with fallbacks
  */
 
-// Check if we're running in Pi Browser - deprecated function, always returns false
+// Check if we're running in Pi Browser
 export const isPiBrowser = () => {
-  return false;
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return false;
+  }
+  
+  const userAgent = navigator.userAgent.toLowerCase();
+  
+  // Log user agent for debugging
+  console.log('[Pi Detection] User Agent:', navigator.userAgent);
+  
+  // Check for Pi Browser specific identifiers
+  const piIdentifiers = [
+    'pi browser',
+    'pi-browser',
+    'pibrowser',
+    'pi network',
+    'pinetwork',
+    'minepi',
+    'pi_browser',
+    'pi.browser'
+  ];
+  
+  // Also check for Pi SDK availability as indication of Pi Browser
+  const hasPiSDK = typeof window !== 'undefined' && window.Pi;
+  
+  // Check URL hostname patterns that might indicate Pi Browser
+  const isPiHostname = window.location.hostname.includes('pi') || 
+                      window.location.hostname.includes('minepi');
+  
+  const userAgentMatch = piIdentifiers.some(identifier => userAgent.includes(identifier));
+  
+  // More aggressive detection: if Pi SDK is available, likely Pi Browser
+  const result = userAgentMatch || hasPiSDK || isPiHostname;
+  
+  console.log('[Pi Detection] Results:', {
+    userAgent: userAgent.substring(0, 100) + '...',
+    userAgentMatch,
+    hasPiSDK,
+    isPiHostname,
+    finalResult: result
+  });
+  
+  return result;
 };
 
 // Check if Pi SDK is loaded and available
@@ -195,14 +236,84 @@ export const createPiPayment = (paymentData) => {
   });
 };
 
+// Check microphone support with Pi Browser specific handling
+export const checkMicrophoneSupport = () => {
+  const isInPiBrowser = isPiBrowser();
+  const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  const hasMediaRecorder = !!window.MediaRecorder;
+  
+  return {
+    isSupported: hasGetUserMedia && hasMediaRecorder,
+    isPiBrowser: isInPiBrowser,
+    hasGetUserMedia,
+    hasMediaRecorder,
+    userAgent: navigator.userAgent,
+    // Pi Browser might have different permission requirements
+    needsSpecialHandling: isInPiBrowser
+  };
+};
+
+// Pi Browser specific getUserMedia with fallbacks
+export const getPiBrowserUserMedia = async (constraints = { audio: true }) => {
+  const micSupport = checkMicrophoneSupport();
+  
+  console.log('[Pi Detection] Microphone support check:', micSupport);
+  
+  if (!micSupport.isSupported) {
+    throw new Error(`Microphone not supported. getUserMedia: ${micSupport.hasGetUserMedia}, MediaRecorder: ${micSupport.hasMediaRecorder}`);
+  }
+  
+  try {
+    // For Pi Browser, try with simplified constraints first
+    if (micSupport.isPiBrowser) {
+      console.log('[Pi Detection] Attempting Pi Browser optimized getUserMedia...');
+      
+      // Try with basic constraints first for Pi Browser
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('[Pi Detection] Pi Browser basic audio access successful');
+        return stream;
+      } catch (basicError) {
+        console.log('[Pi Detection] Pi Browser basic access failed, trying enhanced constraints:', basicError);
+      }
+    }
+    
+    // Regular getUserMedia with enhanced constraints
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    console.log('[Pi Detection] Standard getUserMedia successful');
+    return stream;
+    
+  } catch (error) {
+    console.error('[Pi Detection] getUserMedia failed:', error);
+    
+    // Enhanced error handling for Pi Browser
+    if (micSupport.isPiBrowser) {
+      if (error.name === 'NotAllowedError') {
+        throw new Error('Pi Browser: Microfoon toegang geweigerd. Ga naar Pi Browser instellingen en sta microfoon toe voor deze app.');
+      } else if (error.name === 'NotFoundError') {
+        throw new Error('Pi Browser: Geen microfoon gevonden. Controleer of je apparaat een werkende microfoon heeft.');
+      } else if (error.name === 'NotSupportedError') {
+        throw new Error('Pi Browser: Microfoon wordt niet ondersteund. Probeer een andere browser of update Pi Browser.');
+      }
+    }
+    
+    throw error;
+  }
+};
+
 // Debug utility to check Pi environment
 export const debugPiEnvironment = () => {
+  const micSupport = checkMicrophoneSupport();
   const debug = {
+    isPiBrowser: isPiBrowser(),
     isPiSDKAvailable: isPiSDKAvailable(),
+    microphoneSupport: micSupport,
     userAgent: navigator.userAgent,
     hostname: window.location.hostname,
     piObject: typeof window !== 'undefined' ? !!window.Pi : false,
-    piMethods: typeof window !== 'undefined' && window.Pi ? Object.keys(window.Pi) : []
+    piMethods: typeof window !== 'undefined' && window.Pi ? Object.keys(window.Pi) : [],
+    isHTTPS: window.location.protocol === 'https:',
+    mediaDevicesAvailable: !!navigator.mediaDevices
   };
   
   console.log('Pi Environment Debug:', debug);
@@ -218,5 +329,7 @@ export default {
   authenticateWithPi,
   getPiUser,
   createPiPayment,
+  checkMicrophoneSupport,
+  getPiBrowserUserMedia,
   debugPiEnvironment
 };
