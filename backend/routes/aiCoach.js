@@ -108,39 +108,6 @@ router.post('/intervention', checkAICoachEnabled, async (req, res) => {
   }
 });
 
-/**
- * GET /api/ai-coach/insights/:userId
- * Get daily/weekly insights
- */
-router.get('/insights/:userId', checkAICoachEnabled, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { period = 'daily' } = req.query;
-    
-    if (!userId) {
-      return res.status(400).json({ error: 'userId is required' });
-    }
-    
-    let insights;
-    if (period === 'weekly') {
-      insights = await aiCoachService.generateDailyInsights(userId);
-    } else {
-      // For daily insights, we can get a quick summary
-      insights = await aiCoachService.generateDailyInsights(userId);
-    }
-    
-    res.json({
-      success: true,
-      insights,
-      period,
-      timestamp: new Date()
-    });
-    
-  } catch (error) {
-    console.error('Error generating insights:', error);
-    res.status(500).json({ error: 'Failed to generate insights' });
-  }
-});
 
 /**
  * GET /api/ai-coach/sessions/:userId

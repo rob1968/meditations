@@ -5,13 +5,13 @@ import { getFullUrl } from '../config/api';
 import ProgressDashboard from './ProgressDashboard';
 import EmergencyModal from './EmergencyModal';
 
-const AICoachChat = ({ user, isVisible, onClose, initialMessage = null }) => {
+const AICoachChat = ({ user, isVisible, onClose, initialMessage = null, initialTab = 'chat' }) => {
   const { t } = useTranslation();
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'insights'
+  const [activeTab, setActiveTab] = useState(initialTab); // 'chat' or 'insights'
   
   // Emergency states
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
@@ -29,21 +29,26 @@ const AICoachChat = ({ user, isVisible, onClose, initialMessage = null }) => {
     scrollToBottom();
   }, [messages]);
 
-  // Initialize chat with welcome message
+  // Initialize chat with welcome message and set active tab
   useEffect(() => {
-    if (isVisible && messages.length === 0) {
-      const welcomeMessage = initialMessage || t('coachWelcomeMessage', 
-        "Hi! I'm Alex, your AI recovery coach. I'm here to support you 24/7. How are you feeling today?"
-      );
+    if (isVisible) {
+      // Reset active tab when opening
+      setActiveTab(initialTab);
       
-      setMessages([{
-        id: Date.now(),
-        role: 'coach',
-        content: welcomeMessage,
-        timestamp: new Date()
-      }]);
+      if (messages.length === 0 && initialTab === 'chat') {
+        const welcomeMessage = initialMessage || t('coachWelcomeMessage', 
+          "Hi! I'm Alex, your AI recovery coach. I'm here to support you 24/7. How are you feeling today?"
+        );
+        
+        setMessages([{
+          id: Date.now(),
+          role: 'coach',
+          content: welcomeMessage,
+          timestamp: new Date()
+        }]);
+      }
     }
-  }, [isVisible, initialMessage, t, messages.length]);
+  }, [isVisible, initialMessage, initialTab, t, messages.length]);
 
   // Crisis detection function
   const detectCrisis = async (message) => {

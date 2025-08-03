@@ -370,7 +370,12 @@ class AICoachService {
       `;
       
       const result = await this.model.generateContent(prompt);
-      const intervention = JSON.parse(result.response.text());
+      let text = result.response.text();
+      
+      // Clean markdown code blocks if present
+      text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+      
+      const intervention = JSON.parse(text);
       
       // Save intervention
       await this.saveIntervention(userId, intervention);
@@ -427,7 +432,12 @@ class AICoachService {
       `;
       
       const result = await this.model.generateContent(prompt);
-      const insights = JSON.parse(result.response.text());
+      let text = result.response.text();
+      
+      // Clean markdown code blocks if present
+      text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+      
+      const insights = JSON.parse(text);
       
       return insights;
       
@@ -1417,9 +1427,12 @@ Be supportive, specific, and actionable. Focus on progress made and positive ste
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
-      const text = response.text();
+      let text = response.text();
       
       try {
+        // Clean markdown code blocks if present
+        text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+        
         return JSON.parse(text);
       } catch (parseError) {
         console.error('Error parsing AI insights:', parseError);
@@ -1605,9 +1618,12 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
-      const text = response.text();
+      let text = response.text();
       
       try {
+        // Clean markdown code blocks if present
+        text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+        
         return JSON.parse(text);
       } catch (parseError) {
         console.error('Error parsing emergency AI response:', parseError);

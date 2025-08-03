@@ -52,6 +52,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   // AI Coach state
   const [showCoachChat, setShowCoachChat] = useState(false);
   const [coachInitialMessage, setCoachInitialMessage] = useState(null);
+  const [coachInitialTab, setCoachInitialTab] = useState('chat');
   
   // Trigger Alert state
   const [activeTrigger, setActiveTrigger] = useState(null);
@@ -176,6 +177,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     if (startChat) {
       // Start AI Coach chat session
       setCoachInitialMessage(intervention ? intervention.message : t('coachWelcomeMessage', 'Hi! I\'m Alex, your AI recovery coach. I\'m here to support you 24/7. How are you feeling today?'));
+      setCoachInitialTab('chat');
       setShowCoachChat(true);
     }
     
@@ -2447,6 +2449,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                 className="start-coaching-btn"
                 onClick={() => {
                   setCoachInitialMessage(null);
+                  setCoachInitialTab('chat');
                   setShowCoachChat(true);
                 }}
               >
@@ -2457,7 +2460,8 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
               <button 
                 className="view-insights-btn"
                 onClick={() => {
-                  setCoachInitialMessage(t('insightsWelcome', 'Let me share some insights about your recent progress. What would you like to know about your recovery journey?'));
+                  setCoachInitialMessage(null);
+                  setCoachInitialTab('insights');
                   setShowCoachChat(true);
                 }}
               >
@@ -3025,6 +3029,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         isVisible={showCoachChat}
         onClose={() => setShowCoachChat(false)}
         initialMessage={coachInitialMessage}
+        initialTab={coachInitialTab}
       />
       
       {/* Trigger Alert */}
