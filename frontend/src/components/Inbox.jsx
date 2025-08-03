@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { getFullUrl } from '../config/api';
 import PageHeader from './PageHeader';
+import ConfirmDialog from './ConfirmDialog';
 
 const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, onInboxClick, onCreateClick }) => {
   const [notifications, setNotifications] = useState([]);
@@ -10,7 +11,19 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
   const [error, setError] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [filter, setFilter] = useState('all'); // all, unread, read
+  const [confirmState, setConfirmState] = useState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' });
   const { t } = useTranslation();
+
+  // Helper function to show confirmation dialogs
+  const showConfirmDialog = (message, onConfirm, confirmText = t('confirm', 'Bevestigen'), cancelText = t('cancel', 'Annuleren')) => {
+    setConfirmState({
+      show: true,
+      message,
+      onConfirm,
+      confirmText,
+      cancelText
+    });
+  };
 
   const meditationTypeLabels = {
     sleep: t('sleepMeditation', 'Sleep'),
@@ -248,7 +261,10 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
                 )}
                 <button 
                   className="delete-btn"
-                  onClick={() => deleteNotification(notification._id)}
+                  onClick={() => showConfirmDialog(
+                    t('confirmDeleteNotification', 'Are you sure you want to delete this notification?'),
+                    () => deleteNotification(notification._id)
+                  )}
                   title={t('delete', 'Delete')}
                 >
                   🗑️
@@ -258,6 +274,19 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
           ))}
         </div>
       )}
+
+      {/* Confirm Dialog Component */}
+      <ConfirmDialog
+        message={confirmState.message}
+        visible={confirmState.show}
+        onConfirm={() => {
+          if (confirmState.onConfirm) confirmState.onConfirm();
+          setConfirmState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' });
+        }}
+        onCancel={() => setConfirmState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' })}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+      />
     </div>
   );
 };

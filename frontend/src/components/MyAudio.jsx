@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { getFullUrl, getAssetUrl, API_ENDPOINTS } from '../config/api';
 import ShareMeditationDialog from './ShareMeditationDialog';
 import PageHeader from './PageHeader';
+import Alert from './Alert';
+import ConfirmDialog from './ConfirmDialog';
 
 const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
   const [meditations, setMeditations] = useState([]);
@@ -15,7 +17,25 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
   const [showShareDialog, setShowShareDialog] = useState(null);
   const [isSharing, setIsSharing] = useState(false);
   const [filterType, setFilterType] = useState('all');
+  const [alertState, setAlertState] = useState({ show: false, message: '', type: 'success' });
+  const [confirmState, setConfirmState] = useState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' });
   const { t } = useTranslation();
+  
+  // Helper function to show alerts
+  const showAlert = (message, type = 'success') => {
+    setAlertState({ show: true, message, type });
+  };
+
+  // Helper function to show confirmation dialogs
+  const showConfirmDialog = (message, onConfirm, confirmText = t('confirm', 'Bevestigen'), cancelText = t('cancel', 'Annuleren')) => {
+    setConfirmState({
+      show: true,
+      message,
+      onConfirm,
+      confirmText,
+      cancelText
+    });
+  };
   const prevIsGenerating = useRef(isGenerating);
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -277,7 +297,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
         setError('');
         
         // Show success message
-        alert(t('meditationSharedSuccess', 'Meditation shared successfully! It will appear in the community after admin approval.'));
+        showAlert(t('meditationSharedSuccess', 'Meditation shared successfully! It will appear in the community after admin approval.'), 'success');
       }
     } catch (error) {
       console.error('Error sharing meditation:', error);
@@ -550,7 +570,10 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
               {meditations.find(m => m.id === showImageOptions)?.customImage && (
                 <button 
                   className="image-option-btn delete-btn"
-                  onClick={() => deleteCustomImage(showImageOptions)}
+                  onClick={() => showConfirmDialog(
+                    t('confirmDeleteImage', 'Are you sure you want to delete this image?'),
+                    () => deleteCustomImage(showImageOptions)
+                  )}
                 >
                   🗑️ {t('deleteImage', 'Delete Image')}
                 </button>
@@ -620,6 +643,28 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
           t={t}
         />
       )}
+      
+      {/* Alert Component */}
+      <Alert 
+        message={alertState.message}
+        type={alertState.type}
+        visible={alertState.show}
+        onClose={() => setAlertState({ show: false, message: '', type: 'success' })}
+        position="fixed"
+      />
+
+      {/* Confirm Dialog Component */}
+      <ConfirmDialog
+        message={confirmState.message}
+        visible={confirmState.show}
+        onConfirm={() => {
+          if (confirmState.onConfirm) confirmState.onConfirm();
+          setConfirmState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' });
+        }}
+        onCancel={() => setConfirmState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' })}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+      />
     </div>
   );
 };

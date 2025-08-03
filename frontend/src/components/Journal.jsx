@@ -4,6 +4,8 @@ import i18n from 'i18next';
 import axios from 'axios';
 import { getFullUrl, getAssetUrl, API_ENDPOINTS } from '../config/api';
 import PageHeader from './PageHeader';
+import Alert from './Alert';
+import ConfirmDialog from './ConfirmDialog';
 
 const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
   const [entries, setEntries] = useState([]);
@@ -102,6 +104,16 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   // Track save success for feedback
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   
+  // Alert states for replacing popups
+  const [alertState, setAlertState] = useState({ show: false, message: '', type: 'success' });
+  const [confirmState, setConfirmState] = useState({ 
+    show: false, 
+    message: '', 
+    onConfirm: null,
+    confirmText: 'Bevestigen',
+    cancelText: 'Annuleren'
+  });
+  
   // Control calendar visibility
   const [showCalendar, setShowCalendar] = useState(true);
   
@@ -111,6 +123,22 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   // Check if content has been changed
   const hasContentChanged = () => {
     return formData.content.trim() !== originalContent.trim();
+  };
+  
+  // Helper function to show alerts
+  const showAlert = (message, type = 'success') => {
+    setAlertState({ show: true, message, type });
+  };
+  
+  // Helper function to show confirmation dialog
+  const showConfirmDialog = (message, onConfirm, confirmText = t('confirm', 'Bevestigen'), cancelText = t('cancel', 'Annuleren')) => {
+    setConfirmState({
+      show: true,
+      message,
+      onConfirm,
+      confirmText,
+      cancelText
+    });
   };
 
   const moods = [
@@ -568,7 +596,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         }
         
         // Success message
-        alert(t('voiceCloneSuccess', 'Voice successfully cloned! You can now use it to generate audio.'));
+        showAlert(t('voiceCloneSuccess', 'Voice successfully cloned! You can now use it to generate audio.'), 'success');
       }
     } catch (error) {
       console.error('Error saving custom voice:', error);
@@ -580,22 +608,23 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   };
 
   const deleteCustomVoice = async (voiceId) => {
-    if (!window.confirm(t('confirmDeleteVoice', 'Are you sure you want to delete this custom voice?'))) {
-      return;
-    }
-
-    try {
-      await axios.delete(getFullUrl(`/api/journal/voice-clone/${voiceId}?userId=${user.id}`));
-      await fetchUserVoices(); // Refresh voices list
-      
-      // If deleted voice was selected, switch back to default
-      if (selectedVoiceId === voiceId) {
-        setSelectedVoiceId('default');
+    showConfirmDialog(
+      t('confirmDeleteVoice', 'Are you sure you want to delete this custom voice?'),
+      async () => {
+        try {
+          await axios.delete(getFullUrl(`/api/journal/voice-clone/${voiceId}?userId=${user.id}`));
+          await fetchUserVoices(); // Refresh voices list
+          
+          // If deleted voice was selected, switch back to default
+          if (selectedVoiceId === voiceId) {
+            setSelectedVoiceId('default');
+          }
+        } catch (error) {
+          console.error('Error deleting custom voice:', error);
+          setError(t('failedToDeleteVoice', 'Failed to delete custom voice'));
+        }
       }
-    } catch (error) {
-      console.error('Error deleting custom voice:', error);
-      setError(t('failedToDeleteVoice', 'Failed to delete custom voice'));
-    }
+    );
   };
 
   const handleSaveEntry = async () => {
@@ -705,17 +734,18 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   };
 
   const handleDeleteEntry = async (entryId) => {
-    if (!window.confirm(t('confirmDeleteEntry', 'Are you sure you want to delete this journal entry?'))) {
-      return;
-    }
-
-    try {
-      await axios.delete(getFullUrl(`/api/journal/${entryId}?userId=${user.id}`));
-      await fetchEntries();
-    } catch (error) {
-      console.error('Error deleting journal entry:', error);
-      setError(t('failedToDeleteEntry', 'Failed to delete journal entry'));
-    }
+    showConfirmDialog(
+      t('confirmDeleteEntry', 'Are you sure you want to delete this journal entry?'),
+      async () => {
+        try {
+          await axios.delete(getFullUrl(`/api/journal/${entryId}?userId=${user.id}`));
+          await fetchEntries();
+        } catch (error) {
+          console.error('Error deleting journal entry:', error);
+          setError(t('failedToDeleteEntry', 'Failed to delete journal entry'));
+        }
+      }
+    );
   };
 
   const handleGenerateAudio = async (entry) => {
@@ -751,7 +781,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         }
         // Show success message
         if (response.data.message) {
-          alert(response.data.message);
+          showAlert(response.data.message, 'success');
         }
       }
     } catch (error) {
@@ -777,7 +807,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
       if (response.data.success) {
         await fetchEntries();
-        alert(t('entrySharedSuccess', 'Journal entry shared successfully!'));
+        showAlert(t('entrySharedSuccess', 'Journal entry shared successfully!'), 'success');
       }
     } catch (error) {
       console.error('Error sharing entry:', error);
@@ -1257,17 +1287,18 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   };
 
   const handleDeleteAddiction = async (addictionId) => {
-    if (!window.confirm(t('confirmDeleteAddiction', 'Are you sure you want to delete this addiction tracking?'))) {
-      return;
-    }
-    
-    try {
-      await axios.delete(getFullUrl(`/api/addictions/${addictionId}?userId=${user.id}`));
-      await fetchAddictions();
-    } catch (error) {
-      console.error('Error deleting addiction:', error);
-      setError(t('failedToDeleteAddiction', 'Failed to delete addiction'));
-    }
+    showConfirmDialog(
+      t('confirmDeleteAddiction', 'Are you sure you want to delete this addiction tracking?'),
+      async () => {
+        try {
+          await axios.delete(getFullUrl(`/api/addictions/${addictionId}?userId=${user.id}`));
+          await fetchAddictions();
+        } catch (error) {
+          console.error('Error deleting addiction:', error);
+          setError(t('failedToDeleteAddiction', 'Failed to delete addiction'));
+        }
+      }
+    );
   };
 
   const getAddictionIcon = (type) => {
@@ -2391,23 +2422,26 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                       {editingEntry && (
                         <button
                           className="delete-entry-btn"
-                          onClick={async () => {
-                            if (window.confirm(t('confirmDeleteJournal', 'Weet je zeker dat je deze dagboek entry wilt verwijderen?'))) {
-                              try {
-                                await axios.delete(getFullUrl(`/api/journal/${editingEntry._id}?userId=${user.id}`));
-                                // Reset form and refresh
-                                resetForm();
-                                fetchEntries();
-                                const today = new Date().toISOString().split('T')[0];
-                                if (selectedDate === today) {
-                                  // If deleting today's entry, refresh today's status
-                                  loadTodayForCalendar();
+                          onClick={() => {
+                            showConfirmDialog(
+                              t('confirmDeleteJournal', 'Weet je zeker dat je deze dagboek entry wilt verwijderen?'),
+                              async () => {
+                                try {
+                                  await axios.delete(getFullUrl(`/api/journal/${editingEntry._id}?userId=${user.id}`));
+                                  // Reset form and refresh
+                                  resetForm();
+                                  fetchEntries();
+                                  const today = new Date().toISOString().split('T')[0];
+                                  if (selectedDate === today) {
+                                    // If deleting today's entry, refresh today's status
+                                    loadTodayForCalendar();
+                                  }
+                                } catch (error) {
+                                  console.error('Error deleting entry:', error);
+                                  setError(t('errorDeleting', 'Fout bij verwijderen van entry'));
                                 }
-                              } catch (error) {
-                                console.error('Error deleting entry:', error);
-                                setError(t('errorDeleting', 'Fout bij verwijderen van entry'));
                               }
-                            }
+                            );
                           }}
                         >
                           🗑️ {t('delete', 'Verwijderen')}
@@ -2642,6 +2676,30 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
           </audio>
         )
       ))}
+      
+      {/* Alert Component */}
+      <Alert 
+        message={alertState.message}
+        type={alertState.type}
+        visible={alertState.show}
+        onClose={() => setAlertState({ show: false, message: '', type: 'success' })}
+        position="fixed"
+      />
+      
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        message={confirmState.message}
+        visible={confirmState.show}
+        onConfirm={() => {
+          if (confirmState.onConfirm) {
+            confirmState.onConfirm();
+          }
+          setConfirmState({ ...confirmState, show: false });
+        }}
+        onCancel={() => setConfirmState({ ...confirmState, show: false })}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+      />
     </div>
   );
 };
