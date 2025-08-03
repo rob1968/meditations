@@ -28,9 +28,16 @@ router.get('/user/:userId', async (req, res) => {
     
     console.log('Found addictions:', addictions.length);
     
+    // Add calculated days clean to each addiction
+    const addictionsWithDays = addictions.map(addiction => {
+      const addictionObj = addiction.toObject();
+      addictionObj.daysClean = addiction.getDaysClean();
+      return addictionObj;
+    });
+    
     res.json({
       success: true,
-      addictions
+      addictions: addictionsWithDays
     });
   } catch (error) {
     console.error('Error fetching addictions:', error);

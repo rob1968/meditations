@@ -6,6 +6,8 @@ import { getFullUrl, getAssetUrl, API_ENDPOINTS } from '../config/api';
 import PageHeader from './PageHeader';
 import Alert from './Alert';
 import ConfirmDialog from './ConfirmDialog';
+import AICoachChat from './AICoachChat';
+import TriggerAlert from './TriggerAlert';
 
 const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
   const [entries, setEntries] = useState([]);
@@ -46,6 +48,15 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const [addictions, setAddictions] = useState([]);
   const [showAddictionForm, setShowAddictionForm] = useState(false);
   const [editingAddiction, setEditingAddiction] = useState(null);
+  
+  // AI Coach state
+  const [showCoachChat, setShowCoachChat] = useState(false);
+  const [coachInitialMessage, setCoachInitialMessage] = useState(null);
+  
+  // Trigger Alert state
+  const [activeTrigger, setActiveTrigger] = useState(null);
+  const [showTriggerAlert, setShowTriggerAlert] = useState(false);
+  const [expandedCards, setExpandedCards] = useState(new Set());
   const [addictionForm, setAddictionForm] = useState({
     type: '',
     description: '',
@@ -145,6 +156,36 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       confirmText,
       cancelText
     });
+  };
+
+  // Trigger Alert handler functions
+  const handleTriggerDetected = (trigger) => {
+    console.log('Trigger detected:', trigger);
+    setActiveTrigger(trigger);
+    setShowTriggerAlert(true);
+  };
+
+  const handleTriggerAlertClose = () => {
+    setShowTriggerAlert(false);
+    setActiveTrigger(null);
+  };
+
+  const handleTriggerGetHelp = (intervention, startChat = false) => {
+    console.log('Getting help for trigger:', intervention);
+    
+    if (startChat) {
+      // Start AI Coach chat session
+      setCoachInitialMessage(intervention ? intervention.message : t('coachWelcomeMessage', 'Hi! I\'m Alex, your AI recovery coach. I\'m here to support you 24/7. How are you feeling today?'));
+      setShowCoachChat(true);
+    }
+    
+    // Close trigger alert
+    handleTriggerAlertClose();
+  };
+
+  const handleTriggerDismiss = () => {
+    console.log('Trigger alert dismissed');
+    handleTriggerAlertClose();
   };
 
   // Filter entries based on selected month and mood
@@ -714,9 +755,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       };
 
       // Only include mood if it has a value
-      if (formData.mood && formData.mood.trim()) {
-        payload.mood = formData.mood.trim();
-      }
+      // Mood is now automatically detected by AI, no need to send manually
 
 
       console.log('Saving journal entry:', {
@@ -742,9 +781,18 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         // Update original content to reflect saved state
         setOriginalContent(formData.content);
         
-        // Update editingEntry if this was a new entry that got created
-        if (!editingEntry && response.data.entry) {
+        // Update editingEntry with the latest data (including new mood)
+        if (response.data.entry) {
           setEditingEntry(response.data.entry);
+          
+          // Update todaysEntry if this is today's entry
+          const entryDate = new Date(response.data.entry.date);
+          const today = new Date();
+          const isToday = entryDate.toDateString() === today.toDateString();
+          
+          if (isToday) {
+            setTodaysEntry(response.data.entry);
+          }
         }
         
         setError('');
@@ -760,6 +808,17 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         // Refresh data in background without showing loading states
         fetchEntries(false);
         fetchTodaysEntry();
+        
+        // Force immediate update of todaysEntry if this was today's entry
+        const entryDate = new Date(response.data.entry.date);
+        const today = new Date();
+        const isToday = entryDate.toDateString() === today.toDateString();
+        
+        if (isToday) {
+          console.log('🔄 Updating todaysEntry immediately with new mood data');
+          setTodaysEntry(response.data.entry);
+          setHasTodaysEntry(true);
+        }
         
         // Show calendar again after save to display highlighted date
         setShowCalendar(true);
@@ -1272,9 +1331,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         date: formData.date
       };
 
-      if (formData.mood && formData.mood.trim()) {
-        payload.mood = formData.mood.trim();
-      }
+      // Mood is now automatically detected by AI, no need to send manually
 
 
       let response;
@@ -1311,7 +1368,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     }, 2000); // 2 seconds delay
 
     return () => clearTimeout(timeoutId);
-  }, [formData.content, formData.mood, user, showCreateForm, autoSave]);
+  }, [formData.content, user, showCreateForm, autoSave]);
 
   // Addictions functions
   const fetchAddictions = async () => {
@@ -1438,30 +1495,62 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   };
 
   const getDaysClean = (addiction) => {
-    if (!addiction.quitDate || addiction.status === 'active' || addiction.status === 'relapsed') {
+    try {
+      if (!addiction.quitDate || addiction.status === 'active' || addiction.status === 'relapsed') {
+        return 0;
+      }
+      
+      // Get today's date at midnight
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Parse quit date - handle different formats
+      let quitDate;
+      const quitDateValue = addiction.quitDate;
+      
+      if (!quitDateValue) return 0;
+      
+      // If it's already a Date object
+      if (quitDateValue instanceof Date) {
+        quitDate = new Date(quitDateValue);
+      }
+      // If it's a string
+      else if (typeof quitDateValue === 'string') {
+        // Try to parse ISO format first
+        quitDate = new Date(quitDateValue);
+        
+        // If that gives invalid date, try manual parsing
+        if (isNaN(quitDate.getTime())) {
+          // Extract YYYY-MM-DD part
+          const match = quitDateValue.match(/(\d{4})-(\d{2})-(\d{2})/);
+          if (match) {
+            quitDate = new Date(
+              parseInt(match[1]), 
+              parseInt(match[2]) - 1, 
+              parseInt(match[3])
+            );
+          }
+        }
+      }
+      
+      // Validation
+      if (!quitDate || isNaN(quitDate.getTime())) {
+        return 0;
+      }
+      
+      // Set quit date to midnight
+      quitDate.setHours(0, 0, 0, 0);
+      
+      // Calculate difference in days
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const diffInMs = today.getTime() - quitDate.getTime();
+      const diffInDays = Math.floor(diffInMs / msPerDay);
+      
+      return Math.max(0, diffInDays);
+    } catch (error) {
+      console.error('Days calculation error:', error);
       return 0;
     }
-    
-    const now = new Date();
-    // Parse date string correctly - ensure it's treated as local date
-    const quitDate = new Date(addiction.quitDate + 'T00:00:00');
-    
-    // Check if quit date is in the future
-    if (quitDate > now) {
-      return 0;
-    }
-    
-    // Set both dates to start of day for accurate day comparison
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const quitDay = new Date(quitDate.getFullYear(), quitDate.getMonth(), quitDate.getDate());
-    
-    // Calculate difference in milliseconds
-    const diffTime = today.getTime() - quitDay.getTime();
-    
-    // Convert to days - person is 1 day clean on quit day, 2 days clean the next day, etc.
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    
-    return Math.max(1, diffDays); // Minimum 1 day if we got this far
   };
 
   // Fetch addictions when user changes or when addictions tab is active
@@ -1492,6 +1581,44 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       return () => document.removeEventListener('keydown', handleKeyPress);
     }
   }, [activeTab, showCalendar, hasContentChanged]);
+
+  // Poll for trigger alerts every 30 seconds
+  useEffect(() => {
+    if (!user) return;
+
+    let triggerPollingInterval;
+
+    const checkForTriggers = async () => {
+      try {
+        // Don't check if already showing a trigger alert
+        if (showTriggerAlert) return;
+
+        console.log('Checking for trigger alerts...');
+        const response = await axios.get(getFullUrl(`/api/ai-coach/check-triggers/${user.id}`));
+        
+        if (response.data.success && response.data.triggers && response.data.triggers.length > 0) {
+          const trigger = response.data.triggers[0]; // Show the first (most recent) trigger
+          console.log('New trigger detected:', trigger);
+          handleTriggerDetected(trigger);
+        }
+      } catch (error) {
+        console.error('Error checking for triggers:', error);
+        // Don't show error to user - this is background polling
+      }
+    };
+
+    // Check immediately on mount
+    checkForTriggers();
+
+    // Set up polling interval (every 30 seconds)
+    triggerPollingInterval = setInterval(checkForTriggers, 30000);
+
+    return () => {
+      if (triggerPollingInterval) {
+        clearInterval(triggerPollingInterval);
+      }
+    };
+  }, [user, showTriggerAlert]);
 
   if (isLoading) {
     return (
@@ -1649,6 +1776,13 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
           <span className="tab-icon">🔒</span>
           <span className="tab-label">{t('addictions', 'Verslavingen')}</span>
         </button>
+        <button 
+          className={`tab ${activeTab === 'coach' ? 'active' : ''}`}
+          onClick={() => setActiveTab('coach')}
+        >
+          <span className="tab-icon">🤖</span>
+          <span className="tab-label">{t('coach', 'Coach')}</span>
+        </button>
       </div>
 
       {/* Tab Content */}
@@ -1718,9 +1852,11 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                     {getFilteredEntries().map((entry, index) => (
                       <div 
                         key={entry._id} 
-                        className="mood-grid-card"
+                        className="mood-grid-card clickable"
                         data-mood={entry.mood || 'neutral'}
                         style={{ '--card-index': index }}
+                        onClick={() => handleEditEntry(entry)}
+                        title={`Open dagboek entry: ${entry.title}`}
                       >
                         {/* Mood Badge */}
                         <div className="mood-badge" data-mood={entry.mood || 'neutral'}>
@@ -2247,7 +2383,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                       
                       {(addiction.status === 'recovering' || addiction.status === 'clean') && addiction.quitDate && (
                         <div className="days-clean">
-                          <span className="days-number">{getDaysClean(addiction)}</span>
+                          <span className="days-number">{addiction.daysClean || 0}</span>
                           <span className="days-label">{t('daysClean', 'dagen schoon')}</span>
                         </div>
                       )}
@@ -2271,6 +2407,74 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* AI Coach Tab */}
+        {activeTab === 'coach' && (
+          <div className="coach-tab-content">
+            <div className="coach-welcome">
+              <div className="coach-avatar">
+                <span className="coach-icon">🤖</span>
+              </div>
+              <div className="coach-intro">
+                <h2>{t('aiCoachWelcome', 'Meet Alex, Your AI Recovery Coach')}</h2>
+                <p>{t('aiCoachDescription', 'I\'m here 24/7 to support you on your recovery journey. I can help you recognize triggers, provide coping strategies, and offer encouragement when you need it most.')}</p>
+              </div>
+            </div>
+
+            <div className="coach-features">
+              <div className="coach-feature">
+                <span className="feature-icon">🧠</span>
+                <h3>{t('smartAnalysis', 'Smart Analysis')}</h3>
+                <p>{t('smartAnalysisDesc', 'I analyze your journal entries to detect potential triggers and emotional patterns.')}</p>
+              </div>
+              <div className="coach-feature">
+                <span className="feature-icon">⚡</span>
+                <h3>{t('proactiveSupport', 'Proactive Support')}</h3>
+                <p>{t('proactiveSupportDesc', 'I provide timely interventions and coping strategies when you need them most.')}</p>
+              </div>
+              <div className="coach-feature">
+                <span className="feature-icon">📈</span>
+                <h3>{t('progressTracking', 'Progress Tracking')}</h3>
+                <p>{t('progressTrackingDesc', 'Together we\'ll track your recovery progress and celebrate your achievements.')}</p>
+              </div>
+            </div>
+
+            <div className="coach-cta">
+              <button 
+                className="start-coaching-btn"
+                onClick={() => {
+                  setCoachInitialMessage(null);
+                  setShowCoachChat(true);
+                }}
+              >
+                <span className="btn-icon">💬</span>
+                {t('startCoaching', 'Start Coaching Session')}
+              </button>
+              
+              <button 
+                className="view-insights-btn"
+                onClick={() => {
+                  setCoachInitialMessage(t('insightsWelcome', 'Let me share some insights about your recent progress. What would you like to know about your recovery journey?'));
+                  setShowCoachChat(true);
+                }}
+              >
+                <span className="btn-icon">📊</span>
+                {t('viewInsights', 'View My Insights')}
+              </button>
+            </div>
+
+            <div className="coach-status">
+              <div className="status-item">
+                <span className="status-icon">🟢</span>
+                <span className="status-text">{t('coachOnline', 'Alex is online and ready to help')}</span>
+              </div>
+              <div className="status-item">
+                <span className="status-icon">🔒</span>
+                <span className="status-text">{t('coachPrivacy', 'Your conversations are private and secure')}</span>
+              </div>
             </div>
           </div>
         )}
@@ -2379,28 +2583,57 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
               <div className="quick-write-interface">
                 <div className="quick-write-form">
                   
-                  {/* Mood selector moved above textarea */}
-                  <div className="mood-quick-select mood-above-text">
-                    <span className="mood-label">{t('howDoYouFeelToday', 'Hoe voel je je vandaag?')}</span>
-                    <div className="mood-options-inline">
-                      {moods.slice(0, 6).map(mood => (
-                        <button
-                          key={mood.value}
-                          className={`mood-option-quick ${formData.mood === mood.value ? 'selected' : ''}`}
-                          onClick={async () => {
-                            setFormData({...formData, mood: mood.value});
-                            // Auto-save mood selection
-                            if (formData.content.trim()) {
-                              await handleSaveEntry();
-                            }
-                          }}
-                          title={mood.label}
-                        >
-                          {mood.emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+
+                  {/* AI-Detected Multi-Mood Display */}
+                  {(() => {
+                    // Only show for current editing entry, not general today's entry when editing different date
+                    const currentEntry = editingEntry || (selectedDate === '' ? todaysEntry : null);
+                    return currentEntry && currentEntry.content && currentEntry.content.trim() && currentEntry.moodAnalysis && currentEntry.moodAnalysis.aiGenerated && (
+                      <div className="ai-mood-analysis-display">
+                        <div className="mood-analysis-header">
+                          <span className="mood-label">{t('aiMoodAnalysis', 'AI Mood Analysis')} 🤖</span>
+                          <span className="overall-sentiment sentiment-{currentEntry.moodAnalysis.overallSentiment}">
+                            {t('overallSentiment', 'Overall')}: {currentEntry.moodAnalysis.overallSentiment}
+                          </span>
+                        </div>
+                        <div className="detected-moods-container">
+                          {/* Display all detected moods */}
+                          <div className="detected-moods-grid">
+                            {currentEntry.moodAnalysis.detectedMoods && currentEntry.moodAnalysis.detectedMoods.slice(0, 6).map((detectedMood, index) => (
+                              <div key={index} className={`detected-mood-item ${index === 0 ? 'primary-mood' : 'secondary-mood'}`}>
+                                <div className="mood-icon">
+                                  {moods.find(m => m.value === detectedMood.mood)?.emoji || '😐'}
+                                </div>
+                                <div className="mood-details">
+                                  <span className="mood-name">
+                                    {moods.find(m => m.value === detectedMood.mood)?.label || detectedMood.mood}
+                                  </span>
+                                  <span className="mood-strength">
+                                    {Math.round(detectedMood.strength * 20)}%
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                            {(currentEntry.moodAnalysis.detectedMoods?.length || 0) > 6 && (
+                              <div className="mood-count-more">
+                                +{(currentEntry.moodAnalysis.detectedMoods?.length || 0) - 6} meer
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Confidence and sentiment info */}
+                          <div className="mood-analysis-footer">
+                            <span className="confidence-info">
+                              {t('confidence', 'Confidence')}: {Math.round((currentEntry.moodAnalysis.confidence || 0) * 100)}%
+                            </span>
+                            <span className="mood-count-info">
+                              {currentEntry.moodAnalysis.detectedMoods?.length || 0} {t('moodsDetected', 'moods detected')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   
                   <div className="textarea-container">
                     <textarea
@@ -2587,23 +2820,70 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
             {/* Full Writing Interface */}
             <div className="expanded-writing-area">
-              {/* Quick Mood Selector */}
-              <div className="quick-mood-bar">
-                <span className="mood-label">{t('howAreYouFeeling', 'Hoe voel je je?')}</span>
-                <div className="mood-quick-selector">
-                  {moods.map(mood => (
-                    <button
-                      key={mood.value}
-                      type="button"
-                      className={`mood-emoji-btn ${formData.mood === mood.value ? 'active' : ''}`}
-                      onClick={() => setFormData({...formData, mood: mood.value})}
-                      title={mood.label}
-                    >
-                      {mood.emoji}
-                    </button>
-                  ))}
+              {/* AI-Detected Mood Display */}
+              {(() => {
+                const currentEntry = editingEntry || (selectedDate === '' ? todaysEntry : null);
+                return currentEntry && currentEntry.mood && currentEntry.content?.trim() && (
+                <div className="quick-mood-bar mood-display-bar">
+                  <span className="mood-label">{t('moodDetectedAutomatically', 'Mood detected automatically')} 🤖</span>
+                  <div className="detected-mood-expanded">
+                    {/* Show multiple moods if available in editing mode */}
+                    {(currentEntry?.moodAnalysis?.detectedMoods?.length > 1) ? (
+                      <div className="multiple-moods-display-expanded">
+                        <div className="moods-grid-expanded">
+                          {(currentEntry?.moodAnalysis?.detectedMoods || []).slice(0, 4).map((detectedMood, index) => (
+                            <div key={index} className={`mood-item-expanded ${index === 0 ? 'primary-mood' : 'secondary-mood'}`}>
+                              <div className="mood-icon-expanded">
+                                {moods.find(m => m.value === detectedMood.mood)?.emoji || '😐'}
+                              </div>
+                              <div className="mood-details-expanded-item">
+                                <span className="mood-name-small">
+                                  {moods.find(m => m.value === detectedMood.mood)?.label || detectedMood.mood}
+                                </span>
+                                <span className="mood-strength-small">
+                                  {Math.round(detectedMood.strength * 20)}%
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {(currentEntry?.moodAnalysis?.detectedMoods?.length > 4) && (
+                          <div className="mood-count-indicator-small">
+                            +{(currentEntry?.moodAnalysis?.detectedMoods?.length || 0) - 4}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* Single mood display (fallback) */
+                      <div className="mood-result-expanded">
+                        {moods.find(m => m.value === currentEntry?.mood)?.emoji || '😐'}
+                        <span className="mood-name">
+                          {moods.find(m => m.value === currentEntry?.mood)?.label || currentEntry?.mood}
+                        </span>
+                        {currentEntry?.moodScore && (
+                          <span className="mood-score">({currentEntry?.moodScore}/10)</span>
+                        )}
+                      </div>
+                    )}
+                    {currentEntry?.moodAnalysis?.aiGenerated && (
+                      <div className="mood-details-expanded">
+                        <span className="confidence-badge">
+                          {Math.round((currentEntry?.moodAnalysis?.confidence || 0) * 100)}% {t('moodAnalysisConfidence', 'confidence')}
+                        </span>
+                        <span className="sentiment-badge sentiment-{currentEntry?.moodAnalysis?.overallSentiment}">
+                          {currentEntry?.moodAnalysis?.overallSentiment}
+                        </span>
+                        {(currentEntry?.moodAnalysis?.moodCount > 1) && (
+                          <span className="mood-count-badge">
+                            {currentEntry?.moodAnalysis?.moodCount} moods
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+                );
+              })()}
 
               {/* Main Writing Area */}
               <div className="writing-tools-expanded">
@@ -2738,6 +3018,25 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         confirmText={confirmState.confirmText}
         cancelText={confirmState.cancelText}
       />
+      
+      {/* AI Coach Chat */}
+      <AICoachChat
+        user={user}
+        isVisible={showCoachChat}
+        onClose={() => setShowCoachChat(false)}
+        initialMessage={coachInitialMessage}
+      />
+      
+      {/* Trigger Alert */}
+      {showTriggerAlert && activeTrigger && (
+        <TriggerAlert
+          user={user}
+          trigger={activeTrigger}
+          onClose={handleTriggerAlertClose}
+          onGetHelp={handleTriggerGetHelp}
+          onDismiss={handleTriggerDismiss}
+        />
+      )}
     </div>
   );
 };

@@ -29,12 +29,74 @@ const JournalEntrySchema = new mongoose.Schema({
   mood: {
     type: String,
     enum: {
-      values: ['happy', 'calm', 'stressed', 'anxious', 'energetic', 'peaceful', 'grateful', 'reflective'],
+      values: ['happy', 'calm', 'stressed', 'anxious', 'energetic', 'peaceful', 'grateful', 'reflective', 'sad', 'angry', 'frustrated', 'confused', 'lonely', 'mixed'],
       message: '{VALUE} is not a valid mood'
     },
     required: false,
     default: undefined,
     sparse: true
+  },
+
+  moodScore: {
+    type: Number,
+    min: 1,
+    max: 10,
+    required: false
+  },
+
+  moodAnalysis: {
+    aiGenerated: {
+      type: Boolean,
+      default: false
+    },
+    confidence: {
+      type: Number,
+      min: 0,
+      max: 1,
+      required: false
+    },
+    emotionalIndicators: [{
+      type: String,
+      required: false
+    }],
+    overallSentiment: {
+      type: String,
+      enum: ['positive', 'neutral', 'negative', 'mixed'],
+      required: false
+    },
+    description: {
+      type: String,
+      required: false
+    },
+    detectedMoods: [{
+      mood: {
+        type: String,
+        enum: ['happy', 'calm', 'stressed', 'anxious', 'energetic', 'peaceful', 'grateful', 'reflective', 'sad', 'angry', 'frustrated', 'confused', 'lonely', 'mixed'],
+        required: false
+      },
+      score: {
+        type: Number,
+        min: 1,
+        max: 10,
+        required: false
+      },
+      strength: {
+        type: Number,
+        min: 0,
+        max: 5,
+        required: false
+      },
+      keywords: [{
+        type: String,
+        required: false
+      }]
+    }],
+    moodCount: {
+      type: Number,
+      min: 1,
+      max: 10,
+      required: false
+    }
   },
   
   tags: [{

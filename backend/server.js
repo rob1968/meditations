@@ -19,6 +19,8 @@ const notificationsRoute = require('./routes/notifications');
 const journalRoute = require('./routes/journal');
 const addictionsRoute = require('./routes/addictions');
 const piPaymentsRoute = require('./routes/piPayments');
+const aiCoachRoute = require('./routes/aiCoach');
+const emergencyContactsRoute = require('./routes/emergencyContacts');
 const app = express();
 
 // Create a write stream (in append mode) for logging
@@ -68,6 +70,8 @@ app.use('/api/notifications', notificationsRoute);
 app.use('/api/journal', journalRoute);
 app.use('/api/addictions', addictionsRoute);
 app.use('/api/pi-payments', piPaymentsRoute);
+app.use('/api/ai-coach', aiCoachRoute);
+app.use('/api/emergency-contacts', emergencyContactsRoute);
 
 // Add a route for fetching voices
 app.use('/api/voices', meditationRoute);

@@ -49,6 +49,13 @@ npm run backend         # Start only the backend server
 npm run frontend        # Start only the frontend React app
 ```
 
+### Deployment Commands
+```bash
+npm run build           # Build frontend for production
+npm run deploy          # Full deployment (build + copy + restart services)
+npm run deploy-quick    # Quick deployment (build + copy + restart frontend only)
+```
+
 ### Manual Setup (if needed)
 ```bash
 cd backend && npm install && npm start    # Backend only
@@ -85,7 +92,15 @@ cd frontend && npm install && npm start   # Frontend only
 
 6. **AI Text Generation**: Each meditation type (sleep, stress, focus, anxiety, energy) generates completely unique content every time, customized for the specified duration and language using Claude 3.5 Sonnet.
 
-7. **Professional Meditation Coach Features**:
+7. **Deployment Structure**:
+   - **Frontend builds to**: `/frontend/build/` directory
+   - **Nginx serves from**: Root directory `/var/www/vhosts/pihappy.me/meditations.pihappy.me/`
+   - **Deployment copies build files** from `/frontend/build/` to root directory
+   - **PM2 serves static files** from root directory to `meditations.pihappy.me` subdomain
+   - **IMPORTANT**: Always use `npm run deploy` after frontend changes to ensure correct deployment
+   - **Debug**: If wrong files are served, check if JS filename in `index.html` matches files in `/static/js/`
+
+8. **Professional Meditation Coach Features**:
    - **Expert Coach Persona**: AI generates content as an experienced meditation coach (20+ years experience)
    - **Extended Pauses**: "..." for breathing space, "......" for deep reflection between sections
    - **Slower Audio**: Speech slowed to 0.75x speed for professional meditation tempo

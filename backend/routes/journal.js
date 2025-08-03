@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const JournalEntry = require('../models/JournalEntry');
 const User = require('../models/User');
+const aiCoachService = require('../services/aiCoachService');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -13,6 +14,13 @@ const journalsDir = path.join(__dirname, '../../assets/audio/journals');
 if (!fs.existsSync(journalsDir)) {
   fs.mkdirSync(journalsDir, { recursive: true });
 }
+
+// Helper function for automatic AI Coach analysis (DISABLED)
+const triggerAICoachAnalysis = async (journalEntry) => {
+  // Disabled for now to focus on mood detection
+  console.log(`AI Coach analysis disabled for entry ${journalEntry._id}`);
+  return;
+};
 
 // Set up multer for file uploads
 const upload = multer({
@@ -163,6 +171,19 @@ router.post('/create', async (req, res) => {
     
     console.log('Creating/updating journal entry for date:', normalizedDate);
     
+    // Analyze mood from content using AI
+    const aiCoachService = require('../services/aiCoachService');
+    let detectedMood = null;
+    
+    try {
+      console.log('Analyzing mood from journal content...');
+      detectedMood = await aiCoachService.analyzeMoodFromText(content, userId);
+      console.log('Detected mood:', detectedMood);
+    } catch (error) {
+      console.error('Error analyzing mood:', error);
+      // Continue without mood analysis if it fails
+    }
+    
     // Check if entry already exists for this date
     const existingEntry = await JournalEntry.findOne({
       userId,
@@ -178,9 +199,22 @@ router.post('/create', async (req, res) => {
       // Update existing entry - append content
       existingEntry.content = existingEntry.content + '\n\n' + content.trim();
       
-      // Update mood if provided
-      if (mood && typeof mood === 'string' && mood.trim()) {
+      // Use AI-detected mood or fallback to user-provided mood
+      if (detectedMood && detectedMood.primaryMood) {
+        existingEntry.mood = detectedMood.primaryMood;
+        existingEntry.moodScore = detectedMood.moodScore;
+        existingEntry.moodAnalysis = {
+          aiGenerated: true,
+          confidence: detectedMood.confidence,
+          emotionalIndicators: detectedMood.emotionalIndicators,
+          overallSentiment: detectedMood.overallSentiment,
+          description: detectedMood.moodDescription,
+          detectedMoods: detectedMood.detectedMoods || [],
+          moodCount: detectedMood.moodCount || 1
+        };
+      } else if (mood && typeof mood === 'string' && mood.trim()) {
         existingEntry.mood = mood.trim();
+        existingEntry.moodAnalysis = { aiGenerated: false };
       }
       
       // Merge tags if provided
@@ -194,11 +228,15 @@ router.post('/create', async (req, res) => {
       await existingEntry.save();
       await existingEntry.populate('userId', 'username');
       
+      // Trigger AI Coach analysis for updated entry
+      triggerAICoachAnalysis(existingEntry);
+      
       res.json({
         success: true,
         entry: existingEntry,
         message: 'Journal entry updated successfully',
-        wasUpdated: true
+        wasUpdated: true,
+        detectedMood: detectedMood
       });
     } else {
       // Create new entry
@@ -209,9 +247,22 @@ router.post('/create', async (req, res) => {
         date: normalizedDate
       };
 
-      // Only add mood if it's provided and valid
-      if (mood && typeof mood === 'string' && mood.trim()) {
+      // Use AI-detected mood or fallback to user-provided mood
+      if (detectedMood && detectedMood.primaryMood) {
+        entryData.mood = detectedMood.primaryMood;
+        entryData.moodScore = detectedMood.moodScore;
+        entryData.moodAnalysis = {
+          aiGenerated: true,
+          confidence: detectedMood.confidence,
+          emotionalIndicators: detectedMood.emotionalIndicators,
+          overallSentiment: detectedMood.overallSentiment,
+          description: detectedMood.moodDescription,
+          detectedMoods: detectedMood.detectedMoods || [],
+          moodCount: detectedMood.moodCount || 1
+        };
+      } else if (mood && typeof mood === 'string' && mood.trim()) {
         entryData.mood = mood.trim();
+        entryData.moodAnalysis = { aiGenerated: false };
       }
 
       // Only add tags if they exist
@@ -224,11 +275,15 @@ router.post('/create', async (req, res) => {
       await newEntry.save();
       await newEntry.populate('userId', 'username');
       
+      // Trigger AI Coach analysis for new entry
+      triggerAICoachAnalysis(newEntry);
+      
       res.json({
         success: true,
         entry: newEntry,
         message: 'Journal entry created successfully',
-        wasUpdated: false
+        wasUpdated: false,
+        detectedMood: detectedMood
       });
     }
   } catch (error) {
@@ -276,14 +331,42 @@ router.put('/:entryId', async (req, res) => {
     
     // Update fields
     if (title !== undefined) entry.title = title.trim();
-    if (content !== undefined) entry.content = content.trim();
+    if (content !== undefined) {
+      entry.content = content.trim();
+      
+      // Re-analyze mood when content changes
+      try {
+        console.log('Re-analyzing mood after content update...');
+        const aiCoachService = require('../services/aiCoachService');
+        const detectedMood = await aiCoachService.analyzeMoodFromText(entry.content, userId);
+        
+        if (detectedMood && detectedMood.primaryMood) {
+          entry.mood = detectedMood.primaryMood;
+          entry.moodScore = detectedMood.moodScore;
+          entry.moodAnalysis = {
+            aiGenerated: true,
+            confidence: detectedMood.confidence,
+            emotionalIndicators: detectedMood.emotionalIndicators,
+            overallSentiment: detectedMood.overallSentiment,
+            description: detectedMood.moodDescription,
+            detectedMoods: detectedMood.detectedMoods || [],
+            moodCount: detectedMood.moodCount || 1
+          };
+          console.log('Updated mood after content change:', detectedMood.primaryMood);
+        }
+      } catch (error) {
+        console.error('Error re-analyzing mood:', error);
+      }
+    }
     
-    // Handle mood update carefully
+    // Handle manual mood override if provided
     if (mood !== undefined) {
       if (mood && typeof mood === 'string' && mood.trim()) {
         entry.mood = mood.trim();
+        entry.moodAnalysis = { aiGenerated: false }; // Mark as manually set
       } else {
         entry.mood = undefined; // Remove mood if empty/null
+        entry.moodAnalysis = undefined;
       }
     }
     

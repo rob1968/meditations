@@ -151,10 +151,18 @@ AddictionSchema.methods.getDaysClean = function() {
     .sort((a, b) => b.date - a.date)[0];
   
   const startDate = recentRelapse ? recentRelapse.date : quitDate;
-  const diffTime = Math.abs(now - startDate);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
-  return diffDays;
+  // Set both dates to start of day for accurate day comparison
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const cleanStartDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  
+  // Calculate difference in milliseconds
+  const diffTime = today.getTime() - cleanStartDay.getTime();
+  
+  // Convert to days - on quit day itself, you're 0 days clean
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  return Math.max(0, diffDays);
 };
 
 // Add milestone

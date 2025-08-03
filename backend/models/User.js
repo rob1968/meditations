@@ -156,6 +156,39 @@ const UserSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+
+  // Emergency contacts for crisis situations
+  emergencyContacts: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100
+    },
+    phone: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    relationship: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 50
+    },
+    isPrimary: {
+      type: Boolean,
+      default: false
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   
   // Metadata
   createdAt: {
@@ -240,6 +273,72 @@ UserSchema.methods.removeCustomVoice = function(voiceId) {
 
 UserSchema.methods.getCustomVoices = function() {
   return this.customVoices.sort((a, b) => b.createdAt - a.createdAt);
+};
+
+// Emergency contact management methods
+UserSchema.methods.addEmergencyContact = function(contactData) {
+  const { name, phone, relationship, isPrimary = false } = contactData;
+  
+  // If this contact is marked as primary, unset other primary contacts
+  if (isPrimary) {
+    this.emergencyContacts.forEach(contact => {
+      contact.isPrimary = false;
+    });
+  }
+  
+  this.emergencyContacts.push({
+    name: name.trim(),
+    phone: phone.trim(),
+    relationship: relationship.trim(),
+    isPrimary,
+    isActive: true
+  });
+  
+  return this.save();
+};
+
+UserSchema.methods.updateEmergencyContact = function(contactId, updateData) {
+  const contact = this.emergencyContacts.id(contactId);
+  if (!contact) {
+    throw new Error('Emergency contact not found');
+  }
+  
+  // If setting as primary, unset other primary contacts
+  if (updateData.isPrimary) {
+    this.emergencyContacts.forEach(c => {
+      if (c._id.toString() !== contactId.toString()) {
+        c.isPrimary = false;
+      }
+    });
+  }
+  
+  Object.assign(contact, updateData);
+  return this.save();
+};
+
+UserSchema.methods.removeEmergencyContact = function(contactId) {
+  const contact = this.emergencyContacts.id(contactId);
+  if (!contact) {
+    throw new Error('Emergency contact not found');
+  }
+  
+  contact.remove();
+  return this.save();
+};
+
+UserSchema.methods.getActiveEmergencyContacts = function() {
+  return this.emergencyContacts
+    .filter(contact => contact.isActive)
+    .sort((a, b) => {
+      // Primary contacts first, then by creation date
+      if (a.isPrimary && !b.isPrimary) return -1;
+      if (!a.isPrimary && b.isPrimary) return 1;
+      return b.createdAt - a.createdAt;
+    });
+};
+
+UserSchema.methods.getPrimaryEmergencyContact = function() {
+  return this.emergencyContacts.find(contact => contact.isPrimary && contact.isActive);
 };
 
 // Create indexes for better performance

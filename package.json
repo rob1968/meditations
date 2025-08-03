@@ -8,7 +8,10 @@
     "backend": "cd backend && npm start",
     "backend:dev": "cd backend && npm run dev",
     "frontend": "cd frontend && npm start",
-    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install --legacy-peer-deps"
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install --legacy-peer-deps",
+    "build": "cd frontend && GENERATE_SOURCEMAP=false npm run build",
+    "deploy": "./deploy.sh",
+    "deploy-quick": "npm run build && cp -r frontend/build/* . && npx pm2 restart meditations-frontend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
