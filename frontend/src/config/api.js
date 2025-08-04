@@ -29,6 +29,9 @@ export const API_ENDPOINTS = {
   VOICE_PREVIEW: '/api/meditation/voice-preview',
   GOOGLE_VOICE_PREVIEW: '/api/google-voice-preview',
   
+  // AI Coach endpoints
+  AI_COACH: '/api/ai-coach',
+  
   // Asset endpoints
   MEDITATION_AUDIO: (filename) => `/assets/meditations/${filename}`,
   CUSTOM_IMAGE: (filename) => `/assets/images/custom/${filename}`,

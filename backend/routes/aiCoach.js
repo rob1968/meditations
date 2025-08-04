@@ -528,6 +528,33 @@ router.get('/crisis-resources', async (req, res) => {
 });
 
 /**
+ * POST /api/ai-coach/check-grammar
+ * Check grammar and spelling for text input
+ */
+router.post('/check-grammar', async (req, res) => {
+  try {
+    const { text, language = 'auto' } = req.body;
+    
+    if (!text || text.trim().length === 0) {
+      return res.status(400).json({ error: 'text is required' });
+    }
+    
+    // Check grammar and spelling
+    const analysis = await aiCoachService.checkGrammarAndSpelling(text, language);
+    
+    res.json({
+      success: true,
+      analysis,
+      timestamp: new Date()
+    });
+    
+  } catch (error) {
+    console.error('Error checking grammar:', error);
+    res.status(500).json({ error: 'Failed to check grammar and spelling' });
+  }
+});
+
+/**
  * POST /api/ai-coach/assess-crisis
  * Assess crisis level from user input and provide appropriate response
  */

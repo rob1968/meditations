@@ -2084,6 +2084,148 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
       return this.getEmergencyResources(crisisType, location);
     }
   }
+
+  /**
+   * Check grammar and spelling for text input
+   */
+  async checkGrammarAndSpelling(text, language = 'auto') {
+    try {
+      console.log(`Checking grammar for text in language: ${language}`);
+      
+      // Detect language if auto
+      let detectedLanguage = language;
+      if (language === 'auto') {
+        detectedLanguage = await this.detectLanguage(text);
+      }
+      
+      const prompt = `
+        You are a professional grammar and spelling checker. Analyze the following text for:
+        1. Spelling errors
+        2. Grammar mistakes
+        3. Punctuation issues
+        4. Whether the text makes sense or is nonsensical
+        
+        Text language: ${detectedLanguage}
+        Text to analyze: "${text}"
+        
+        Provide your analysis in this exact JSON format:
+        {
+          "errors": [
+            {
+              "type": "spelling|grammar|punctuation",
+              "error": "incorrect text",
+              "suggestion": "corrected text",
+              "start": start_position,
+              "end": end_position,
+              "explanation": "brief explanation"
+            }
+          ],
+          "isNonsense": boolean,
+          "nonsenseReason": "reason if nonsense, null otherwise",
+          "detectedLanguage": "language_code",
+          "overallQuality": "excellent|good|fair|poor",
+          "readabilityScore": number_between_1_and_10,
+          "suggestions": ["general improvement suggestion1", "suggestion2"]
+        }
+        
+        For position indices:
+        - Use character positions (0-based)
+        - Be precise with start/end positions
+        - Only flag actual errors, not stylistic preferences
+        
+        For nonsense detection:
+        - Mark as nonsense if text is gibberish, random characters, or completely incoherent
+        - Don't mark as nonsense just because of poor grammar or spelling
+        - Consider the language context
+        
+        Be helpful but not overly pedantic. Focus on meaningful errors that affect understanding.
+      `;
+      
+      const result = await this.model.generateContent(prompt);
+      const responseText = result.response.text();
+      console.log('Raw Gemini response for grammar check:', responseText);
+      
+      // Clean the response text - remove markdown code blocks if present
+      let cleanedText = responseText.trim();
+      
+      // Remove ```json and ``` markers
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+      } else if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.replace(/^```\s*/, '').replace(/```\s*$/, '');
+      }
+      
+      console.log('Cleaned Gemini response for grammar check:', cleanedText);
+      
+      const analysis = JSON.parse(cleanedText);
+      
+      // Validate and fix the response
+      if (!analysis.errors) analysis.errors = [];
+      if (typeof analysis.isNonsense !== 'boolean') analysis.isNonsense = false;
+      if (!analysis.detectedLanguage) analysis.detectedLanguage = detectedLanguage || 'en';
+      if (!analysis.overallQuality) analysis.overallQuality = 'good';
+      if (!analysis.readabilityScore) analysis.readabilityScore = 7;
+      if (!analysis.suggestions) analysis.suggestions = [];
+      
+      // Sort errors by position
+      analysis.errors.sort((a, b) => a.start - b.start);
+      
+      return analysis;
+      
+    } catch (error) {
+      console.error('Error checking grammar and spelling:', error);
+      return this.getDefaultGrammarAnalysis();
+    }
+  }
+
+  /**
+   * Detect the language of text
+   */
+  async detectLanguage(text) {
+    try {
+      if (!text || text.trim().length < 10) {
+        return 'en'; // Default to English for short text
+      }
+      
+      const prompt = `
+        Detect the language of this text and return only the language code (e.g., "en", "nl", "de", "fr", "es", "it", "pt", "ru", "zh", "ja", "ko", "ar", "hi"):
+        
+        Text: "${text.substring(0, 200)}" ${text.length > 200 ? '...' : ''}
+        
+        Return only the 2-letter language code, nothing else.
+      `;
+      
+      const result = await this.model.generateContent(prompt);
+      const detectedLang = result.response.text().trim().toLowerCase();
+      
+      // Validate the detected language
+      const supportedLanguages = ['en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'ar', 'hi'];
+      if (supportedLanguages.includes(detectedLang)) {
+        return detectedLang;
+      }
+      
+      return 'en'; // Default fallback
+      
+    } catch (error) {
+      console.error('Error detecting language:', error);
+      return 'en'; // Default fallback
+    }
+  }
+
+  /**
+   * Default grammar analysis fallback
+   */
+  getDefaultGrammarAnalysis() {
+    return {
+      errors: [],
+      isNonsense: false,
+      nonsenseReason: null,
+      detectedLanguage: 'en',
+      overallQuality: 'good',
+      readabilityScore: 7,
+      suggestions: ['Text appears to be readable']
+    };
+  }
 }
 
 module.exports = new AICoachService();

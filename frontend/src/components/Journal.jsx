@@ -8,6 +8,7 @@ import Alert from './Alert';
 import ConfirmDialog from './ConfirmDialog';
 import AICoachChat from './AICoachChat';
 import TriggerAlert from './TriggerAlert';
+import GrammarChecker from './GrammarChecker';
 
 const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
   const [entries, setEntries] = useState([]);
@@ -2300,11 +2301,14 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                     
                     <div className="form-group">
                       <label>{t('description', 'Beschrijving')} ({t('optional', 'optioneel')}):</label>
-                      <textarea 
-                        value={addictionForm.description}
-                        onChange={(e) => setAddictionForm({...addictionForm, description: e.target.value})}
+                      <GrammarChecker
+                        text={addictionForm.description}
+                        onTextChange={(newText) => setAddictionForm({...addictionForm, description: newText})}
                         placeholder={t('addictionDescription', 'Beschrijf je verslaving, triggers, of andere details...')}
                         rows={3}
+                        enabled={true}
+                        language="auto"
+                        debounceMs={2000}
                       />
                     </div>
                     
@@ -2640,19 +2644,20 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                   })()}
                   
                   <div className="textarea-container">
-                    <textarea
-                      ref={textareaRef}
-                      placeholder={t('writeHere', 'Schrijf hier je gedachten, gevoelens of ervaringen van vandaag...')}
-                      value={formData.content}
-                      onChange={(e) => {
-                        setFormData({...formData, content: e.target.value});
-                        if (editingEntry && e.target.value !== lastSavedContent) {
+                    <GrammarChecker
+                      text={formData.content}
+                      onTextChange={(newText) => {
+                        setFormData({...formData, content: newText});
+                        if (editingEntry && newText !== lastSavedContent) {
                           // Auto-save logic can be added here
                         }
                       }}
+                      placeholder={t('writeHere', 'Schrijf hier je gedachten, gevoelens of ervaringen van vandaag...')}
                       className={`quick-content-textarea ${recordingState === 'processing' ? 'processing' : ''}`}
                       rows={6}
-                      disabled={recordingState === 'processing'}
+                      enabled={recordingState !== 'processing'}
+                      language="auto"
+                      debounceMs={2000}
                     />
                     
                     {/* Spinner overlay during transcription */}
@@ -2931,18 +2936,16 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                 </div>
               </div>
 
-              <textarea
-                ref={(el) => {
-                  if (el && showCreateForm) {
-                    setTimeout(() => el.focus(), 100);
-                  }
-                }}
-                value={formData.content}
-                onChange={(e) => setFormData({...formData, content: e.target.value})}
+              <GrammarChecker
+                text={formData.content}
+                onTextChange={(newText) => setFormData({...formData, content: newText})}
                 placeholder={t('startWriting', 'Begin met schrijven... Wat houd je vandaag bezig?')}
                 className="expanded-writing-textarea"
-                rows="15"
-                maxLength="5000"
+                rows={15}
+                maxLength={5000}
+                enabled={true}
+                language="auto"
+                debounceMs={1500}
               />
 
 

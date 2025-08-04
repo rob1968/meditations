@@ -524,9 +524,16 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
       if (savedBackgroundId && savedBackgroundUserId && savedBackgroundFilename) {
         backgroundPath = path.join(CUSTOM_BACKGROUNDS_DIR, savedBackgroundUserId, savedBackgroundFilename);
         if (!fs.existsSync(backgroundPath)) {
-          throw new Error(`Saved background audio file not found: ${backgroundPath}`);
+          console.warn(`Saved background audio file not found: ${backgroundPath}, falling back to default background`);
+          // Fallback to default ocean background
+          backgroundPath = path.join(__dirname, `../../assets/ocean.mp3`);
+          if (!fs.existsSync(backgroundPath)) {
+            console.error('Default ocean background not found, proceeding without background music');
+            backgroundPath = null;
+          }
+        } else {
+          console.log(`Using saved background file: ${backgroundPath}`);
         }
-        console.log(`Using saved background file: ${backgroundPath}`);
       }
       // Check if a custom background file was uploaded
       else if (req.file) {
@@ -554,12 +561,24 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
         if (background && background.startsWith('saved-system-')) {
           backgroundFilename = background.replace('saved-system-', '');
         }
+        // Handle saved custom backgrounds that weren't properly passed
+        else if (background && background.startsWith('saved-')) {
+          console.warn(`Background ID ${background} was selected but saved background parameters are missing. Falling back to ocean.`);
+          backgroundFilename = 'ocean';
+        }
         
         backgroundPath = path.join(__dirname, `../../assets/${backgroundFilename}.mp3`);
         if (!fs.existsSync(backgroundPath)) {
-          throw new Error(`Background audio file not found: ${backgroundPath}`);
+          console.warn(`Background audio file not found: ${backgroundPath}, falling back to ocean background`);
+          backgroundPath = path.join(__dirname, `../../assets/ocean.mp3`);
+          if (!fs.existsSync(backgroundPath)) {
+            console.error('Default ocean background not found, proceeding without background music');
+            backgroundPath = null;
+          }
         }
-        console.log(`Using default background: ${backgroundPath}`);
+        if (backgroundPath) {
+          console.log(`Using default/fallback background: ${backgroundPath}`);
+        }
       }
     }
     // Create unique filename based on language, timestamp and a hash of the text
