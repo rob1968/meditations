@@ -450,12 +450,17 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
                   <button 
                     className="thumbnail-play-button"
                     onClick={() => {
+                      console.log('Play button clicked for meditation:', meditation.id);
+                      console.log('Audio files:', meditation.audioFiles);
                       if (meditation.audioFiles && meditation.audioFiles.length > 0) {
                         const audio = document.querySelector(`#audio-${meditation.id}`);
+                        console.log('Found audio element:', audio);
                         if (audio) {
                           if (audio.paused) {
                             // Pause all other audios first
-                            document.querySelectorAll('audio').forEach(a => a.pause());
+                            document.querySelectorAll('audio').forEach(a => {
+                              if (a.id !== `audio-${meditation.id}`) a.pause();
+                            });
                             audio.play()
                               .then(() => {
                                 setPlayingMeditationId(meditation.id);

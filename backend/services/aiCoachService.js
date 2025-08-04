@@ -6,7 +6,7 @@ const User = require('../models/User');
 
 class AICoachService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
+    this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_CLOUD_API_KEY);
     this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     // Coach persona configuration
