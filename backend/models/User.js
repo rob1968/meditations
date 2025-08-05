@@ -36,6 +36,29 @@ const UserSchema = new mongoose.Schema({
       type: String,
       trim: true,
       maxlength: 5
+    },
+    // Google Places data
+    placeId: {
+      type: String,
+      trim: true,
+      maxlength: 200
+    },
+    formattedAddress: {
+      type: String,
+      trim: true,
+      maxlength: 300
+    },
+    coordinates: {
+      latitude: {
+        type: Number,
+        min: -90,
+        max: 90
+      },
+      longitude: {
+        type: Number,
+        min: -180,
+        max: 180
+      }
     }
   },
   gender: {

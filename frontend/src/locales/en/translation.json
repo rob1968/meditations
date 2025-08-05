@@ -771,5 +771,21 @@
   "creditsDesc": "Manage your tokens",
   "aiMoodAnalysis": "AI Mood Analysis",
   "confidence": "Confidence",
-  "moodsDetected": "moods detected"
+  "moodsDetected": "moods detected",
+  
+  "searchCountries": "Search countries...",
+  "searchCities": "Search cities...",
+  "searchLocations": "Search locations...",
+  "enterCountryManually": "Enter country name",
+  "enterCityManually": "Enter city name", 
+  "enterLocationManually": "Enter location",
+  "useAutocomplete": "Use autocomplete",
+  "typeManually": "Type manually",
+  "locationSelected": "Location selected",
+  "searchingLocations": "Searching locations...",
+  "noLocationsFound": "No locations found",
+  "countrySearchHelp": "Start typing to search countries",
+  "citySearchHelp": "Start typing to search cities",
+  "locationSearchHelp": "Start typing to search locations",
+  "manualLocationHelp": "Enter location manually (autocomplete disabled)"
 }

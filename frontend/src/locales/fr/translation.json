@@ -676,5 +676,21 @@
   "moodAnalysisConfidence": "confiance",
   "proactiveSupport": "Support Proactif",
   "proactiveSupportDesc": "Je fournis des interventions opportunes et des stratégies d'adaptation quand tu en as le plus besoin.",
-  "aiCoachDescription": "Je suis là 24h/24 et 7j/7 pour te soutenir dans ton parcours de récupération. Je peux t'aider à reconnaître les déclencheurs, fournir des stratégies d'adaptation et offrir des encouragements quand tu en as le plus besoin."
+  "aiCoachDescription": "Je suis là 24h/24 et 7j/7 pour te soutenir dans ton parcours de récupération. Je peux t'aider à reconnaître les déclencheurs, fournir des stratégies d'adaptation et offrir des encouragements quand tu en as le plus besoin.",
+  
+  "searchCountries": "Rechercher des pays...",
+  "searchCities": "Rechercher des villes...",
+  "searchLocations": "Rechercher des lieux...",
+  "enterCountryManually": "Entrer le nom du pays",
+  "enterCityManually": "Entrer le nom de la ville",
+  "enterLocationManually": "Entrer le lieu",
+  "useAutocomplete": "Utiliser l'autocomplétion",
+  "typeManually": "Taper manuellement",
+  "locationSelected": "Lieu sélectionné",
+  "searchingLocations": "Recherche de lieux...",
+  "noLocationsFound": "Aucun lieu trouvé",
+  "countrySearchHelp": "Commencez à taper pour rechercher des pays",
+  "citySearchHelp": "Commencez à taper pour rechercher des villes",
+  "locationSearchHelp": "Commencez à taper pour rechercher des lieux",
+  "manualLocationHelp": "Entrer le lieu manuellement (autocomplétion désactivée)"
 }

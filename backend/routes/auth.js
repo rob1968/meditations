@@ -96,7 +96,8 @@ router.post('/register', async (req, res) => {
       city, 
       gender, 
       preferredLanguage, 
-      bio 
+      bio,
+      locationData 
     } = req.body;
     
     if (!username || username.trim().length < 3) {
@@ -121,12 +122,28 @@ router.post('/register', async (req, res) => {
     if (age) {
       userData.age = age;
     }
-    if (city || country || countryCode) {
+    if (city || country || countryCode || locationData) {
       userData.location = {
         city: city || '',
         country: country || '',
         countryCode: countryCode || ''
       };
+      
+      // Add Google Places data if provided
+      if (locationData) {
+        if (locationData.placeId) {
+          userData.location.placeId = locationData.placeId;
+        }
+        if (locationData.formattedAddress) {
+          userData.location.formattedAddress = locationData.formattedAddress;
+        }
+        if (locationData.coordinates) {
+          userData.location.coordinates = {
+            latitude: locationData.coordinates.lat,
+            longitude: locationData.coordinates.lng
+          };
+        }
+      }
     }
     if (gender) {
       userData.gender = gender;
@@ -630,7 +647,7 @@ router.post('/user/:id/credits/add', async (req, res) => {
 // Update user profile
 router.put('/user/:id/profile', async (req, res) => {
   try {
-    const { preferredLanguage, city, country, countryCode, gender, bio } = req.body;
+    const { preferredLanguage, city, country, countryCode, gender, bio, locationData } = req.body;
     const user = await User.findById(req.params.id);
     
     if (!user) {
@@ -676,7 +693,7 @@ router.put('/user/:id/profile', async (req, res) => {
       user.preferredLanguage = preferredLanguage === '' ? undefined : preferredLanguage;
     }
     
-    if (city !== undefined || country !== undefined || countryCode !== undefined) {
+    if (city !== undefined || country !== undefined || countryCode !== undefined || locationData) {
       // Ensure location object exists
       if (!user.location) {
         user.location = {};
@@ -685,7 +702,11 @@ router.put('/user/:id/profile', async (req, res) => {
       user.location = {
         city: city !== undefined ? city : (user.location.city || ''),
         country: country !== undefined ? country : (user.location.country || ''),
-        countryCode: countryCode !== undefined ? countryCode : (user.location.countryCode || '')
+        countryCode: countryCode !== undefined ? countryCode : (user.location.countryCode || ''),
+        // Google Places data
+        placeId: locationData?.placeId || user.location.placeId || undefined,
+        formattedAddress: locationData?.formattedAddress || user.location.formattedAddress || undefined,
+        coordinates: locationData?.coordinates || user.location.coordinates || undefined
       };
     }
     
@@ -1128,7 +1149,7 @@ router.delete('/delete-account/:userId', async (req, res) => {
 // Complete Pi user registration with additional profile information
 router.post('/complete-pi-registration', async (req, res) => {
   try {
-    const { userId, username, birthDate, age, country, countryCode, city, gender, preferredLanguage, bio } = req.body;
+    const { userId, username, birthDate, age, country, countryCode, city, gender, preferredLanguage, bio, locationData } = req.body;
 
     console.log('[Auth] Completing Pi user registration for userId:', userId, 'with username:', username);
 
@@ -1179,6 +1200,22 @@ router.post('/complete-pi-registration', async (req, res) => {
     }
     if (city) {
       user.location.city = city;
+    }
+    
+    // Update Google Places location data if provided
+    if (locationData) {
+      if (locationData.placeId) {
+        user.location.placeId = locationData.placeId;
+      }
+      if (locationData.formattedAddress) {
+        user.location.formattedAddress = locationData.formattedAddress;
+      }
+      if (locationData.coordinates) {
+        user.location.coordinates = {
+          latitude: locationData.coordinates.lat,
+          longitude: locationData.coordinates.lng
+        };
+      }
     }
     if (gender) {
       user.gender = gender;

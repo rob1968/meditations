@@ -675,5 +675,21 @@
   "moodAnalysisConfidence": "신뢰도",
   "proactiveSupport": "능동적 지원",
   "proactiveSupportDesc": "가장 필요할 때 적시에 개입과 대처 전략을 제공합니다.",
-  "aiCoachDescription": "저는 24시간 내내 당신의 회복 여정을 지원하기 위해 여기 있습니다. 트리거를 인식하고, 대처 전략을 제공하며, 가장 필요할 때 격려를 제공할 수 있습니다."
+  "aiCoachDescription": "저는 24시간 내내 당신의 회복 여정을 지원하기 위해 여기 있습니다. 트리거를 인식하고, 대처 전략을 제공하며, 가장 필요할 때 격려를 제공할 수 있습니다.",
+  
+  "searchCountries": "국가 검색...",
+  "searchCities": "도시 검색...",
+  "searchLocations": "위치 검색...",
+  "enterCountryManually": "국가명 입력",
+  "enterCityManually": "도시명 입력",
+  "enterLocationManually": "위치 입력",
+  "useAutocomplete": "자동완성 사용",
+  "typeManually": "수동 입력",
+  "locationSelected": "위치 선택됨",
+  "searchingLocations": "위치 검색 중...",
+  "noLocationsFound": "위치를 찾을 수 없음",
+  "countrySearchHelp": "입력을 시작하여 국가 검색",
+  "citySearchHelp": "입력을 시작하여 도시 검색",
+  "locationSearchHelp": "입력을 시작하여 위치 검색",
+  "manualLocationHelp": "수동으로 위치 입력 (자동완성 비활성화)"
 }

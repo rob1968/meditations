@@ -677,5 +677,21 @@
   "moodAnalysisConfidence": "confianza",
   "proactiveSupport": "Soporte Proactivo",
   "proactiveSupportDesc": "Proporciono intervenciones oportunas y estrategias de afrontamiento cuando más las necesitas.",
-  "aiCoachDescription": "Estoy aquí 24/7 para apoyarte en tu viaje de recuperación. Puedo ayudarte a reconocer desencadenantes, proporcionar estrategias de afrontamiento y ofrecer aliento cuando más lo necesites."
+  "aiCoachDescription": "Estoy aquí 24/7 para apoyarte en tu viaje de recuperación. Puedo ayudarte a reconocer desencadenantes, proporcionar estrategias de afrontamiento y ofrecer aliento cuando más lo necesites.",
+  
+  "searchCountries": "Buscar países...",
+  "searchCities": "Buscar ciudades...",
+  "searchLocations": "Buscar ubicaciones...",
+  "enterCountryManually": "Ingresar nombre del país",
+  "enterCityManually": "Ingresar nombre de la ciudad",
+  "enterLocationManually": "Ingresar ubicación",
+  "useAutocomplete": "Usar autocompletado",
+  "typeManually": "Escribir manualmente",
+  "locationSelected": "Ubicación seleccionada",
+  "searchingLocations": "Buscando ubicaciones...",
+  "noLocationsFound": "No se encontraron ubicaciones",
+  "countrySearchHelp": "Comience a escribir para buscar países",
+  "citySearchHelp": "Comience a escribir para buscar ciudades",
+  "locationSearchHelp": "Comience a escribir para buscar ubicaciones",
+  "manualLocationHelp": "Ingresar ubicación manualmente (autocompletado deshabilitado)"
 }

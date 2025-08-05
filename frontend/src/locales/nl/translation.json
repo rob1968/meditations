@@ -704,5 +704,20 @@
   "creditsDesc": "Beheer je tokens",
   "aiMoodAnalysis": "AI Stemming Analyse",
   "confidence": "Betrouwbaarheid",
-  "moodsDetected": "stemmingen gedetecteerd"
+  "moodsDetected": "stemmingen gedetecteerd",
+  "searchCountries": "Zoek landen...",
+  "searchCities": "Zoek steden...",
+  "searchLocations": "Zoek locaties...",
+  "enterCountryManually": "Voer landnaam in",
+  "enterCityManually": "Voer stadnaam in",
+  "enterLocationManually": "Voer locatie in",
+  "useAutocomplete": "Gebruik autocomplete",
+  "typeManually": "Typ handmatig",
+  "locationSelected": "Locatie geselecteerd",
+  "searchingLocations": "Zoeken naar locaties...",
+  "noLocationsFound": "Geen locaties gevonden",
+  "countrySearchHelp": "Begin met typen om landen te zoeken",
+  "citySearchHelp": "Begin met typen om steden te zoeken",
+  "locationSearchHelp": "Begin met typen om locaties te zoeken",
+  "manualLocationHelp": "Voer locatie handmatig in (autocomplete uitgeschakeld)"
 }

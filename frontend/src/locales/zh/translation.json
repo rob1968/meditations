@@ -672,5 +672,21 @@
   "moodAnalysisConfidence": "置信度",
   "proactiveSupport": "主动支持",
   "proactiveSupportDesc": "在您最需要的时候提供及时的干预和应对策略。",
-  "aiCoachDescription": "我全天候为您提供康复旅程的支持。我可以帮助您识别触发因素，提供应对策略，并在您最需要的时候给予鼓励。"
+  "aiCoachDescription": "我全天候为您提供康复旅程的支持。我可以帮助您识别触发因素，提供应对策略，并在您最需要的时候给予鼓励。",
+  
+  "searchCountries": "搜索国家...",
+  "searchCities": "搜索城市...",
+  "searchLocations": "搜索位置...",
+  "enterCountryManually": "输入国家名称",
+  "enterCityManually": "输入城市名称",
+  "enterLocationManually": "输入位置",
+  "useAutocomplete": "使用自动完成",
+  "typeManually": "手动输入",
+  "locationSelected": "位置已选择",
+  "searchingLocations": "正在搜索位置...",
+  "noLocationsFound": "未找到位置",
+  "countrySearchHelp": "开始输入以搜索国家",
+  "citySearchHelp": "开始输入以搜索城市",
+  "locationSearchHelp": "开始输入以搜索位置",
+  "manualLocationHelp": "手动输入位置（自动完成已禁用）"
 }

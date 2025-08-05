@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { getFullUrl } from '../config/api';
 import { getSortedCountries } from '../data/countries';
 import { getLocalizedLanguages, getLanguageDisplayName } from '../data/languages';
+import LocationSelector from './LocationSelector';
 
 const ProfileInfo = ({ user, onUserUpdate }) => {
   // Edit mode states
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedUser, setEditedUser] = useState({});
+  const [locationData, setLocationData] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   
@@ -30,6 +32,12 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
       gender: user.gender || '',
       bio: user.bio || ''
     });
+    // Initialize location data from user profile
+    setLocationData(user.location ? {
+      placeId: user.location.placeId,
+      formattedAddress: user.location.formattedAddress,
+      coordinates: user.location.coordinates
+    } : null);
     setIsEditMode(true);
     setSaveMessage('');
   };
@@ -38,25 +46,39 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
   const cancelEdit = () => {
     setIsEditMode(false);
     setEditedUser({});
+    setLocationData(null);
     setSaveMessage('');
   };
 
-  // Handle country selection
-  const handleCountryChange = (e) => {
-    const selectedCountry = countries.find(c => c.name === e.target.value);
-    if (selectedCountry) {
+  // Handle location data from Google Places
+  const handleLocationData = (locationInfo) => {
+    setLocationData(locationInfo);
+    if (locationInfo) {
       setEditedUser(prev => ({
         ...prev,
-        country: selectedCountry.name,
-        countryCode: selectedCountry.code
-      }));
-    } else {
-      setEditedUser(prev => ({
-        ...prev,
-        country: e.target.value,
-        countryCode: ''
+        country: locationInfo.country || '',
+        countryCode: locationInfo.countryCode || '',
+        city: locationInfo.city || ''
       }));
     }
+  };
+
+  // Handle country selection with Google Places
+  const handleCountrySelection = (countryName) => {
+    setEditedUser(prev => ({
+      ...prev,
+      country: countryName,
+      city: '' // Clear city when country changes
+    }));
+    setLocationData(null);
+  };
+
+  // Handle city selection with Google Places
+  const handleCitySelection = (cityName) => {
+    setEditedUser(prev => ({
+      ...prev,
+      city: cityName
+    }));
   };
 
   // Save profile changes
@@ -71,7 +93,13 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
         country: editedUser.country,
         countryCode: editedUser.countryCode,
         gender: editedUser.gender,
-        bio: editedUser.bio.trim()
+        bio: editedUser.bio.trim(),
+        // Google Places location data
+        locationData: locationData ? {
+          placeId: locationData.placeId,
+          formattedAddress: locationData.formattedAddress,
+          coordinates: locationData.coordinates
+        } : null
       });
 
       // Update user data in localStorage
@@ -187,25 +215,31 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
             <label className="field-label">{t('location', 'Location')}</label>
             {isEditMode ? (
               <div className="location-inputs">
-                <input
-                  type="text"
-                  value={editedUser.city}
-                  onChange={(e) => setEditedUser(prev => ({ ...prev, city: e.target.value }))}
-                  placeholder={t('enterCity', 'Enter your city')}
-                  className="field-input city-input"
-                />
-                <select
-                  value={editedUser.country}
-                  onChange={handleCountryChange}
-                  className="field-input country-input"
-                >
-                  <option value="">{t('selectCountry', 'Select your country')}</option>
-                  {countries.map(country => (
-                    <option key={country.code} value={country.name}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="location-selector-wrapper">
+                  <label className="location-sub-label">{t('country', 'Country')}</label>
+                  <LocationSelector
+                    type="country"
+                    value={editedUser.country}
+                    onChange={handleCountrySelection}
+                    onLocationData={(data) => data && handleLocationData(data)}
+                    placeholder={t('selectCountry', 'Select your country')}
+                    className="field-input"
+                    allowManualInput={true}
+                  />
+                </div>
+                <div className="location-selector-wrapper">
+                  <label className="location-sub-label">{t('city', 'City')}</label>
+                  <LocationSelector
+                    type="city"
+                    value={editedUser.city}
+                    onChange={handleCitySelection}
+                    onLocationData={handleLocationData}
+                    countryFilter={editedUser.countryCode}
+                    placeholder={t('enterCity', 'Enter your city')}
+                    className="field-input"
+                    allowManualInput={true}
+                  />
+                </div>
               </div>
             ) : (
               <div className="field-value">

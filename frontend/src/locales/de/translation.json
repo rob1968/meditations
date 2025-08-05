@@ -663,5 +663,21 @@
   "moodAnalysisConfidence": "Vertrauen",
   "proactiveSupport": "Proaktive Unterstützung",
   "proactiveSupportDesc": "Ich biete rechtzeitige Interventionen und Bewältigungsstrategien, wenn du sie am meisten brauchst.",
-  "aiCoachDescription": "Ich bin rund um die Uhr für dich da, um dich auf deiner Genesungsreise zu unterstützen. Ich kann dir helfen, Auslöser zu erkennen, Bewältigungsstrategien anzubieten und Ermutigung zu geben, wenn du sie am meisten brauchst."
+  "aiCoachDescription": "Ich bin rund um die Uhr für dich da, um dich auf deiner Genesungsreise zu unterstützen. Ich kann dir helfen, Auslöser zu erkennen, Bewältigungsstrategien anzubieten und Ermutigung zu geben, wenn du sie am meisten brauchst.",
+  
+  "searchCountries": "Länder suchen...",
+  "searchCities": "Städte suchen...",
+  "searchLocations": "Orte suchen...",
+  "enterCountryManually": "Ländername eingeben",
+  "enterCityManually": "Stadtname eingeben",
+  "enterLocationManually": "Ort eingeben",
+  "useAutocomplete": "Autovervollständigung verwenden",
+  "typeManually": "Manuell eingeben",
+  "locationSelected": "Ort ausgewählt",
+  "searchingLocations": "Orte werden gesucht...",
+  "noLocationsFound": "Keine Orte gefunden",
+  "countrySearchHelp": "Tippen Sie, um Länder zu suchen",
+  "citySearchHelp": "Tippen Sie, um Städte zu suchen",
+  "locationSearchHelp": "Tippen Sie, um Orte zu suchen",
+  "manualLocationHelp": "Ort manuell eingeben (Autovervollständigung deaktiviert)"
 }

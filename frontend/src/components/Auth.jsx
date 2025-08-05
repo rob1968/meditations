@@ -5,6 +5,7 @@ import { getFullUrl, API_ENDPOINTS } from '../config/api';
 import { getSortedCountries } from '../data/countries';
 import { getLocalizedLanguages } from '../data/languages';
 import PageHeader from './PageHeader';
+import LocationSelector from './LocationSelector';
 import piAuthService from '../services/piAuth';
 
 const Auth = ({ onLogin }) => {
@@ -14,6 +15,7 @@ const Auth = ({ onLogin }) => {
   const [countryCode, setCountryCode] = useState('');
   const [city, setCity] = useState('');
   const [gender, setGender] = useState('');
+  const [locationData, setLocationData] = useState(null);
   const [preferredLanguage, setPreferredLanguage] = useState('');
   const [bio, setBio] = useState('');
   const [isLogin, setIsLogin] = useState(true);
@@ -132,6 +134,29 @@ const Auth = ({ onLogin }) => {
     }
   };
 
+  // Handle location data from Google Places
+  const handleLocationData = (locationInfo) => {
+    setLocationData(locationInfo);
+    if (locationInfo) {
+      setCountry(locationInfo.country || '');
+      setCountryCode(locationInfo.countryCode || '');
+      setCity(locationInfo.city || '');
+    }
+  };
+
+  // Handle country selection with Google Places
+  const handleCountrySelection = (countryName) => {
+    setCountry(countryName);
+    // City will be cleared when country changes
+    setCity('');
+    setLocationData(null);
+  };
+
+  // Handle city selection with Google Places
+  const handleCitySelection = (cityName) => {
+    setCity(cityName);
+  };
+
   // Traditional login function (Pi detection now happens automatically at startup)
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -174,7 +199,13 @@ const Auth = ({ onLogin }) => {
             city: city.trim() || null,
             gender: gender || null,
             preferredLanguage: preferredLanguage || null,
-            bio: bio.trim() || null
+            bio: bio.trim() || null,
+            // Google Places location data
+            locationData: locationData ? {
+              placeId: locationData.placeId,
+              formattedAddress: locationData.formattedAddress,
+              coordinates: locationData.coordinates
+            } : null
           };
 
       const response = await axios.post(getFullUrl(endpoint), requestData);
@@ -238,7 +269,13 @@ const Auth = ({ onLogin }) => {
         city: city.trim() || null,
         gender: gender || null,
         preferredLanguage: preferredLanguage || null,
-        bio: bio.trim() || null
+        bio: bio.trim() || null,
+        // Google Places location data
+        locationData: locationData ? {
+          placeId: locationData.placeId,
+          formattedAddress: locationData.formattedAddress,
+          coordinates: locationData.coordinates
+        } : null
       };
 
       const response = await axios.post(getFullUrl('/api/auth/complete-pi-registration'), updateData);
@@ -274,6 +311,7 @@ const Auth = ({ onLogin }) => {
     setGender('');
     setPreferredLanguage('');
     setBio('');
+    setLocationData(null);
     setError('');
     setNeedsRegistration(false);
     setPiUserData(null);
@@ -368,28 +406,28 @@ const Auth = ({ onLogin }) => {
 
             <div className="form-group">
               <label>{t('country', 'Country')} ({t('optional', 'Optional')})</label>
-              <select
+              <LocationSelector
+                type="country"
                 value={country}
-                onChange={handleCountryChange}
+                onChange={handleCountrySelection}
+                onLocationData={(data) => data && handleLocationData(data)}
+                placeholder={t('selectCountry', 'Select your country')}
                 className="auth-input"
-              >
-                <option value="">{t('selectCountry', 'Select your country')}</option>
-                {countries.map(country => (
-                  <option key={country.code} value={country.name}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
+                allowManualInput={true}
+              />
             </div>
 
             <div className="form-group">
               <label>{t('location', 'City')} ({t('optional', 'Optional')})</label>
-              <input
-                type="text"
+              <LocationSelector
+                type="city"
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
+                onChange={handleCitySelection}
+                onLocationData={handleLocationData}
+                countryFilter={countryCode}
                 placeholder={t('enterCity', 'Enter your city')}
                 className="auth-input"
+                allowManualInput={true}
               />
             </div>
 
@@ -507,28 +545,28 @@ const Auth = ({ onLogin }) => {
 
               <div className="form-group">
                 <label>{t('country', 'Country')} ({t('optional', 'Optional')})</label>
-                <select
+                <LocationSelector
+                  type="country"
                   value={country}
-                  onChange={handleCountryChange}
+                  onChange={handleCountrySelection}
+                  onLocationData={(data) => data && handleLocationData(data)}
+                  placeholder={t('selectCountry', 'Select your country')}
                   className="auth-input"
-                >
-                  <option value="">{t('selectCountry', 'Select your country')}</option>
-                  {countries.map(country => (
-                    <option key={country.code} value={country.name}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
+                  allowManualInput={true}
+                />
               </div>
 
               <div className="form-group">
                 <label>{t('location', 'City')} ({t('optional', 'Optional')})</label>
-                <input
-                  type="text"
+                <LocationSelector
+                  type="city"
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
+                  onChange={handleCitySelection}
+                  onLocationData={handleLocationData}
+                  countryFilter={countryCode}
                   placeholder={t('enterCity', 'Enter your city')}
                   className="auth-input"
+                  allowManualInput={true}
                 />
               </div>
 
