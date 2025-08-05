@@ -2,21 +2,17 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl, API_ENDPOINTS } from '../config/api';
-import { getSortedCountries } from '../data/countries';
 import { getLocalizedLanguages } from '../data/languages';
 import PageHeader from './PageHeader';
-import LocationSelector from './LocationSelector';
 import piAuthService from '../services/piAuth';
+import googlePlacesService from '../services/googlePlacesService';
+import LocationPickerModal from './LocationPickerModal';
 
 const Auth = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [birthDate, setBirthDate] = useState('');
-  const [country, setCountry] = useState('');
-  const [countryCode, setCountryCode] = useState('');
-  const [city, setCity] = useState('');
+  const [location, setLocation] = useState(null); // Combined location: { city, country, countryCode, fullName }
   const [gender, setGender] = useState('');
-  const [locationData, setLocationData] = useState(null);
-  const [preferredLanguage, setPreferredLanguage] = useState('');
   const [bio, setBio] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,8 +24,6 @@ const Auth = ({ onLogin }) => {
   const [showTraditionalAuth, setShowTraditionalAuth] = useState(false);
   const { t, i18n } = useTranslation();
 
-  // Get sorted countries for the current language
-  const countries = getSortedCountries(i18n.language);
 
   // Automatic Pi Network detection and initialization
   useEffect(() => {
@@ -80,7 +74,7 @@ const Auth = ({ onLogin }) => {
           
           // Check if user needs to complete registration
           const user = piResult.user;
-          const needsProfile = !user.birthDate || !user.country || !user.gender || !user.preferredLanguage;
+          const needsProfile = !user.birthDate || !user.location?.country || !user.gender;
           
           if (needsProfile) {
             console.log('[Auth] New Pi user detected - showing registration fields');
@@ -123,39 +117,25 @@ const Auth = ({ onLogin }) => {
     return age;
   };
 
-  const handleCountryChange = (e) => {
-    const selectedCountry = countries.find(c => c.name === e.target.value);
-    if (selectedCountry) {
-      setCountry(selectedCountry.name);
-      setCountryCode(selectedCountry.code);
-    } else {
-      setCountry(e.target.value);
-      setCountryCode('');
+  const countWords = (text) => {
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
+
+  const handleBioChange = (e) => {
+    const text = e.target.value;
+    const wordCount = countWords(text);
+    
+    if (wordCount <= 50) {
+      setBio(text);
     }
   };
 
-  // Handle location data from Google Places
-  const handleLocationData = (locationInfo) => {
-    setLocationData(locationInfo);
-    if (locationInfo) {
-      setCountry(locationInfo.country || '');
-      setCountryCode(locationInfo.countryCode || '');
-      setCity(locationInfo.city || '');
-    }
+  // Handle location selection from LocationPickerModal
+  const handleLocationChange = (locationData) => {
+    setLocation(locationData);
   };
 
-  // Handle country selection with Google Places
-  const handleCountrySelection = (countryName) => {
-    setCountry(countryName);
-    // City will be cleared when country changes
-    setCity('');
-    setLocationData(null);
-  };
 
-  // Handle city selection with Google Places
-  const handleCitySelection = (cityName) => {
-    setCity(cityName);
-  };
 
   // Traditional login function (Pi detection now happens automatically at startup)
   const handleLogin = async (e) => {
@@ -179,6 +159,11 @@ const Auth = ({ onLogin }) => {
     try {
       // Validation for registration
       if (!isLogin) {
+        // Validate required location fields
+        if (!location || !location.country || !location.city) {
+          throw new Error(t('locationRequired', 'Location is required'));
+        }
+
         if (birthDate) {
           const age = calculateAge(birthDate);
           if (age < 13 || age > 120) {
@@ -194,18 +179,12 @@ const Auth = ({ onLogin }) => {
             username: username.trim(), 
             birthDate: birthDate || null,
             age: birthDate ? calculateAge(birthDate) : null,
-            country: country || null,
-            countryCode: countryCode || null,
-            city: city.trim() || null,
+            country: location?.country || null,
+            countryCode: location?.countryCode || null,
+            city: location?.city || null,
             gender: gender || null,
-            preferredLanguage: preferredLanguage || null,
+            preferredLanguage: i18n.language,
             bio: bio.trim() || null,
-            // Google Places location data
-            locationData: locationData ? {
-              placeId: locationData.placeId,
-              formattedAddress: locationData.formattedAddress,
-              coordinates: locationData.coordinates
-            } : null
           };
 
       const response = await axios.post(getFullUrl(endpoint), requestData);
@@ -246,6 +225,13 @@ const Auth = ({ onLogin }) => {
       return;
     }
 
+    // Validate required location fields
+    if (!location || !location.country || !location.city) {
+      setError(t('locationRequired', 'Location is required'));
+      setIsLoading(false);
+      return;
+    }
+
     // Validation for registration
     if (birthDate) {
       const age = calculateAge(birthDate);
@@ -264,18 +250,12 @@ const Auth = ({ onLogin }) => {
         username: username.trim(),
         birthDate: birthDate || null,
         age: birthDate ? calculateAge(birthDate) : null,
-        country: country || null,
-        countryCode: countryCode || null,
-        city: city.trim() || null,
+        country: location?.country || null,
+        countryCode: location?.countryCode || null,
+        city: location?.city || null,
         gender: gender || null,
-        preferredLanguage: preferredLanguage || null,
+        preferredLanguage: i18n.language,
         bio: bio.trim() || null,
-        // Google Places location data
-        locationData: locationData ? {
-          placeId: locationData.placeId,
-          formattedAddress: locationData.formattedAddress,
-          coordinates: locationData.coordinates
-        } : null
       };
 
       const response = await axios.post(getFullUrl('/api/auth/complete-pi-registration'), updateData);
@@ -305,13 +285,9 @@ const Auth = ({ onLogin }) => {
   const resetForm = () => {
     setUsername('');
     setBirthDate('');
-    setCountry('');
-    setCountryCode('');
-    setCity('');
+    setLocation(null);
     setGender('');
-    setPreferredLanguage('');
     setBio('');
-    setLocationData(null);
     setError('');
     setNeedsRegistration(false);
     setPiUserData(null);
@@ -323,6 +299,27 @@ const Auth = ({ onLogin }) => {
       <div className="auth-container">
         <div className="auth-language-header">
           <PageHeader />
+          {/* Standalone Language Selector for Registration */}
+          <div className="auth-language-selector">
+            <div className="language-selector-label">
+              <span className="language-icon">🌐</span>
+              <span className="language-text">{t('selectUILanguage', 'Select Language')}</span>
+            </div>
+            <select
+              value={i18n.language}
+              onChange={(e) => {
+                i18n.changeLanguage(e.target.value);
+                localStorage.setItem('selectedLanguage', e.target.value);
+              }}
+              className="auth-language-select"
+            >
+              {availableLanguages.map(lang => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.flag} {lang.nativeName}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="auth-card">
           <div className="auth-header">
@@ -342,6 +339,27 @@ const Auth = ({ onLogin }) => {
     <div className="auth-container">
       <div className="auth-language-header">
         <PageHeader />
+        {/* Standalone Language Selector for Registration */}
+        <div className="auth-language-selector">
+          <div className="language-selector-label">
+            <span className="language-icon">🌐</span>
+            <span className="language-text">{t('selectUILanguage', 'Select Language')}</span>
+          </div>
+          <select
+            value={i18n.language}
+            onChange={(e) => {
+              i18n.changeLanguage(e.target.value);
+              localStorage.setItem('selectedLanguage', e.target.value);
+            }}
+            className="auth-language-select"
+          >
+            {availableLanguages.map(lang => (
+              <option key={lang.code} value={lang.code}>
+                {lang.flag} {lang.nativeName}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       <div className="auth-card">
         <div className="auth-header">
@@ -405,29 +423,12 @@ const Auth = ({ onLogin }) => {
             </div>
 
             <div className="form-group">
-              <label>{t('country', 'Country')} ({t('optional', 'Optional')})</label>
-              <LocationSelector
-                type="country"
-                value={country}
-                onChange={handleCountrySelection}
-                onLocationData={(data) => data && handleLocationData(data)}
-                placeholder={t('selectCountry', 'Select your country')}
-                className="auth-input"
-                allowManualInput={true}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>{t('location', 'City')} ({t('optional', 'Optional')})</label>
-              <LocationSelector
-                type="city"
-                value={city}
-                onChange={handleCitySelection}
-                onLocationData={handleLocationData}
-                countryFilter={countryCode}
-                placeholder={t('enterCity', 'Enter your city')}
-                className="auth-input"
-                allowManualInput={true}
+              <label>{t('location', 'Location')} *</label>
+              <LocationPickerModal
+                value={location}
+                onChange={handleLocationChange}
+                placeholder={t('selectYourLocation', 'Select your location (City, Country)')}
+                required={true}
               />
             </div>
 
@@ -446,34 +447,18 @@ const Auth = ({ onLogin }) => {
               </select>
             </div>
 
-            <div className="form-group">
-              <label>{t('preferredLanguage', 'Preferred Language')} ({t('optional', 'Optional')})</label>
-              <select
-                value={preferredLanguage}
-                onChange={(e) => setPreferredLanguage(e.target.value)}
-                className="auth-input"
-              >
-                <option value="">{t('selectLanguage', 'Select your language')}</option>
-                {availableLanguages.map(lang => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.localizedName}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             <div className="form-group">
-              <label>{t('bio', 'Bio')} ({t('optional', 'Optional')})</label>
+              <label>{t('bio', 'Bio')} ({t('optional', 'Optional')} - {t('maxWords', 'Max 50 words')})</label>
               <textarea
                 value={bio}
-                onChange={(e) => setBio(e.target.value)}
+                onChange={handleBioChange}
                 placeholder={t('bioPlaceholder', 'Tell us about yourself...')}
-                maxLength={500}
                 rows={3}
                 className="auth-input"
               />
-              <div className="character-count">
-                {500 - bio.length} {t('charactersRemaining', 'characters remaining')}
+              <div className="word-count">
+                {countWords(bio)}/50 {t('words', 'words')}
               </div>
             </div>
 
@@ -544,29 +529,12 @@ const Auth = ({ onLogin }) => {
               </div>
 
               <div className="form-group">
-                <label>{t('country', 'Country')} ({t('optional', 'Optional')})</label>
-                <LocationSelector
-                  type="country"
-                  value={country}
-                  onChange={handleCountrySelection}
-                  onLocationData={(data) => data && handleLocationData(data)}
-                  placeholder={t('selectCountry', 'Select your country')}
-                  className="auth-input"
-                  allowManualInput={true}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>{t('location', 'City')} ({t('optional', 'Optional')})</label>
-                <LocationSelector
-                  type="city"
-                  value={city}
-                  onChange={handleCitySelection}
-                  onLocationData={handleLocationData}
-                  countryFilter={countryCode}
-                  placeholder={t('enterCity', 'Enter your city')}
-                  className="auth-input"
-                  allowManualInput={true}
+                <label>{t('location', 'Location')} *</label>
+                <LocationPickerModal
+                  value={location}
+                  onChange={handleLocationChange}
+                  placeholder={t('selectYourLocation', 'Select your location (City, Country)')}
+                  required={true}
                 />
               </div>
 
@@ -585,34 +553,18 @@ const Auth = ({ onLogin }) => {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label>{t('preferredLanguage', 'Preferred Language')} ({t('optional', 'Optional')})</label>
-                <select
-                  value={preferredLanguage}
-                  onChange={(e) => setPreferredLanguage(e.target.value)}
-                  className="auth-input"
-                >
-                  <option value="">{t('selectLanguage', 'Select your language')}</option>
-                  {availableLanguages.map(lang => (
-                    <option key={lang.code} value={lang.code}>
-                      {lang.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
 
               <div className="form-group">
-                <label>{t('bio', 'Bio')} ({t('optional', 'Optional')})</label>
+                <label>{t('bio', 'Bio')} ({t('optional', 'Optional')} - {t('maxWords', 'Max 50 words')})</label>
                 <textarea
                   value={bio}
-                  onChange={(e) => setBio(e.target.value)}
+                  onChange={handleBioChange}
                   placeholder={t('bioPlaceholder', 'Tell us about yourself...')}
-                  maxLength={500}
                   rows={3}
                   className="auth-input"
                 />
-                <div className="character-count">
-                  {500 - bio.length} {t('charactersRemaining', 'characters remaining')}
+                <div className="word-count">
+                  {countWords(bio)}/50 {t('words', 'words')}
                 </div>
               </div>
             </>

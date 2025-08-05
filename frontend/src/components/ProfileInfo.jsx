@@ -2,22 +2,18 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl } from '../config/api';
-import { getSortedCountries } from '../data/countries';
 import { getLocalizedLanguages, getLanguageDisplayName } from '../data/languages';
-import LocationSelector from './LocationSelector';
+import LocationPickerModal from './LocationPickerModal';
 
 const ProfileInfo = ({ user, onUserUpdate }) => {
   // Edit mode states
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedUser, setEditedUser] = useState({});
-  const [locationData, setLocationData] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   
   const { t, i18n } = useTranslation();
   
-  // Get sorted countries for the current language
-  const countries = getSortedCountries(i18n.language);
   
   // Get localized language names
   const availableLanguages = getLocalizedLanguages(t);
@@ -26,18 +22,16 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
   const startEdit = () => {
     setEditedUser({
       preferredLanguage: user.preferredLanguage || '',
-      city: user.location?.city || '',
-      country: user.location?.country || '',
-      countryCode: user.location?.countryCode || '',
+      location: user.location ? {
+        city: user.location.city || '',
+        country: user.location.country || '',
+        countryCode: user.location.countryCode || '',
+        fullName: user.location.city && user.location.country ? 
+          `${user.location.city}, ${user.location.country}` : ''
+      } : null,
       gender: user.gender || '',
       bio: user.bio || ''
     });
-    // Initialize location data from user profile
-    setLocationData(user.location ? {
-      placeId: user.location.placeId,
-      formattedAddress: user.location.formattedAddress,
-      coordinates: user.location.coordinates
-    } : null);
     setIsEditMode(true);
     setSaveMessage('');
   };
@@ -46,38 +40,14 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
   const cancelEdit = () => {
     setIsEditMode(false);
     setEditedUser({});
-    setLocationData(null);
     setSaveMessage('');
   };
 
-  // Handle location data from Google Places
-  const handleLocationData = (locationInfo) => {
-    setLocationData(locationInfo);
-    if (locationInfo) {
-      setEditedUser(prev => ({
-        ...prev,
-        country: locationInfo.country || '',
-        countryCode: locationInfo.countryCode || '',
-        city: locationInfo.city || ''
-      }));
-    }
-  };
-
-  // Handle country selection with Google Places
-  const handleCountrySelection = (countryName) => {
+  // Handle location selection
+  const handleLocationChange = (locationData) => {
     setEditedUser(prev => ({
       ...prev,
-      country: countryName,
-      city: '' // Clear city when country changes
-    }));
-    setLocationData(null);
-  };
-
-  // Handle city selection with Google Places
-  const handleCitySelection = (cityName) => {
-    setEditedUser(prev => ({
-      ...prev,
-      city: cityName
+      location: locationData
     }));
   };
 
@@ -89,17 +59,11 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
     try {
       const response = await axios.put(getFullUrl(`/api/auth/user/${user.id}/profile`), {
         preferredLanguage: editedUser.preferredLanguage,
-        city: editedUser.city.trim(),
-        country: editedUser.country,
-        countryCode: editedUser.countryCode,
+        city: editedUser.location?.city || '',
+        country: editedUser.location?.country || '',
+        countryCode: editedUser.location?.countryCode || '',
         gender: editedUser.gender,
         bio: editedUser.bio.trim(),
-        // Google Places location data
-        locationData: locationData ? {
-          placeId: locationData.placeId,
-          formattedAddress: locationData.formattedAddress,
-          coordinates: locationData.coordinates
-        } : null
       });
 
       // Update user data in localStorage
@@ -214,33 +178,12 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
           <div className="field-content">
             <label className="field-label">{t('location', 'Location')}</label>
             {isEditMode ? (
-              <div className="location-inputs">
-                <div className="location-selector-wrapper">
-                  <label className="location-sub-label">{t('country', 'Country')}</label>
-                  <LocationSelector
-                    type="country"
-                    value={editedUser.country}
-                    onChange={handleCountrySelection}
-                    onLocationData={(data) => data && handleLocationData(data)}
-                    placeholder={t('selectCountry', 'Select your country')}
-                    className="field-input"
-                    allowManualInput={true}
-                  />
-                </div>
-                <div className="location-selector-wrapper">
-                  <label className="location-sub-label">{t('city', 'City')}</label>
-                  <LocationSelector
-                    type="city"
-                    value={editedUser.city}
-                    onChange={handleCitySelection}
-                    onLocationData={handleLocationData}
-                    countryFilter={editedUser.countryCode}
-                    placeholder={t('enterCity', 'Enter your city')}
-                    className="field-input"
-                    allowManualInput={true}
-                  />
-                </div>
-              </div>
+              <LocationPickerModal
+                value={editedUser.location}
+                onChange={handleLocationChange}
+                placeholder={t('selectYourLocation', 'Select your location (City, Country)')}
+                required={false}
+              />
             ) : (
               <div className="field-value">
                 {[user.location?.city, user.location?.country].filter(Boolean).join(', ') || t('notSet', 'Not set')}

@@ -86,15 +86,36 @@ class GooglePlacesService {
       throw new Error('Google Maps API not loaded');
     }
 
-    // Initialize services
-    this.autocompleteService = new window.google.maps.places.AutocompleteService();
-    this.placesService = new window.google.maps.places.PlacesService(
-      document.createElement('div')
-    );
+    // Initialize services - use new API if available, fallback to old
+    if (window.google.maps.places.AutocompleteSuggestion) {
+      console.log('[GooglePlaces] Using new AutocompleteSuggestion API');
+      this.useNewAPI = true;
+    } else {
+      console.log('[GooglePlaces] Using legacy AutocompleteService API');
+      this.useNewAPI = false;
+      this.initializeLegacyServices();
+    }
+    
     this.geocoder = new window.google.maps.Geocoder();
     
     // Generate new session token
     this.generateNewSessionToken();
+  }
+
+  /**
+   * Initialize legacy Google Places services
+   */
+  initializeLegacyServices() {
+    if (!window.google || !window.google.maps || !window.google.maps.places) {
+      console.error('[GooglePlaces] Cannot initialize legacy services - Google Maps not available');
+      return;
+    }
+    
+    console.log('[GooglePlaces] Initializing legacy services...');
+    this.autocompleteService = new window.google.maps.places.AutocompleteService();
+    this.placesService = new window.google.maps.places.PlacesService(
+      document.createElement('div')
+    );
   }
 
   /**
@@ -104,6 +125,32 @@ class GooglePlacesService {
     if (window.google && window.google.maps && window.google.maps.places) {
       this.sessionToken = new window.google.maps.places.AutocompleteSessionToken();
     }
+  }
+
+  /**
+   * Clean city name by removing common prefixes
+   * @param {string} name - City name to clean
+   * @returns {string} Cleaned city name
+   */
+  cleanCityName(name) {
+    if (!name) return '';
+    
+    // Remove "gemeente " prefix (Dutch municipalities)
+    if (name.toLowerCase().startsWith('gemeente ')) {
+      return name.substring(9);
+    }
+    
+    // Remove other common prefixes
+    const prefixes = ['stad ', 'city of ', 'ville de ', 'ciudad de '];
+    const lowerName = name.toLowerCase();
+    
+    for (const prefix of prefixes) {
+      if (lowerName.startsWith(prefix)) {
+        return name.substring(prefix.length);
+      }
+    }
+    
+    return name;
   }
 
   /**
@@ -117,6 +164,80 @@ class GooglePlacesService {
 
     if (!input || input.trim().length < 2) {
       return [];
+    }
+
+    // Try new API first if available, fallback to legacy on error
+    if (this.useNewAPI) {
+      try {
+        return await this.getPlacePredictionsNew(input, options);
+      } catch (error) {
+        console.log('[GooglePlaces] New API failed, falling back to legacy API:', error.message);
+        // Switch to legacy API permanently for this session and initialize legacy services
+        this.useNewAPI = false;
+        this.initializeLegacyServices();
+        return this.getPlacePredictionsLegacy(input, options);
+      }
+    } else {
+      return this.getPlacePredictionsLegacy(input, options);
+    }
+  }
+
+  /**
+   * Get place predictions using new AutocompleteSuggestion API
+   */
+  async getPlacePredictionsNew(input, options = {}) {
+    try {
+      const request = {
+        input: input.trim(),
+        includedPrimaryTypes: options.types || ['locality'],
+        sessionToken: this.sessionToken
+      };
+
+      // Add location restriction if country is specified
+      if (options.componentRestrictions && options.componentRestrictions.country) {
+        request.locationRestriction = {
+          rectangle: {
+            // Use country bounds - for NL as example, but we'll make it more generic
+            low: { lat: 50.0, lng: 3.0 },
+            high: { lat: 54.0, lng: 8.0 }
+          }
+        };
+        
+        // Better approach: use includedRegionCodes instead
+        request.includedRegionCodes = [options.componentRestrictions.country];
+        delete request.locationRestriction;
+      }
+
+      const { suggestions } = await window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
+      
+      // Convert new format to legacy format for compatibility
+      return suggestions.map(suggestion => ({
+        place_id: suggestion.placePrediction.placeId,
+        description: suggestion.placePrediction.text.text,
+        structured_formatting: {
+          main_text: suggestion.placePrediction.structuredFormat.mainText?.text || '',
+          secondary_text: suggestion.placePrediction.structuredFormat.secondaryText?.text || ''
+        },
+        types: suggestion.placePrediction.types || []
+      }));
+    } catch (error) {
+      console.error('New Places API error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get place predictions using legacy AutocompleteService API
+   */
+  async getPlacePredictionsLegacy(input, options = {}) {
+    // Ensure legacy services are initialized
+    if (!this.autocompleteService) {
+      console.log('[GooglePlaces] AutocompleteService not initialized, initializing now...');
+      this.initializeLegacyServices();
+    }
+
+    if (!this.autocompleteService) {
+      throw new Error('AutocompleteService could not be initialized');
     }
 
     const defaultOptions = {
@@ -151,6 +272,47 @@ class GooglePlacesService {
   async getPlaceDetails(placeId, fields = ['name', 'formatted_address', 'address_components', 'geometry', 'types']) {
     await this.loadGoogleMapsAPI();
 
+    // Try new API first if available, fallback to legacy on error
+    if (this.useNewAPI) {
+      try {
+        return await this.getPlaceDetailsNew(placeId, fields);
+      } catch (error) {
+        console.log('[GooglePlaces] New API failed for place details, falling back to legacy API:', error.message);
+        // Switch to legacy API permanently for this session
+        this.useNewAPI = false;
+        return this.getPlaceDetailsLegacy(placeId, fields);
+      }
+    } else {
+      return this.getPlaceDetailsLegacy(placeId, fields);
+    }
+  }
+
+  /**
+   * Get place details using new Place API
+   */
+  async getPlaceDetailsNew(placeId, fields) {
+    try {
+      const request = {
+        id: placeId,
+        fields: fields,
+        sessionToken: this.sessionToken
+      };
+
+      const place = await window.google.maps.places.Place.fetchFields(request);
+      
+      // Generate new session token after successful request
+      this.generateNewSessionToken();
+      return place;
+    } catch (error) {
+      console.error('New Place details error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get place details using legacy PlacesService API
+   */
+  async getPlaceDetailsLegacy(placeId, fields) {
     const request = {
       placeId: placeId,
       fields: fields,
@@ -212,6 +374,231 @@ class GooglePlacesService {
     };
 
     return this.getPlacePredictions(input, defaultOptions);
+  }
+
+  /**
+   * Get major cities for a specific country
+   * @param {string} countryCode - ISO country code (e.g., 'NL', 'US')
+   * @returns {Promise<Array>} Array of major cities in the country
+   */
+  async getCitiesForCountry(countryCode) {
+    await this.loadGoogleMapsAPI();
+    
+    try {
+      console.log('[getCitiesForCountry] Getting cities for country:', countryCode);
+      
+      // Country-specific city lists as fallback and to guide search
+      const knownCities = this.getKnownCitiesForCountry(countryCode);
+      console.log('[getCitiesForCountry] Known cities count:', knownCities.length);
+      
+      const allCities = new Map();
+      
+      // Strategy 1: Search for each known city individually with (cities) type
+      console.log('[getCitiesForCountry] Strategy 1: Searching for known cities with (cities) type...');
+      for (const knownCity of knownCities.slice(0, 8)) {
+        try {
+          const options = {
+            input: knownCity,
+            types: ['(cities)'],
+            componentRestrictions: { country: countryCode },
+            sessionToken: this.sessionToken
+          };
+          
+          const predictions = await this.getPlacePredictions(knownCity, options);
+          console.log(`[getCitiesForCountry] Search for "${knownCity}" returned ${predictions.length} predictions`);
+          
+          predictions.forEach(prediction => {
+            const cityName = this.cleanCityName(
+              prediction.structured_formatting?.main_text || 
+              prediction.description.split(',')[0]
+            );
+            
+            if (cityName && cityName.length > 1 && !allCities.has(prediction.place_id)) {
+              allCities.set(prediction.place_id, {
+                name: cityName,
+                placeId: prediction.place_id,
+                description: prediction.description
+              });
+              console.log(`[getCitiesForCountry] Added city: ${cityName}`);
+            }
+          });
+          
+          // Small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.warn(`[getCitiesForCountry] Error searching for "${knownCity}":`, error);
+        }
+      }
+      
+      // Strategy 2: Try with locality type specifically
+      if (allCities.size < 15) {
+        console.log('[getCitiesForCountry] Strategy 2: Trying with locality type...');
+        const localityOptions = {
+          types: ['locality'],
+          componentRestrictions: { country: countryCode }
+        };
+        
+        // Try with single letters to get broad results
+        const searchLetters = ['a', 'e', 'r', 'n'];
+        for (const letter of searchLetters) {
+          try {
+            const predictions = await this.getPlacePredictions(letter, localityOptions);
+            console.log(`[getCitiesForCountry] Locality search for "${letter}" returned ${predictions.length} predictions`);
+            
+            predictions.forEach(prediction => {
+              const cityName = this.cleanCityName(
+                prediction.structured_formatting?.main_text || 
+                prediction.description.split(',')[0]
+              );
+              
+              if (cityName && cityName.length > 1 && !allCities.has(prediction.place_id)) {
+                allCities.set(prediction.place_id, {
+                  name: cityName,
+                  placeId: prediction.place_id,
+                  description: prediction.description
+                });
+                console.log(`[getCitiesForCountry] Added from locality search: ${cityName}`);
+              }
+            });
+            
+            if (allCities.size >= 30) break;
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (error) {
+            console.warn(`[getCitiesForCountry] Error with locality search "${letter}":`, error);
+          }
+        }
+      }
+      
+      // Strategy 3: Try administrative areas for Netherlands
+      if (countryCode === 'NL' && allCities.size < 20) {
+        console.log('[getCitiesForCountry] Strategy 3: Trying administrative areas for Netherlands...');
+        const adminOptions = {
+          types: ['administrative_area_level_2'],
+          componentRestrictions: { country: 'NL' }
+        };
+        
+        try {
+          const predictions = await this.getPlacePredictions('gemeente', adminOptions);
+          console.log(`[getCitiesForCountry] Admin search returned ${predictions.length} predictions`);
+          
+          predictions.forEach(prediction => {
+            const cityName = this.cleanCityName(
+              prediction.structured_formatting?.main_text || 
+              prediction.description.split(',')[0]
+            );
+            
+            if (cityName && cityName.length > 1 && !allCities.has(prediction.place_id)) {
+              allCities.set(prediction.place_id, {
+                name: cityName,
+                placeId: prediction.place_id,
+                description: prediction.description
+              });
+              console.log(`[getCitiesForCountry] Added from admin search: ${cityName}`);
+            }
+          });
+        } catch (error) {
+          console.warn('[getCitiesForCountry] Error with admin search:', error);
+        }
+      }
+      
+      // If Google API returns limited results, add known cities as supplementary options
+      if (allCities.size < 10) {
+        console.log('[getCitiesForCountry] Supplementing with known cities as API returned limited results');
+        knownCities.forEach((cityName, index) => {
+          if (!Array.from(allCities.values()).some(city => city.name.toLowerCase() === cityName.toLowerCase())) {
+            allCities.set(`known-${index}`, {
+              name: cityName,
+              placeId: `known-${index}`,
+              description: `${cityName}, ${countryCode}`,
+              isKnown: true
+            });
+          }
+        });
+      }
+      
+      // Convert Map to array and sort
+      const cities = Array.from(allCities.values())
+        .sort((a, b) => {
+          // Prioritize Google results over known cities
+          if (a.isKnown && !b.isKnown) return 1;
+          if (!a.isKnown && b.isKnown) return -1;
+          return a.name.localeCompare(b.name);
+        })
+        .slice(0, 50);
+      
+      console.log(`[getCitiesForCountry] Final result: ${cities.length} cities for ${countryCode}`);
+      console.log('[getCitiesForCountry] Cities:', cities.map(c => c.name).join(', '));
+      
+      // Always include "Other" option for manual input
+      if (!cities.some(c => c.name === 'Other')) {
+        cities.push({
+          name: 'Other',
+          placeId: 'manual',
+          description: 'Enter city manually',
+          isManual: true
+        });
+      }
+      
+      return cities;
+    } catch (error) {
+      console.error('[getCitiesForCountry] Error fetching cities for country:', error);
+      // Return known cities as ultimate fallback
+      const fallbackCities = this.getKnownCitiesForCountry(countryCode).slice(0, 20).map((cityName, index) => ({
+        name: cityName,
+        placeId: `fallback-${index}`,
+        description: `${cityName}, ${countryCode}`,
+        isFallback: true
+      }));
+      
+      // Always include "Other" option
+      fallbackCities.push({
+        name: 'Other',
+        placeId: 'manual',
+        description: 'Enter city manually',
+        isManual: true
+      });
+      
+      return fallbackCities;
+    }
+  }
+
+  /**
+   * Get known major cities for a country as fallback
+   * @param {string} countryCode - ISO country code
+   * @returns {Array} Array of known city names
+   */
+  getKnownCitiesForCountry(countryCode) {
+    const knownCities = {
+      'NL': [
+        'Amsterdam', 'Rotterdam', 'Den Haag', 'Utrecht', 'Eindhoven', 'Groningen', 
+        'Tilburg', 'Almere', 'Breda', 'Nijmegen', 'Enschede', 'Apeldoorn', 
+        'Haarlem', 'Amersfoort', 'Arnhem', 'Zaanstad', 'Haarlemmermeer', 
+        'Zoetermeer', 'Zwolle', 'Maastricht', 'Leiden', 'Dordrecht', 'Alphen aan den Rijn'
+      ],
+      'US': [
+        'New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia',
+        'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville',
+        'Fort Worth', 'Columbus', 'Charlotte', 'San Francisco', 'Indianapolis', 'Seattle'
+      ],
+      'DE': [
+        'Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt am Main', 'Stuttgart',
+        'Düsseldorf', 'Leipzig', 'Dortmund', 'Essen', 'Bremen', 'Dresden'
+      ],
+      'FR': [
+        'Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes',
+        'Montpellier', 'Strasbourg', 'Bordeaux', 'Lille', 'Rennes', 'Reims'
+      ],
+      'GB': [
+        'London', 'Birmingham', 'Manchester', 'Glasgow', 'Liverpool', 'Leeds',
+        'Sheffield', 'Edinburgh', 'Bristol', 'Cardiff', 'Leicester', 'Coventry'
+      ],
+      'BE': [
+        'Brussel', 'Antwerpen', 'Gent', 'Charleroi', 'Luik', 'Brugge',
+        'Namur', 'Leuven', 'Mons', 'Aalst', 'Mechelen', 'La Louvière'
+      ]
+    };
+    
+    return knownCities[countryCode] || [];
   }
 
   /**
@@ -342,7 +729,7 @@ class GooglePlacesService {
    * Check if API is loaded and ready
    */
   isReady() {
-    return this.isLoaded && window.google && window.google.maps && window.google.maps.places;
+    return this.isLoaded && !!window.google && !!window.google.maps && !!window.google.maps.places;
   }
 
   /**

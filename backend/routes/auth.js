@@ -703,10 +703,24 @@ router.put('/user/:id/profile', async (req, res) => {
         city: city !== undefined ? city : (user.location.city || ''),
         country: country !== undefined ? country : (user.location.country || ''),
         countryCode: countryCode !== undefined ? countryCode : (user.location.countryCode || ''),
-        // Google Places data
-        placeId: locationData?.placeId || user.location.placeId || undefined,
-        formattedAddress: locationData?.formattedAddress || user.location.formattedAddress || undefined,
-        coordinates: locationData?.coordinates || user.location.coordinates || undefined
+        // Google Places data - only set if they have actual values
+        ...(locationData?.placeId && { placeId: locationData.placeId }),
+        ...(user.location?.placeId && !locationData?.placeId && { placeId: user.location.placeId }),
+        ...(locationData?.formattedAddress && { formattedAddress: locationData.formattedAddress }),
+        ...(user.location?.formattedAddress && !locationData?.formattedAddress && { formattedAddress: user.location.formattedAddress }),
+        // Only include coordinates if they have valid latitude/longitude format
+        ...(locationData?.coordinates?.latitude && locationData?.coordinates?.longitude && { 
+          coordinates: {
+            latitude: locationData.coordinates.latitude,
+            longitude: locationData.coordinates.longitude
+          }
+        }),
+        ...(user.location?.coordinates?.latitude && user.location?.coordinates?.longitude && !locationData?.coordinates && { 
+          coordinates: {
+            latitude: user.location.coordinates.latitude,
+            longitude: user.location.coordinates.longitude
+          }
+        })
       };
     }
     
