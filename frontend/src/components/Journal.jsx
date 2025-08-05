@@ -874,7 +874,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     console.log('Selected voice ID:', selectedVoiceId);
     
     if (userCredits && userCredits.credits < 1) {
-      setError(t('insufficientCreditsAudio', 'Insufficient credits. You need 1 credit to generate audio.'));
+      setError(t('insufficientTokensAudio', 'Insufficient tokens. You need 1 token to generate audio.'));
       return;
     }
 
@@ -1467,19 +1467,19 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
   const getAddictionDisplayName = (addiction) => {
     const names = {
-      'smoking': t('smoking', 'Roken'),
+      'smoking': t('smoking', 'Smoking'),
       'alcohol': t('alcohol', 'Alcohol'),
       'drugs': t('drugs', 'Drugs'),
-      'gambling': t('gambling', 'Gokken'),
-      'shopping': t('shopping', 'Winkelen'),
+      'gambling': t('gambling', 'Gambling'),
+      'shopping': t('shopping', 'Shopping'),
       'social_media': t('socialMedia', 'Social Media'),
       'gaming': t('gaming', 'Gaming'),
-      'food': t('food', 'Eten'),
-      'caffeine': t('caffeine', 'Cafeïne'),
-      'sugar': t('sugar', 'Suiker'),
-      'phone': t('phone', 'Telefoon'),
+      'food': t('food', 'Food'),
+      'caffeine': t('caffeine', 'Caffeine'),
+      'sugar': t('sugar', 'Sugar'),
+      'phone': t('phone', 'Phone'),
       'internet': t('internet', 'Internet'),
-      'other': t('other', 'Anders')
+      'other': t('other', 'Other')
     };
     return names[addiction.type] || addiction.customType || addiction.type;
   };
@@ -1777,7 +1777,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
           onClick={() => setActiveTab('addictions')}
         >
           <span className="tab-icon">🔒</span>
-          <span className="tab-label">{t('addictions', 'Verslavingen')}</span>
+          <span className="tab-label">{t('addictions', 'Addictions')}</span>
         </button>
         <button 
           className={`tab ${activeTab === 'coach' ? 'active' : ''}`}
@@ -1859,7 +1859,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                         data-mood={entry.mood || 'neutral'}
                         style={{ '--card-index': index }}
                         onClick={() => handleEditEntry(entry)}
-                        title={`Open dagboek entry: ${entry.title}`}
+                        title={`${t('openJournalEntry', 'Open journal entry')}: ${entry.title}`}
                       >
                         {/* Mood Badge */}
                         <div className="mood-badge" data-mood={entry.mood || 'neutral'}>
@@ -1870,10 +1870,10 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                         <div className="mood-card-content">
                           <div className="mood-card-header">
                             <div className="mood-card-meta">
-                              <span title="Aantal woorden">
+                              <span title={t('wordCount', 'Word count')}>
                                 📝 {countWords(entry.content)}
                               </span>
-                              <span title="Leestijd">
+                              <span title={t('readingTime', 'Reading time')}>
                                 ⏱️ {Math.ceil(countWords(entry.content) / 200)}m
                               </span>
                             </div>
@@ -1904,7 +1904,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                                   e.stopPropagation();
                                   handlePlayAudio(entry);
                                 }}
-                                title={playingEntryId === entry._id ? 'Pauzeer audio' : 'Speel audio af'}
+                                title={playingEntryId === entry._id ? t('pauseAudio', 'Pause audio') : t('playAudio', 'Play audio')}
                               >
                                 {playingEntryId === entry._id ? '⏸️' : '▶️'}
                               </button>
@@ -1926,23 +1926,23 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
           <div className="voice-tab-content">
             {/* Journal Audio Generation Section */}
             <div className="journal-audio-section">
-              <h3>{t('generateJournalAudio', 'Dagboek Audio Genereren')}</h3>
+              <h3>{t('generateJournalAudio', 'Generate Journal Audio')}</h3>
               
               {/* Voice Selection */}
               <div className="voice-selection-container">
-                <label>{t('selectVoice', 'Selecteer een stem')}:</label>
+                <label>{t('selectVoice', 'Select Voice')}:</label>
                 <select 
                   value={selectedVoiceId} 
                   onChange={(e) => setSelectedVoiceId(e.target.value)}
                   className="voice-select"
                 >
-                  <option value="default">{t('defaultVoice', 'Standaard Stem (Sarah)')}</option>
-                  <option value="EXAVITQu4vr4xnSDxMaL">Sarah - {t('calm', 'Kalm')}</option>
-                  <option value="pNInz6obpgDQGcFmaJgB">Adam - {t('deep', 'Diep')}</option>
+                  <option value="default">{t('defaultVoice', 'Default Voice (Sarah)')}</option>
+                  <option value="EXAVITQu4vr4xnSDxMaL">Sarah - {t('calm', 'Calm')}</option>
+                  <option value="pNInz6obpgDQGcFmaJgB">Adam - {t('deep', 'Deep')}</option>
                   <option value="21m00Tcm4TlvDq8ikWAM">Rachel - {t('warm', 'Warm')}</option>
                   {userCustomVoices.map(voice => (
                     <option key={voice.voiceId} value={voice.voiceId}>
-                      {voice.name} - {t('custom', 'Aangepast')}
+                      {voice.name} - {t('customVoice', 'Custom')}
                     </option>
                   ))}
                 </select>
@@ -1950,9 +1950,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
               {/* Journal Entries List */}
               <div className="journal-entries-for-audio">
-                <h4>{t('yourJournalEntries', 'Je dagboekentries')}:</h4>
+                <h4>{t('yourJournalEntries', 'Your Journal Entries')}:</h4>
                 {entries.length === 0 ? (
-                  <p className="no-entries-message">{t('noEntriesForAudio', 'Geen dagboekentries gevonden. Schrijf eerst een dagboekentry.')}</p>
+                  <p className="no-entries-message">{t('noEntriesForAudio', 'No journal entries found. Write a journal entry first.')}</p>
                 ) : (
                   <div className="audio-entries-list">
                     {entries.map(entry => (
@@ -1965,7 +1965,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                             </span>
                           )}
                           {entry.audioFile && (
-                            <span className="has-audio-indicator" title={t('hasAudio', 'Heeft audio')}>
+                            <span className="has-audio-indicator" title={t('hasAudio', 'Has audio')}>
                               🎵
                             </span>
                           )}
@@ -1985,9 +1985,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                               disabled={generatingAudio === entry._id}
                             >
                               {generatingAudio === entry._id ? (
-                                <>{t('generating', 'Genereren...')} <span className="spinner-small"></span></>
+                                <>{t('generating', 'Generating...')} <span className="spinner-small"></span></>
                               ) : (
-                                <>🎙️ {t('generateAudio', 'Audio Genereren')}</>
+                                <>🎙️ {t('generateAudio', 'Generate Audio')}</>
                               )}
                             </button>
                           ) : (
@@ -1997,13 +1997,13 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                                 onClick={() => handlePlayAudio(entry)}
                               >
                                 {playingEntryId === entry._id ? '⏸️' : '▶️'} 
-                                {playingEntryId === entry._id ? t('pause', 'Pauzeer') : t('play', 'Afspelen')}
+                                {playingEntryId === entry._id ? t('pause', 'Pause') : t('playVoice', 'Play')}
                               </button>
                               <button 
                                 className="regenerate-audio-btn"
                                 onClick={() => handleGenerateAudio(entry)}
                                 disabled={generatingAudio === entry._id}
-                                title={t('regenerateAudio', 'Audio opnieuw genereren')}
+                                title={t('regenerateAudio', 'Regenerate audio')}
                               >
                                 🔄
                               </button>
@@ -2021,7 +2021,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
             {/* Voice Management Section */}
             <div className="voice-management-card">
-              <h3>{t('manageVoices', 'Beheer je stemmen')}</h3>
+              <h3>{t('manageVoices', 'Manage Voices')}</h3>
               
               {/* Voice Recording Interface */}
               <div className="voice-recorder-main">
@@ -2029,11 +2029,11 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                 {voiceRecordingState === 'idle' && (
                   <div className="voice-recorder-idle">
                     <div className="voice-recorder-header">
-                      <h4>{t('recordYourVoice', 'Neem Je Stem Op')}</h4>
+                      <h4>{t('recordYourVoice', 'Record Your Voice')}</h4>
                       <div className="recording-info">
-                        <p className="recording-limit">⏱️ {t('maxRecordingTime', 'maximaal 1 minuut')}</p>
-                        <p className="quality-tips">💡 {t('qualityTips', 'Tips: Spreek duidelijk in een stille ruimte')}</p>
-                        <p className="credit-cost">💰 {t('creditCost', 'Kosten: 2 credits')}</p>
+                        <p className="recording-limit">⏱️ {t('targetTime', 'Maximum 1 minute')}</p>
+                        <p className="quality-tips">💡 {t('qualityTips', 'Tips: Speak clearly in a quiet room')}</p>
+                        <p className="credit-cost">💰 {t('voiceSaveCost', 'Cost: 2 tokens')}</p>
                       </div>
                     </div>
                     
@@ -2043,12 +2043,12 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                       disabled={!audioSupported}
                     >
                       <div className="mic-icon pulse">🎙️</div>
-                      <span>{t('startRecording', 'Start Opname')}</span>
+                      <span>{t('startRecording', 'Start Recording')}</span>
                     </button>
                     
                     {!audioSupported && (
                       <div className="audio-not-supported">
-                        ⚠️ {t('audioNotSupported', 'Audio opname niet beschikbaar op dit apparaat')}
+                        ⚠️ {t('audioNotSupported', 'Audio recording not available on this device')}
                       </div>
                     )}
                   </div>
@@ -2079,13 +2079,13 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                     
                     <div className="quality-feedback live-feedback">
                       {voiceRecordingTime > 45 && (
-                        <p className="warning-text pulse">⚠️ {t('recordingWarning', 'Bijna klaar! Maximum 1 minuut')}</p>
+                        <p className="warning-text pulse">⚠️ {t('recordingWarning', 'Almost done! Maximum 1 minute')}</p>
                       )}
                       <p className="feedback-text">
-                        {voiceRecordingTime < 15 ? `🔵 ${t('keepTalking', 'Blijf praten voor betere kwaliteit')}` : 
-                         voiceRecordingTime < 30 ? `🟢 ${t('goodLength', 'Goede lengte!')}` : 
-                         voiceRecordingTime < 45 ? `🟡 ${t('optimalLength', 'Optimale lengte bereikt')}` : 
-                         `🟠 ${t('nearMaximum', 'Bijna maximum bereikt')}`}
+                        {voiceRecordingTime < 15 ? `🔵 ${t('keepTalking', 'Keep talking for better quality')}` : 
+                         voiceRecordingTime < 30 ? `🟢 ${t('goodLength', 'Good length!')}` : 
+                         voiceRecordingTime < 45 ? `🟡 ${t('optimalLength', 'Optimal length reached')}` : 
+                         `🟠 ${t('nearMaximum', 'Near maximum reached')}`}
                       </p>
                     </div>
                     
@@ -2093,7 +2093,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                       className="stop-voice-recording-btn"
                       onClick={stopVoiceRecording}
                     >
-                      ⏹️ {t('stopRecording', 'Stop Opname')}
+                      ⏹️ {t('stopRecording', 'Stop Recording')}
                     </button>
                   </div>
                 )}
@@ -2106,8 +2106,8 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                       <div className="wave"></div>
                       <div className="wave"></div>
                     </div>
-                    <h4>{t('processingVoice', 'Stem wordt verwerkt...')}</h4>
-                    <p>{t('processingMessage', 'Even geduld, we bereiden je stem voor')}</p>
+                    <h4>{t('processingVoice', 'Processing voice...')}</h4>
+                    <p>{t('processingMessage', 'Please wait, we are preparing your voice')}</p>
                   </div>
                 )}
                 
@@ -2116,15 +2116,15 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                   <div className="voice-recorder-preview">
                     <div className="preview-header success-header">
                       <div className="success-icon">✅</div>
-                      <h4>{t('recordingComplete', 'Opname Voltooid!')}</h4>
-                      <p>{t('recordingLength', 'Lengte')}: {Math.floor(voiceRecordingTime / 60)}:{(voiceRecordingTime % 60).toString().padStart(2, '0')}</p>
+                      <h4>{t('recordingComplete', 'Recording Complete!')}</h4>
+                      <p>{t('recordingTime', 'Length')}: {Math.floor(voiceRecordingTime / 60)}:{(voiceRecordingTime % 60).toString().padStart(2, '0')}</p>
                     </div>
                     
                     <button 
                       className="play-preview-btn preview-play-btn"
                       onClick={playVoicePreview}
                     >
-                      ▶️ {t('playPreview', 'Beluister Opname')}
+                      ▶️ {t('playVoicePreview', 'Play Preview')}
                     </button>
                     
                     <div className="voice-save-section enhanced-save-interface">
@@ -2140,7 +2140,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                         }}
                       />
                       <div className="save-info">
-                        <span className="credit-cost-display">💰 {t('creditCost', 'Kosten: 2 credits')}</span>
+                        <span className="credit-cost-display">💰 {t('voiceSaveCost', 'Cost: 2 tokens')}</span>
                       </div>
                       <button 
                         className="save-voice-btn enhanced-save-btn"
@@ -2151,9 +2151,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                         disabled={uploadingVoice}
                       >
                         {uploadingVoice ? (
-                          <><div className="spinner"></div> {t('uploading', 'Opslaan...')}</>
+                          <><div className="spinner"></div> {t('savingVoice', 'Saving...')}</>
                         ) : (
-                          `💾 ${t('saveVoice', 'Stem Opslaan')}`
+                          `💾 ${t('saveVoice', 'Save Voice')}`
                         )}
                       </button>
                     </div>
@@ -2162,7 +2162,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                       className="retake-voice-btn retake-recording-btn"
                       onClick={cancelVoiceRecording}
                     >
-                      🔄 {t('retakeRecording', 'Opnieuw Opnemen')}
+                      🔄 {t('retakeRecording', 'Record Again')}
                     </button>
                   </div>
                 )}
@@ -2306,7 +2306,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                         onTextChange={(newText) => setAddictionForm({...addictionForm, description: newText})}
                         placeholder={t('addictionDescription', 'Beschrijf je verslaving, triggers, of andere details...')}
                         rows={3}
-                        enabled={true}
+                        enabled={false}
                         language="auto"
                         debounceMs={2000}
                       />
@@ -2532,7 +2532,15 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
               </div>
               <div className="calendar-grid">
                 <div className="calendar-weekdays">
-                  {['Z', 'M', 'D', 'W', 'D', 'V', 'Z'].map((day, index) => (
+                  {[
+                    t('sundayShort', 'S'),
+                    t('mondayShort', 'M'), 
+                    t('tuesdayShort', 'T'),
+                    t('wednesdayShort', 'W'),
+                    t('thursdayShort', 'T'),
+                    t('fridayShort', 'F'),
+                    t('saturdayShort', 'S')
+                  ].map((day, index) => (
                     <div key={index} className="weekday">{day}</div>
                   ))}
                 </div>
@@ -2655,7 +2663,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                       placeholder={t('writeHere', 'Schrijf hier je gedachten, gevoelens of ervaringen van vandaag...')}
                       className={`quick-content-textarea ${recordingState === 'processing' ? 'processing' : ''}`}
                       rows={6}
-                      enabled={recordingState !== 'processing'}
+                      enabled={false}
                       language="auto"
                       debounceMs={2000}
                     />
@@ -2943,7 +2951,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                 className="expanded-writing-textarea"
                 rows={15}
                 maxLength={5000}
-                enabled={true}
+                enabled={false}
                 language="auto"
                 debounceMs={1500}
               />

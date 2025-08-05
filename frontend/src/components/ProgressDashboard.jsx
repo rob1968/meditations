@@ -65,13 +65,13 @@ const ProgressDashboard = ({ user, onStartCoaching }) => {
 
   const formatCleanDays = (cleanDays) => {
     if (!cleanDays || Object.keys(cleanDays).length === 0) {
-      return 'No active recovery tracking';
+      return t('noActiveRecoveryTracking', 'No active recovery tracking');
     }
     
     return Object.entries(cleanDays).map(([addiction, days]) => (
       <div key={addiction} className="clean-days-item">
         <span className="addiction-type">{addiction}</span>
-        <span className="days-count">{days} days</span>
+        <span className="days-count">{days} {t('days', 'days')}</span>
       </div>
     ));
   };

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl, API_ENDPOINTS } from '../config/api';
 import { getSortedCountries } from '../data/countries';
+import { getLocalizedLanguages } from '../data/languages';
 import PageHeader from './PageHeader';
 import piAuthService from '../services/piAuth';
 
@@ -106,22 +107,8 @@ const Auth = ({ onLogin }) => {
     initializeAuth();
   }, [onLogin]);
   
-  // Available languages
-  const availableLanguages = [
-    { code: 'en', name: 'English' },
-    { code: 'de', name: 'Deutsch' },
-    { code: 'es', name: 'Español' },
-    { code: 'fr', name: 'Français' },
-    { code: 'it', name: 'Italiano' },
-    { code: 'pt', name: 'Português' },
-    { code: 'ru', name: 'Русский' },
-    { code: 'ja', name: '日本語' },
-    { code: 'ko', name: '한국어' },
-    { code: 'zh', name: '中文' },
-    { code: 'ar', name: 'العربية' },
-    { code: 'hi', name: 'हिंदी' },
-    { code: 'nl', name: 'Nederlands' }
-  ];
+  // Get localized language names
+  const availableLanguages = getLocalizedLanguages(t);
 
   const calculateAge = (birthDate) => {
     const today = new Date();
@@ -431,7 +418,7 @@ const Auth = ({ onLogin }) => {
                 <option value="">{t('selectLanguage', 'Select your language')}</option>
                 {availableLanguages.map(lang => (
                   <option key={lang.code} value={lang.code}>
-                    {lang.name}
+                    {lang.localizedName}
                   </option>
                 ))}
               </select>

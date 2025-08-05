@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl, API_ENDPOINTS } from '../config/api';
 import { getSortedCountries } from '../data/countries';
+import { getLocalizedLanguages, getLanguageDisplayName } from '../data/languages';
 import PiPaymentNew from './PiPaymentNew';
 import Alert from './Alert';
 
@@ -48,28 +49,14 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
     setShowPiPayment(false);
     
     // Show success message
-    showAlert(t('paymentSuccess', 'Payment successful! Credits have been added to your account.'), 'success');
+    showAlert(t('paymentSuccess', 'Payment successful! Tokens have been added to your account.'), 'success');
   };
   
   // Get sorted countries for the current language
   const countries = getSortedCountries(i18n.language);
   
-  // Available languages
-  const availableLanguages = [
-    { code: 'en', name: 'English' },
-    { code: 'de', name: 'Deutsch' },
-    { code: 'es', name: 'Español' },
-    { code: 'fr', name: 'Français' },
-    { code: 'it', name: 'Italiano' },
-    { code: 'pt', name: 'Português' },
-    { code: 'ru', name: 'Русский' },
-    { code: 'ja', name: '日本語' },
-    { code: 'ko', name: '한국어' },
-    { code: 'zh', name: '中文' },
-    { code: 'ar', name: 'العربية' },
-    { code: 'hi', name: 'हिंदी' },
-    { code: 'nl', name: 'Nederlands' }
-  ];
+  // Get localized language names
+  const availableLanguages = getLocalizedLanguages(t);
 
   useEffect(() => {
     if (user) {
@@ -301,13 +288,13 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
 
       <div className="profile-info-card">
               <div className="credits-header">
-                <h3>💎 {t('credits', 'Credits')}</h3>
+                <h3>💎 {t('tokens', 'Tokens')}</h3>
                 <button 
                   className="credits-purchase-btn"
                   onClick={() => setShowPiPayment(true)}
                 >
                   <span style={{ fontSize: '16px', marginRight: '8px' }}>π</span>
-                  {t('buyCredits', 'Buy Credits')}
+                  {t('buyTokens', 'Buy Tokens')}
                 </button>
               </div>
               
@@ -315,12 +302,12 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
                 <div className="credits-main">
                   <div className="credits-balance">
                     <span className="credits-amount">{credits.credits}</span>
-                    <span className="credits-label">{t('availableCredits', 'Available Credits')}</span>
+                    <span className="credits-label">{t('availableTokens', 'Available Tokens')}</span>
                   </div>
                   
                   {credits.credits < 3 && (
                     <div className="credits-warning">
-                      ⚠️ {t('lowCreditsWarning', 'Low credits! Consider purchasing more.')}
+                      ⚠️ {t('lowTokensWarning', 'Low tokens! Consider purchasing more.')}
                     </div>
                   )}
                 </div>
@@ -350,7 +337,7 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
                 
                 {showCreditHistory && (
                   <div className="credit-history">
-                    <h4>{t('creditHistory', 'Credit History')}</h4>
+                    <h4>{t('tokenHistory', 'Token History')}</h4>
                     {creditHistory.length === 0 ? (
                       <p>{t('noTransactions', 'No transactions yet.')}</p>
                     ) : (
@@ -525,20 +512,13 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
                       <option value="">{t('selectLanguage', 'Select your language')}</option>
                       {availableLanguages.map(lang => (
                         <option key={lang.code} value={lang.code}>
-                          {lang.name}
+                          {lang.localizedName}
                         </option>
                       ))}
                     </select>
                   ) : (
                     <div className="field-value">
-                      {(() => {
-                        const languageNames = {
-                          en: 'English', de: 'Deutsch', es: 'Español', fr: 'Français',
-                          it: 'Italiano', pt: 'Português', ru: 'Русский', ja: '日本語',
-                          ko: '한국어', zh: '中文', ar: 'العربية', hi: 'हिंदी', nl: 'Nederlands'
-                        };
-                        return languageNames[user.preferredLanguage] || user.preferredLanguage || t('notSet', 'Not set');
-                      })()}
+                      {getLanguageDisplayName(user.preferredLanguage, t) || t('notSet', 'Not set')}
                     </div>
                   )}
                 </div>
@@ -647,7 +627,7 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
       {user.username === 'rob' && elevenlabsStats && (
         <div className="elevenlabs-credits-display">
           <h3 style={{ color: 'var(--text-primary)', marginBottom: 'var(--space-lg)' }}>
-            🔊 {t('elevenLabsCredits', 'ElevenLabs Credits')}
+            🔊 {t('elevenLabsTokens', 'ElevenLabs Tokens')}
           </h3>
           <div className="credits-info">
             <span className="credits-icon">🔊</span>
@@ -726,7 +706,7 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
             </h3>
             
             <p style={{ marginBottom: '16px', color: '#333' }}>
-              {t('deleteAccountWarning', 'This action cannot be undone. All your meditations, credit history, and profile data will be permanently deleted.')}
+              {t('deleteAccountWarning', 'This action cannot be undone. All your meditations, token history, and profile data will be permanently deleted.')}
             </p>
             
             <p style={{ marginBottom: '16px', color: '#666', fontSize: '14px' }}>

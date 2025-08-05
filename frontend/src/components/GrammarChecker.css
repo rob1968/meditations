@@ -72,7 +72,8 @@
   line-height: 1.5;
   resize: vertical;
   font-family: inherit;
-  background: white;
+  background: #f8f9fa !important;
+  color: #212529 !important;
   position: relative;
   z-index: 1;
 }
@@ -81,6 +82,7 @@
   border-color: #4CAF50;
   outline: none;
   box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+  background: #ffffff !important;
 }
 
 .grammar-overlay {

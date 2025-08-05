@@ -193,7 +193,7 @@ const AICoachChat = ({ user, isVisible, onClose, initialMessage = null, initialT
               <span>🤖</span>
             </div>
             <div className="coach-details">
-              <h3>Alex</h3>
+              <h3>{t('coachName', 'Alex')}</h3>
               <span className="coach-status">
                 <span className="status-dot online"></span>
                 {t('coachOnlineStatus', 'Online')}
@@ -352,7 +352,7 @@ const AICoachChat = ({ user, isVisible, onClose, initialMessage = null, initialT
             const emergencyMessage = {
               id: Date.now(),
               role: 'coach',
-              content: `I understand you're going through a crisis. ${emergencyResponse.message} I'm here to continue supporting you.`,
+              content: `${t('emergencyResponsePrefix', "I understand you're going through a crisis.")} ${emergencyResponse.message} ${t('emergencyResponseSuffix', "I'm here to continue supporting you.")}`,
               timestamp: new Date(),
               isEmergencyResponse: true
             };

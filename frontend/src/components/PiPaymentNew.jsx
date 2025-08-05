@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl } from '../config/api';
+import { initializePiSDK, isPiSDKAvailable, waitForPiSDK, authenticateWithPi, isPiBrowser } from '../utils/piDetection';
 
 const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
   const { t } = useTranslation();
@@ -26,30 +27,73 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
     console.log('=== NEW PI PAYMENT FLOW START ===');
     setLoading(true);
     setError(null);
-    setPaymentStatus('Starting Pi payment...');
+    setPaymentStatus(t('startingPiPayment', 'Starting Pi payment...'));
 
     try {
+      // Ensure Pi SDK is available and properly initialized
       if (!window.Pi) {
-        throw new Error('Pi SDK not available');
+        console.error('Pi SDK check failed:', {
+          windowPi: window.Pi,
+          isPiBrowser: isPiBrowser(),
+          url: window.location.href
+        });
+        throw new Error('Pi SDK not available. Please open this app in the Pi Browser.');
       }
 
-      console.log('Creating Pi payment with SDK directly...');
+      console.log('Initializing Pi SDK...');
+      setPaymentStatus(t('initializingPiNetwork', 'Initializing Pi Network...'));
       
-      // DIRECT Pi.createPayment call - NO backend involvement
-      const payment = await window.Pi.createPayment({
+      // Wait for SDK to be ready
+      await waitForPiSDK(5000);
+      
+      // Initialize Pi SDK before using any other methods
+      if (!isPiSDKAvailable()) {
+        throw new Error('Pi SDK failed to load properly');
+      }
+      
+      // Initialize Pi SDK exactly like pingo1 working version
+      console.log('Initializing Pi SDK...');
+      window.Pi.init({
+        version: "2.0",
+        sandbox: false // Set to false for production
+      });
+      console.log('Pi SDK initialized successfully');
+
+      // Define callback for incomplete payments (pingo1 pattern)
+      const onIncompletePaymentFound = (payment) => {
+        console.log(`Incomplete payment found: ${JSON.stringify(payment)}`);
+      };
+
+      // Authenticate exactly like pingo1 working version
+      console.log('Authenticating with Pi Network...');
+      setPaymentStatus(t('authenticatingWithPi', 'Authenticating with Pi Network...'));
+      
+      const authData = await window.Pi.authenticate(["username", "payments"], {
+        onIncompletePaymentFound: onIncompletePaymentFound
+      });
+      console.log('Pi authentication successful:', authData);
+
+      console.log('Creating Pi payment with SDK directly...');
+      setPaymentStatus(t('creatingPayment', 'Creating payment...'));
+      
+      // Payment data following pingo1 pattern
+      const paymentData = {
         amount: packageInfo.price,
-        memo: `${packageInfo.credits} Meditation Credits`,
+        memo: `${packageInfo.credits} Meditation Tokens`,
         metadata: {
           creditsAmount: packageInfo.credits,
           userId: user.id,
           userEmail: user.email || '',
           timestamp: Date.now()
         }
-      }, {
+      };
+      
+      // Create payment using pingo1 exact pattern
+      window.Pi.createPayment(paymentData, {
         // Pi SDK Callbacks
-        onReadyForServerApproval: async (paymentId) => {
+        onReadyForServerApproval: async function(paymentId) {
           console.log('🔄 Pi SDK: onReadyForServerApproval', paymentId);
-          setPaymentStatus('Approving payment with Pi Network...');
+          setPaymentStatus(t('approvingPayment', 'Approving payment with Pi Network...'));
           
           try {
             const response = await fetch(getFullUrl('/api/pi-payments/approve'), {
@@ -70,9 +114,9 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
           }
         },
 
-        onReadyForServerCompletion: async (paymentId, txid) => {
+        onReadyForServerCompletion: async function(paymentId, txid) {
           console.log('🔄 Pi SDK: onReadyForServerCompletion', paymentId, txid);
-          setPaymentStatus('Completing payment...');
+          setPaymentStatus(t('completingPayment', 'Completing payment...'));
           
           try {
             const response = await fetch(getFullUrl('/api/pi-payments/complete'), {
@@ -90,7 +134,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
             console.log('✅ Complete result:', result);
             
             if (result.success) {
-              setPaymentStatus('✅ Payment completed successfully!');
+              setPaymentStatus(`✅ ${t('paymentCompleted', 'Payment completed successfully!')}`);
               setTimeout(() => {
                 onPaymentComplete(result.newCreditBalance || (user.credits + packageInfo.credits));
                 onClose(); // Close modal after successful payment
@@ -104,14 +148,14 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
           }
         },
 
-        onCancel: (paymentId) => {
+        onCancel: function(paymentId) {
           console.log('❌ Pi SDK: Payment cancelled', paymentId);
-          setPaymentStatus('Payment cancelled');
+          setPaymentStatus(t('paymentCancelled', 'Payment cancelled'));
           setError('Payment was cancelled by user');
           setLoading(false);
         },
 
-        onError: (error, payment) => {
+        onError: function(error, payment) {
           console.error('❌ Pi SDK: Payment error', error, payment);
           setError(`Pi payment error: ${error.message || error}`);
           setPaymentStatus('');
@@ -176,7 +220,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
         {!loading && (
           <div>
             <p style={{ textAlign: 'center', marginBottom: '20px', color: '#666' }}>
-              Select credits package (NEW Pi SDK implementation):
+              Select tokens package (NEW Pi SDK implementation):
             </p>
             
             <div style={{ display: 'grid', gap: '12px' }}>
@@ -198,10 +242,10 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1F2937' }}>
-                        {pkg.credits} Credits
+                        {pkg.credits} Tokens
                       </div>
                       <div style={{ color: '#6B7280', fontSize: '14px' }}>
-                        ~{Math.round(pkg.credits / pkg.price)} credits per π
+                        ~{Math.round(pkg.credits / pkg.price)} tokens per π
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>

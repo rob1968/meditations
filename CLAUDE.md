@@ -4,31 +4,55 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a full-stack meditation audio generation application that:
-- Generates unique AI-powered meditation texts using OpenAI API
-- Supports 5 meditation types (sleep, stress, focus, anxiety, energy)
-- Converts text to speech using Eleven Labs API
-- Mixes speech with background nature sounds (ocean, forest, rain)
-- Processes audio to slow down speech for a meditative effect
-- Supports 5 languages (English, German, Spanish, French, Dutch)
+This is a comprehensive full-stack meditation and wellness application that:
+- Generates unique AI-powered meditation texts using Claude API and Google Gemini
+- Supports 5 meditation types (sleep, stress, focus, anxiety, energy) with professional coach personas
+- Converts text to speech using ElevenLabs API and Google Cloud TTS
+- Mixes speech with custom/default background nature sounds
+- Processes audio with FFmpeg for optimal meditation tempo
+- Supports 13 languages with automatic translation
+- Features comprehensive journaling system with AI mood detection and grammar checking
+- Includes AI Coach for addiction recovery support and crisis intervention
+- Integrates Pi Network payments for credit purchases
+- Provides community features, progress tracking, and emergency contact management
 
 ## Architecture
 
 ### Backend (Node.js/Express)
 - **Server**: `/backend/server.js` - Express server on port 5002
-- **Routes**: `/backend/routes/meditation.js` - Handles audio generation and AI text generation
-- **Database**: MongoDB via Mongoose (connection string in .env)
-- **Audio Processing**: Uses FFmpeg for slowing speech and mixing audio
-- **AI Text Generation**: Uses OpenAI API to generate unique meditation scripts
-- **Logging**: Access logs to `backend/access.log`, errors to `routes/error.log`
+- **Database**: MongoDB via Mongoose with collections for Users, Meditations, JournalEntries, AICoach sessions, Notifications
+- **Audio Processing**: Uses FFmpeg for speech tempo adjustment and background music mixing
+- **AI Services**: 
+  - `aiCoachService.js` - Google Gemini for coaching, mood detection, grammar checking, crisis assessment
+  - `translationService.js` - Multi-language support for meditation content
+  - `googleTTSService.js` - Google Cloud TTS integration with quota management
+
+#### Key Route Modules:
+- `meditation.js` - Core meditation generation, TTS, audio processing, custom backgrounds
+- `journal.js` - Journal entries with AI mood detection and trigger analysis
+- `aiCoach.js` - AI coaching sessions, grammar checking, crisis intervention
+- `auth.js` - User authentication, Pi Network integration
+- `piPayments.js` - Pi Network payment processing for credits
+- `userMeditations.js` - User meditation library management
+- `notifications.js` - System notifications and alerts
+- `addictions.js` - Addiction tracking and recovery support
+- `emergencyContacts.js` - Crisis support contact management
+- `community.js` - Community features and sharing
 
 ### Frontend (React)
-- **Entry**: `/frontend/src/App.jsx` - Main application component
-- **Components**: 
-  - `MeditationForm.jsx` - User input form
-  - `AudioPlayer.jsx` - Audio playback interface
-- **API URL**: Uses relative URLs (`/api/`) - proxied through Plesk Nginx to backend on port 5002
-- **i18n**: Multi-language support via react-i18next
+- **Entry**: `/frontend/src/App.jsx` - Main app with wizard-style meditation creation
+- **API Configuration**: `/frontend/src/config/api.js` - Dynamic API URL detection and endpoint definitions
+- **Internationalization**: react-i18next supporting 13 languages with automatic translation
+- **State Management**: React hooks with local storage persistence for user preferences
+
+#### Core Components:
+- `MeditationForm.jsx` - Multi-step meditation creation wizard
+- `Journal.jsx` - Comprehensive journaling with grammar checking, voice-to-text, mood detection
+- `AICoachChat.jsx` - Interactive AI coaching interface with crisis detection
+- `GrammarChecker.jsx` - Real-time grammar and spelling analysis with error highlighting
+- `BottomNavigation.jsx` - Main app navigation between meditation, journal, community, profile
+- `BackgroundSlider.jsx` - Custom background audio upload and management
+- `PiPaymentNew.jsx` - Pi Network payment integration for credit purchases
 
 ## Common Commands
 
@@ -51,9 +75,29 @@ npm run frontend        # Start only the frontend React app
 
 ### Deployment Commands
 ```bash
-npm run build           # Build frontend for production
-npm run deploy          # Full deployment (build + copy + restart services)
+npm run build           # Build frontend for production (sets GENERATE_SOURCEMAP=false)
+npm run deploy          # Full deployment (build + copy + restart services) 
 npm run deploy-quick    # Quick deployment (build + copy + restart frontend only)
+
+# Manual deployment steps:
+cd frontend && GENERATE_SOURCEMAP=false npm run build
+cp -r frontend/build/* .
+npx pm2 restart meditations-backend
+```
+
+### Development and Debugging
+```bash
+# Backend development
+cd backend && npm run dev     # Start with nodemon for auto-restart
+npx pm2 logs meditations-backend --lines 50    # View recent logs
+npx pm2 restart meditations-backend           # Restart after changes
+
+# Frontend development  
+cd frontend && npm start      # Start React dev server on port 3000
+npm run build                # Test production build locally
+
+# Database debugging
+# Connect to MongoDB to inspect collections directly
 ```
 
 ### Manual Setup (if needed)
@@ -65,57 +109,87 @@ cd frontend && npm install && npm start   # Frontend only
 ## Key Configuration
 
 ### Environment Variables (backend/.env)
-- `ELEVEN_LABS_API_KEY`: API key for text-to-speech
-- `ANTHROPIC_API_KEY`: Claude API key for AI text generation (replaces OpenAI)
+- `ELEVEN_LABS_API_KEY`: ElevenLabs API key for premium text-to-speech
+- `ANTHROPIC_API_KEY`: Claude API key for AI text generation
+- `GOOGLE_CLOUD_API_KEY`: Google Gemini API key for AI coaching and mood detection
 - `MONGODB_URI`: MongoDB connection string
+- `PI_API_KEY`: Pi Network API key for payment processing  
 - `PORT`: Server port (defaults to 5002)
 
 ### Important Paths
-- **FFmpeg**: Currently hardcoded to `C:\\Program Files\\ffmpeg-windows-x64\\bin\\ffmpeg.exe` in `routes/meditation.js`
-- **Temp files**: Created in `/temp` directory
-- **Audio assets**: Background sounds in `/assets` directory
+- **FFmpeg**: System FFmpeg installation used for audio processing (Linux deployment)
+- **Custom Backgrounds**: User-uploaded audio files stored in `/backend/custom-backgrounds/{userId}/`
+- **System Backgrounds**: Default nature sounds in `/assets/` directory
+- **User Meditations**: Generated meditation files in `/backend/user-meditations/{userId}/`
+- **Frontend Build**: Production files copied from `/frontend/build/` to root directory
 
-## Critical Notes
+## Critical Architecture Notes
 
-1. **FFmpeg Path**: The FFmpeg executable path is Windows-specific and hardcoded. When deploying or running on different systems, update the path in `backend/routes/meditation.js`
+1. **Multi-AI Integration**: The app integrates multiple AI services:
+   - **Claude (Anthropic)**: Primary meditation text generation and complex reasoning
+   - **Google Gemini**: AI coaching, mood detection, grammar checking, crisis assessment
+   - **ElevenLabs**: Premium TTS for high-quality meditation audio
+   - **Google Cloud TTS**: Fallback TTS with quota management
 
-2. **API Endpoint**: Frontend uses relative API URLs (`/api/`) which are proxied through Plesk Nginx configuration to backend on port 5002. Plesk "Additional nginx directives" must include proper proxy configuration.
+2. **PM2 Process Management**: Backend runs via PM2 with process name `meditations-backend`. Always use `npx pm2 restart meditations-backend` after backend changes. Check logs with `npx pm2 logs meditations-backend`.
 
-3. **Temp File Cleanup**: The application creates temporary audio files in `/temp`. Ensure proper cleanup mechanisms are in place.
+3. **Dynamic API Configuration**: Frontend automatically detects API URL based on current domain. Uses relative URLs (`/api/`) proxied through Nginx to backend on port 5002. Comment out `REACT_APP_API_URL` in frontend/.env for production.
 
-4. **No Tests**: Currently no test suite exists. Consider adding tests when implementing new features.
+4. **Audio Processing Pipeline**:
+   - User input → AI text generation (Claude) → TTS (ElevenLabs/Google) → FFmpeg processing (tempo adjustment) → Background mixing → Final meditation audio
+   - Custom backgrounds uploaded to user-specific directories, graceful fallback to system backgrounds
 
-5. **Audio Processing Flow**:
-   - User selects meditation type and duration → AI generates unique text via Claude API
-   - Generated text → Eleven Labs TTS → Slow down audio with FFmpeg
-   - Mix slowed speech with background sound → Return final audio file
+5. **Journal AI Features**:
+   - **Real-time Grammar Checking**: Powered by Google Gemini with 13-language support
+   - **Mood Detection**: AI analyzes journal text to detect emotional states
+   - **Trigger Analysis**: Identifies addiction triggers and potential crisis situations
+   - **Voice-to-Text**: Speech recognition for journal input
 
-6. **AI Text Generation**: Each meditation type (sleep, stress, focus, anxiety, energy) generates completely unique content every time, customized for the specified duration and language using Claude 3.5 Sonnet.
+6. **Deployment Architecture**:
+   - **Backend**: PM2 process serving on port 5002
+   - **Frontend**: Static files served from root directory via Nginx
+   - **Build Process**: `npm run build` → `cp -r frontend/build/* .` → `npx pm2 restart all`
+   - **Critical**: Always deploy after frontend changes or users see cached old versions
 
-7. **Deployment Structure**:
-   - **Frontend builds to**: `/frontend/build/` directory
-   - **Nginx serves from**: Root directory `/var/www/vhosts/pihappy.me/meditations.pihappy.me/`
-   - **Deployment copies build files** from `/frontend/build/` to root directory
-   - **PM2 serves static files** from root directory to `meditations.pihappy.me` subdomain
-   - **IMPORTANT**: Always use `npm run deploy` after frontend changes to ensure correct deployment
-   - **Debug**: If wrong files are served, check if JS filename in `index.html` matches files in `/static/js/`
+7. **Error Handling Patterns**:
+   - **Background Files**: Graceful fallback to default backgrounds when custom files missing
+   - **TTS Failures**: Automatic fallback from ElevenLabs to Google Cloud TTS  
+   - **AI Service Failures**: Fallback responses prevent user-facing errors
+   - **Credit System**: Prevents infinite API usage through user credit management
 
-8. **Professional Meditation Coach Features**:
-   - **Expert Coach Persona**: AI generates content as an experienced meditation coach (20+ years experience)
-   - **Extended Pauses**: "..." for breathing space, "......" for deep reflection between sections
-   - **Slower Audio**: Speech slowed to 0.75x speed for professional meditation tempo
-   - **Enhanced Voice Settings**: Stability 0.65, Style 0.2 for calm, consistent meditation voice
-   - **Sentence-Level Pacing**: Extra pauses added after each sentence for natural flow
-   - **Professional Language**: Warm, nurturing guidance with specialized meditation terminology
-   - **Automatic Fallback**: Local templates also follow professional coach style with integrated pauses
+## Specialized Features
 
-8. **Pi Network Payment Integration**:
-   - **Direct API Integration**: Uses direct Pi API calls to `sandbox.minepi.com` without pi-backend dependency
-   - **Payment Routes**: `/backend/routes/piPayments.js` handles all Pi Network payment operations
-   - **Payment API**: `/api/pi-payments/*` endpoints for create, submit, complete, cancel operations
-   - **Frontend Component**: `PiPaymentNew.jsx` provides user interface for credit purchases with auto-close
-   - **Credit Packages**: Multiple credit packages (10, 25, 50, 100) with Pi pricing
-   - **Authentication**: Uses Pi Network SDK for browser-based authentication
-   - **Configuration**: Requires `PI_API_KEY` and `PI_WALLET_PRIVATE_SEED` environment variables
-   - **Payment Flow**: Authenticate → Create payment → Submit → Complete → Add credits to user account
-   - **Auto-login**: Automatic Pi Network detection and login for seamless user experience
+### AI Coaching System (`aiCoachService.js`)
+- **Crisis Detection**: Automatically identifies and responds to mental health crises
+- **Addiction Support**: Tracks recovery progress and provides intervention strategies  
+- **Grammar Analysis**: Real-time spelling/grammar checking with error highlighting and nonsense detection
+- **Mood Analytics**: Multi-dimensional mood detection from journal entries
+- **Emergency Resources**: Location-based crisis resources and emergency contact management
+
+### Professional Meditation Features
+- **Dynamic Coach Personas**: AI adapts coaching style based on user preferences and meditation type
+- **Advanced Audio Processing**: Custom tempo control (0.7x-1.2x) with ElevenLabs voice stability optimization
+- **Intelligent Pausing**: Context-aware pause insertion for breathing space and reflection
+- **Multi-language Generation**: Claude generates native content in 13 languages, not translations
+
+### Pi Network Integration
+- **Seamless Payments**: Direct Pi API integration for credit purchases without third-party dependencies
+- **Auto-detection**: Automatic Pi Browser detection with fallback to traditional payment methods
+- **Credit Management**: Real-time credit tracking with usage analytics and quota management
+- **Payment Security**: Pi Network SDK handles authentication and payment verification
+
+### Custom Background System
+- **User Uploads**: Support for MP3/M4A custom background audio with metadata storage
+- **Intelligent Fallbacks**: Graceful degradation when custom files are missing or corrupted
+- **System Backgrounds**: Curated nature sounds (ocean, forest, rain, etc.) as defaults
+- **Audio Processing**: FFmpeg normalization and mixing for consistent volume levels
+
+## Database Architecture
+
+### Key Collections
+- **Users**: Authentication, preferences, credits, Pi Network integration
+- **Meditations**: Generated content with audio files, custom backgrounds, sharing settings
+- **JournalEntries**: User journals with AI-detected moods, triggers, and grammar analysis
+- **AICoach**: Coaching sessions, interventions, progress tracking, crisis logs
+- **Notifications**: System alerts, coaching prompts, emergency notifications
+- **Addictions**: Recovery tracking with trigger identification and progress metrics

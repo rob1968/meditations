@@ -218,7 +218,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
   const shareMeditation = async (meditationId, shareData) => {
     // Check credits before sharing
     if (userCredits && userCredits.credits < 1) {
-      setError(t('insufficientCreditsShare', 'Insufficient credits. You need 1 credit to share a meditation.'));
+      setError(t('insufficientTokensShare', 'Insufficient tokens. You need 1 token to share a meditation.'));
       return;
     }
     
@@ -507,7 +507,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
                     className="share-button"
                     onClick={() => {
                       if (userCredits && userCredits.credits < 1) {
-                        setError(t('insufficientCreditsShare', 'Insufficient credits. You need 1 credit to share a meditation.'));
+                        setError(t('insufficientTokensShare', 'Insufficient tokens. You need 1 token to share a meditation.'));
                         return;
                       }
                       setShowShareDialog(meditation.id);
@@ -545,7 +545,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
                     </audio>
                   ))}
                   <div className="audio-info-minimal">
-                    <span className="audio-count">{meditation.audioFiles.length} {t('audioFiles', 'audio file(s)')}</span>
+                    <span className="audio-count">{meditation.audioFiles.length} {t('audioFiles', 'audio files')}</span>
                   </div>
                 </div>
               )}

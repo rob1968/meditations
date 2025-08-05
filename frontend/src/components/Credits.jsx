@@ -46,7 +46,7 @@ const Credits = ({ user }) => {
         t('allVoices', 'Access to all voices'),
         t('allBackgrounds', 'All background sounds'),
         t('prioritySupport', 'Priority support'),
-        t('bonusCredits', '+10 bonus credits')
+        t('bonusTokens', '+10 bonus tokens')
       ]
     },
     {
@@ -60,7 +60,7 @@ const Credits = ({ user }) => {
         t('allVoices', 'Access to all voices'),
         t('allBackgrounds', 'All background sounds'),
         t('premiumSupport', 'Premium support'),
-        t('bonusCredits', '+50 bonus credits'),
+        t('bonusTokens', '+50 bonus tokens'),
         t('earlyAccess', 'Early access to new features')
       ]
     }
@@ -121,7 +121,7 @@ const Credits = ({ user }) => {
     setShowPiPayment(false);
     
     // Show success message
-    showAlert(t('paymentSuccess', 'Payment successful! Credits have been added to your account.'), 'success');
+    showAlert(t('paymentSuccess', 'Payment successful! Tokens have been added to your account.'), 'success');
   };
 
   if (isLoading) {
@@ -137,13 +137,13 @@ const Credits = ({ user }) => {
   return (
     <div className="credits-section">
       <div className="credits-header">
-        <h3>💎 {t('credits', 'Credits')}</h3>
+        <h3>💎 {t('tokens', 'Tokens')}</h3>
         <button 
           className="credits-purchase-btn"
           onClick={() => setShowPiPayment(true)}
         >
           <span style={{ fontSize: '16px', marginRight: '8px' }}>π</span>
-          {t('buyCredits', 'Buy Credits')}
+          {t('buyTokens', 'Buy Tokens')}
         </button>
       </div>
       
@@ -152,12 +152,12 @@ const Credits = ({ user }) => {
           <div className="credits-main">
             <div className="credits-balance">
               <span className="credits-amount">{credits.credits}</span>
-              <span className="credits-label">{t('availableCredits', 'Available Credits')}</span>
+              <span className="credits-label">{t('availableTokens', 'Available Tokens')}</span>
             </div>
             
             {credits.credits < 3 && (
               <div className="credits-warning">
-                ⚠️ {t('lowCreditsWarning', 'Low credits! Consider purchasing more.')}
+                ⚠️ {t('lowTokensWarning', 'Low tokens! Consider purchasing more.')}
               </div>
             )}
           </div>
@@ -187,7 +187,7 @@ const Credits = ({ user }) => {
           
           {showCreditHistory && (
             <div className="credit-history">
-              <h4>{t('creditHistory', 'Credit History')}</h4>
+              <h4>{t('tokenHistory', 'Token History')}</h4>
               {creditHistory.length === 0 ? (
                 <p>{t('noTransactions', 'No transactions yet.')}</p>
               ) : (
@@ -222,7 +222,7 @@ const Credits = ({ user }) => {
       {/* Credit Tiers Section */}
       <div className="credit-tiers-section">
         <h3 className="credit-tiers-header">
-          🎯 {t('chooseCreditPackage', 'Choose Your Credit Package')}
+          🎯 {t('chooseTokenPackage', 'Choose Your Token Package')}
         </h3>
         
         <div className="credit-tiers-grid">
@@ -243,7 +243,7 @@ const Credits = ({ user }) => {
               
               <div className="tier-credits">
                 <div className="tier-credits-amount">{tier.credits}</div>
-                <div className="tier-credits-label">{t('credits', 'Credits')}</div>
+                <div className="tier-credits-label">{t('tokens', 'Tokens')}</div>
               </div>
               
               <div className="tier-features">
@@ -271,7 +271,7 @@ const Credits = ({ user }) => {
       {/* ElevenLabs Credits Display - Only for user 'rob' */}
       {user.username === 'rob' && elevenlabsStats && (
         <div className="elevenlabs-credits-display">
-          <h3>🔊 ElevenLabs Credits</h3>
+          <h3>🔊 {t('elevenLabsTokens', 'ElevenLabs Tokens')}</h3>
           <div className="elevenlabs-info">
             <span className="elevenlabs-icon">🔊</span>
             <div className="elevenlabs-text">

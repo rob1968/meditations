@@ -1,37 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getLocalizedLanguages } from '../data/languages';
 
 const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = false, onBackClick, unreadCount = 0, onInboxClick, onCreateClick }) => {
   const { t, i18n } = useTranslation();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [languageOpen, setLanguageOpen] = useState(false);
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const profileDropdownRef = useRef(null);
 
-  // Available UI languages
-  const uiLanguages = [
-    { value: 'en', label: '🇺🇸 English', flag: '🇺🇸' },
-    { value: 'nl', label: '🇳🇱 Nederlands', flag: '🇳🇱' },
-    { value: 'de', label: '🇩🇪 Deutsch', flag: '🇩🇪' },
-    { value: 'fr', label: '🇫🇷 Français', flag: '🇫🇷' },
-    { value: 'es', label: '🇪🇸 Español', flag: '🇪🇸' },
-    { value: 'it', label: '🇮🇹 Italiano', flag: '🇮🇹' },
-    { value: 'pt', label: '🇵🇹 Português', flag: '🇵🇹' },
-    { value: 'ru', label: '🇷🇺 Русский', flag: '🇷🇺' },
-    { value: 'zh', label: '🇨🇳 中文', flag: '🇨🇳' },
-    { value: 'ja', label: '🇯🇵 日本語', flag: '🇯🇵' },
-    { value: 'ko', label: '🇰🇷 한국어', flag: '🇰🇷' },
-    { value: 'hi', label: '🇮🇳 हिन्दी', flag: '🇮🇳' },
-    { value: 'ar', label: '🇸🇦 العربية', flag: '🇸🇦' }
-  ];
-
-  const currentLanguage = uiLanguages.find(lang => lang.value === i18n.language) || uiLanguages[0];
+  // Get localized language names
+  const availableLanguages = getLocalizedLanguages(t);
+  const currentLanguage = availableLanguages.find(lang => lang.code === i18n.language) || availableLanguages[0];
 
   // Handle language change
-  const handleLanguageChange = (languageValue) => {
-    i18n.changeLanguage(languageValue);
-    localStorage.setItem('selectedLanguage', languageValue);
-    setLanguageOpen(false);
+  const handleLanguageChange = (languageCode) => {
+    i18n.changeLanguage(languageCode);
+    localStorage.setItem('selectedLanguage', languageCode);
+    setLanguageMenuOpen(false);
+    // Keep the main profile menu open after language selection
   };
+
 
 
   // Close profile menu when clicking outside
@@ -39,7 +27,7 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
     const handleClickOutside = (event) => {
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setProfileMenuOpen(false);
-        setLanguageOpen(false);
+        setLanguageMenuOpen(false);
       }
     };
 
@@ -53,7 +41,7 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
   const profileMenuItems = [
     { id: 'inbox', icon: '📬', label: t('inbox', 'Inbox'), badge: unreadCount },
     { id: 'profile', icon: '👤', label: t('profile', 'Profile') },
-    { id: 'credits', icon: '💎', label: t('credits', 'Credits') },
+    { id: 'credits', icon: '💎', label: t('tokens', 'Tokens') },
     { id: 'statistics', icon: '📊', label: t('statistics', 'Statistics') }
   ];
 
@@ -144,6 +132,89 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
                       ✕
                     </button>
                   </div>
+
+                  {/* Language Selector Section - Right under header */}
+                  <div className="profile-panel-language">
+                    <div className="panel-language-header">
+                      <div className="panel-item-icon">🌐</div>
+                      <span className="panel-language-title">{t('uiLanguage', 'UI Language')}</span>
+                      <div className="panel-language-selector">
+                        <button 
+                          className={`panel-language-button ${languageMenuOpen ? 'open' : ''}`}
+                          onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            color: 'var(--text-primary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <span className="panel-language-flag" style={{ fontSize: '24px', lineHeight: '1' }}>{currentLanguage.flag}</span>
+                          <span className="panel-language-current">{currentLanguage.nativeName}</span>
+                          <span className="panel-language-arrow">▼</span>
+                        </button>
+                        {languageMenuOpen && (
+                          <div className="panel-language-options" style={{
+                            position: 'absolute',
+                            top: '100%',
+                            right: '0',
+                            background: 'var(--bg-primary)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '8px',
+                            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+                            zIndex: 1000,
+                            minWidth: '200px',
+                            maxHeight: '300px',
+                            overflowY: 'auto'
+                          }}>
+                            {availableLanguages.map(language => (
+                              <button
+                                key={language.code}
+                                className={`panel-language-option ${i18n.language === language.code ? 'selected' : ''}`}
+                                onClick={() => handleLanguageChange(language.code)}
+                                style={{
+                                  width: '100%',
+                                  padding: '12px 16px',
+                                  border: 'none',
+                                  background: i18n.language === language.code ? 'var(--accent-color)' : 'transparent',
+                                  color: i18n.language === language.code ? 'white' : 'var(--text-primary)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '12px',
+                                  fontSize: '14px',
+                                  cursor: 'pointer',
+                                  transition: 'background-color 0.2s ease',
+                                  borderBottom: '1px solid var(--border-color)'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (i18n.language !== language.code) {
+                                    e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (i18n.language !== language.code) {
+                                    e.target.style.background = 'transparent';
+                                  }
+                                }}
+                              >
+                                <span className="language-flag" style={{ fontSize: '24px', lineHeight: '1' }}>{language.flag}</span>
+                                <span className="language-name">{language.nativeName}</span>
+                                {i18n.language === language.code && <span className="language-check" style={{ marginLeft: 'auto' }}>✓</span>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="profile-panel-divider"></div>
                   
                   <div className="profile-panel-menu">
                     {profileMenuItems.map(item => (
@@ -166,38 +237,6 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
                     ))}
                   </div>
                   
-                  {/* Language Selector Section */}
-                  <div className="profile-panel-language-section">
-                    <div className="panel-language-header">
-                      <span className="language-icon">🌐</span>
-                      <span>{t('selectUILanguage', 'UI Language')}</span>
-                    </div>
-                    <div className="panel-language-selector">
-                      <div 
-                        className={`panel-language-button ${languageOpen ? 'open' : ''}`} 
-                        onClick={() => setLanguageOpen(!languageOpen)}
-                      >
-                        <span>{currentLanguage.flag}</span>
-                        <span>{currentLanguage.label.split(' ')[1]}</span>
-                        <span className="language-arrow">▼</span>
-                      </div>
-                      {languageOpen && (
-                        <div className="panel-language-options">
-                          {uiLanguages.map(language => (
-                            <div 
-                              key={language.value}
-                              className={`panel-language-option ${i18n.language === language.value ? 'selected' : ''}`}
-                              onClick={() => handleLanguageChange(language.value)}
-                            >
-                              <span className="language-flag">{language.flag}</span>
-                              <span className="language-name">{language.label.split(' ')[1]}</span>
-                              {i18n.language === language.value && <span className="selected-check">✓</span>}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
               </>
             )}

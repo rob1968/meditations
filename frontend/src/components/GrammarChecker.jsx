@@ -21,7 +21,7 @@ const GrammarChecker = ({
   const [isChecking, setIsChecking] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(null);
   const [showNonsenseWarning, setShowNonsenseWarning] = useState(false);
-  const [checkingEnabled, setCheckingEnabled] = useState(enabled);
+  const [checkingEnabled, setCheckingEnabled] = useState(false); // Start disabled
   const textareaRef = useRef(null);
   const debounceRef = useRef(null);
   const overlayRef = useRef(null);
@@ -94,16 +94,10 @@ const GrammarChecker = ({
     }
   }, [getCurrentLanguage, checkingEnabled, showNonsenseWarning]);
 
-  // Debounced effect for auto-checking
+  // Debounced effect for auto-checking (disabled - only manual checking now)
   useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      checkGrammar(text);
-    }, debounceMs);
-
+    // Auto-checking is disabled - users must click "Check Text" button
+    // This prevents automatic API calls and gives users control
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);

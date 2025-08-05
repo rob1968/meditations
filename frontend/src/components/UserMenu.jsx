@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getLocalizedLanguages } from '../data/languages';
 
 const UserMenu = ({ 
   user, 
@@ -21,32 +22,18 @@ const UserMenu = ({
   const [languageOpen, setLanguageOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Available UI languages
-  const uiLanguages = [
-    { value: 'en', label: '🇺🇸 English', flag: '🇺🇸' },
-    { value: 'nl', label: '🇳🇱 Nederlands', flag: '🇳🇱' },
-    { value: 'de', label: '🇩🇪 Deutsch', flag: '🇩🇪' },
-    { value: 'fr', label: '🇫🇷 Français', flag: '🇫🇷' },
-    { value: 'es', label: '🇪🇸 Español', flag: '🇪🇸' },
-    { value: 'it', label: '🇮🇹 Italiano', flag: '🇮🇹' },
-    { value: 'pt', label: '🇵🇹 Português', flag: '🇵🇹' },
-    { value: 'ru', label: '🇷🇺 Русский', flag: '🇷🇺' },
-    { value: 'zh', label: '🇨🇳 中文', flag: '🇨🇳' },
-    { value: 'ja', label: '🇯🇵 日本語', flag: '🇯🇵' },
-    { value: 'ko', label: '🇰🇷 한국어', flag: '🇰🇷' },
-    { value: 'hi', label: '🇮🇳 हिन्दी', flag: '🇮🇳' },
-    { value: 'ar', label: '🇸🇦 العربية', flag: '🇸🇦' }
-  ];
-
-  const currentLanguage = uiLanguages.find(lang => lang.value === i18n.language) || uiLanguages[0];
+  // Get localized language names
+  const availableLanguages = getLocalizedLanguages(t);
+  const currentLanguage = availableLanguages.find(lang => lang.code === i18n.language) || availableLanguages[0];
 
   // Handle language change
-  const handleLanguageChange = (languageValue) => {
-    i18n.changeLanguage(languageValue);
-    localStorage.setItem('selectedLanguage', languageValue);
+  const handleLanguageChange = (languageCode) => {
+    i18n.changeLanguage(languageCode);
+    localStorage.setItem('selectedLanguage', languageCode);
     setLanguageOpen(false);
     setIsOpen(false); // Close main menu too
   };
+
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -108,9 +95,9 @@ const UserMenu = ({
       {
         id: 'credits',
         icon: '💳',
-        label: t('credits', 'Credits'),
+        label: t('tokens', 'Tokens'),
         action: onViewCredits,
-        description: t('creditsDesc', 'Manage your credits'),
+        description: t('creditsDesc', 'Manage your tokens'),
         badge: credits?.credits,
         showOn: ['create', 'myAudio', 'community', 'inbox', 'journal', 'journalHub', 'admin']
       },
@@ -194,21 +181,20 @@ const UserMenu = ({
                 className={`menu-language-button ${languageOpen ? 'open' : ''}`} 
                 onClick={() => setLanguageOpen(!languageOpen)}
               >
-                <span>{currentLanguage.flag}</span>
-                <span>{currentLanguage.label.split(' ')[1]}</span>
+                <span>{currentLanguage.nativeName}</span>
                 <span className="language-arrow">▼</span>
               </div>
               {languageOpen && (
                 <div className="menu-language-options">
-                  {uiLanguages.map(language => (
+                  {availableLanguages.map(language => (
                     <div 
-                      key={language.value}
-                      className={`menu-language-option ${i18n.language === language.value ? 'selected' : ''}`}
-                      onClick={() => handleLanguageChange(language.value)}
+                      key={language.code}
+                      className={`menu-language-option ${i18n.language === language.code ? 'selected' : ''}`}
+                      onClick={() => handleLanguageChange(language.code)}
                     >
-                      <span className="language-flag">{language.flag}</span>
-                      <span className="language-name">{language.label.split(' ')[1]}</span>
-                      {i18n.language === language.value && <span className="selected-check">✓</span>}
+                      <span className="language-name">{language.nativeName}</span>
+                      <span className="language-localized">{language.localizedName}</span>
+                      {i18n.language === language.code && <span className="selected-check">✓</span>}
                     </div>
                   ))}
                 </div>

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import UserMenu from './UserMenu';
 
 const BottomNavigation = ({ activeTab, onTabChange, user, onLogout }) => {
   const { t } = useTranslation();
