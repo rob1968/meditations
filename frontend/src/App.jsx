@@ -200,7 +200,7 @@ const App = () => {
       setError('');
     } catch (error) {
       console.error('Error generating text preview:', error);
-      setError(error.response?.data?.error || 'Failed to generate meditation text. Please check your Claude API configuration.');
+      setError(error.response?.data?.error || t('claudeApiError', 'Failed to generate meditation text. Please check your Claude API configuration.'));
       setText('');
       setGeneratedText('');
     } finally {
@@ -407,7 +407,7 @@ const App = () => {
                     setError('');
                   } catch (error) {
                     console.error('Error generating wizard text:', error);
-                    setError(error.response?.data?.error || 'Failed to generate meditation text. Please check your Claude API configuration.');
+                    setError(error.response?.data?.error || t('claudeApiError', 'Failed to generate meditation text. Please check your Claude API configuration.'));
                   } finally {
                     setIsGeneratingText(false);
                   }
@@ -1016,7 +1016,7 @@ const App = () => {
   const handleTextApproved = () => {
     // Check credits before showing voice selector
     if (user && userCredits && userCredits.credits < 1) {
-      setError(t('insufficientCredits', 'Insufficient credits. You need 1 credit to generate audio.'));
+      setError(t('insufficientTokens', 'Insufficient tokens. You need 1 token to generate audio.'));
       return;
     }
     

@@ -9,10 +9,10 @@
 
 const express = require('express');
 const router = express.Router();
-const fetch = require('node-fetch');
+const axios = require('axios');
 const User = require('../models/User');
 
-// Helper function to call Pi Network API
+// Helper function to call Pi Network API using axios
 async function callPiAPI(endpoint, method = 'GET', body = null) {
   const apiKey = process.env.PI_API_KEY;
   
@@ -20,8 +20,9 @@ async function callPiAPI(endpoint, method = 'GET', body = null) {
     throw new Error('PI_API_KEY not configured');
   }
 
-  const options = {
-    method: method,
+  const config = {
+    method: method.toLowerCase(),
+    url: `https://api.minepi.com/v2/${endpoint}`,
     headers: {
       'Authorization': `Key ${apiKey}`,
       'Content-Type': 'application/json',
@@ -29,22 +30,26 @@ async function callPiAPI(endpoint, method = 'GET', body = null) {
   };
 
   if (body) {
-    options.body = JSON.stringify(body);
+    config.data = body;
   }
 
   try {
-    const response = await fetch(`https://api.minepi.com/v2/${endpoint}`, options);
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error(`Pi API error for ${endpoint}:`, data);
-      throw new Error(data.error_message || `Pi API error: ${response.status}`);
-    }
-    
-    return data;
+    const response = await axios(config);
+    return response.data;
   } catch (error) {
-    console.error(`Error calling Pi API ${endpoint}:`, error);
-    throw error;
+    if (error.response) {
+      // The request was made and the server responded with a status code that falls out of the range of 2xx
+      console.error(`Pi API error for ${endpoint}:`, error.response.data);
+      throw new Error(error.response.data.error_message || `Pi API error: ${error.response.status}`);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error(`No response from Pi API ${endpoint}:`, error.request);
+      throw new Error(`No response from Pi API ${endpoint}`);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error(`Error calling Pi API ${endpoint}:`, error.message);
+      throw error;
+    }
   }
 }
 

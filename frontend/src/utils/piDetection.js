@@ -102,7 +102,7 @@ export const initializePiSDK = () => {
       // Initialize Pi SDK (this is the missing piece!)
       window.Pi.init({
         version: "2.0", // Specify the Pi SDK version
-        // sandbox: false  // Use production mode (removed sandbox parameter as requested)
+        sandbox: false  // Use production mode for live payments
       });
       
       console.log('[Pi Init] Pi SDK initialized successfully');
@@ -114,8 +114,8 @@ export const initializePiSDK = () => {
   });
 };
 
-// Safe Pi SDK authentication wrapper following working example pattern
-export const authenticateWithPi = (scopes = ['payments', 'username', 'wallet_address']) => {
+// Safe Pi SDK authentication wrapper with timeout
+export const authenticateWithPi = (scopes = ['payments', 'username', 'wallet_address'], timeoutMs = 30000) => {
   return new Promise(async (resolve, reject) => {
     // Ensure Pi SDK is loaded before attempting to use it
     if (typeof window.Pi === 'undefined') {
@@ -127,10 +127,15 @@ export const authenticateWithPi = (scopes = ['payments', 'username', 'wallet_add
     console.log('[Pi Auth] Pi SDK (window.Pi) is loaded:', window.Pi);
     console.log('[Pi Auth] Starting Pi authentication with scopes:', scopes);
     
+    // Set up timeout to prevent hanging
+    const timeoutId = setTimeout(() => {
+      console.error('[Pi Auth] Authentication timeout after', timeoutMs + 'ms');
+      reject(new Error(`Pi Authentication timed out after ${timeoutMs}ms. Please try again.`));
+    }, timeoutMs);
+    
     try {
-      // Initialize Pi SDK first if not already done
-      console.log('[Pi Auth] Ensuring Pi SDK is initialized...');
-      await initializePiSDK();
+      // Skip re-initialization if already done (prevents hanging)
+      console.log('[Pi Auth] Skipping re-initialization (already done in payment flow)...');
       
       // Callback for incomplete payments (required by Pi SDK)
       function onIncompletePaymentFound(payment) {
@@ -148,6 +153,7 @@ export const authenticateWithPi = (scopes = ['payments', 'username', 'wallet_add
       const authStartTime = Date.now();
       window.Pi.authenticate(scopes, onIncompletePaymentFound)
         .then(auth => {
+          clearTimeout(timeoutId); // Clear timeout on success
           const duration = Date.now() - authStartTime;
           console.log('[Pi Auth] Pi Authentication successful (frontend):', {
             duration: `${duration}ms`,
@@ -158,6 +164,7 @@ export const authenticateWithPi = (scopes = ['payments', 'username', 'wallet_add
           resolve(auth);
         })
         .catch(err => {
+          clearTimeout(timeoutId); // Clear timeout on error
           const duration = Date.now() - authStartTime;
           console.error('[Pi Auth] Pi.authenticate call failed:', {
             error: err,
@@ -167,6 +174,7 @@ export const authenticateWithPi = (scopes = ['payments', 'username', 'wallet_add
           reject(new Error(`Pi Authentication failed: ${err.message || err}`));
         });
     } catch (error) {
+      clearTimeout(timeoutId); // Clear timeout on exception
       console.error('[Pi Auth] Error during Pi authentication:', error);
       reject(error);
     }
