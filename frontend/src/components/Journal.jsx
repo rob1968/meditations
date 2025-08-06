@@ -30,6 +30,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const [recordingState, setRecordingState] = useState('idle'); // 'idle', 'recording', 'processing'
   const [todaysEntry, setTodaysEntry] = useState(null);
   const [hasTodaysEntry, setHasTodaysEntry] = useState(false);
+  const [isSavingEntry, setIsSavingEntry] = useState(false); // Track saving/mood generation state
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedDateEntry, setSelectedDateEntry] = useState(null);
@@ -73,7 +74,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
   
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState('calendar'); // 'calendar', 'browse', 'voice', 'addictions'
+  const [activeTab, setActiveTab] = useState('write'); // 'write', 'calendar', 'archive', 'voice', 'addictions', 'coach'
   
   // Ref to track if calendar has been initialized to prevent re-loading today's entry
   const calendarInitialized = useRef(false);
@@ -115,6 +116,15 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   
   // Track original content to detect changes
   const [originalContent, setOriginalContent] = useState('');
+  
+  // Grammar checking states
+  // Grammar checking state - only for new entries, not updates
+  const [enableGrammarCheck, setEnableGrammarCheck] = useState(true); // Always enabled, automatic and silent
+  const [isPerformingGrammarCheck, setIsPerformingGrammarCheck] = useState(false);
+  const [hasGrammarErrors, setHasGrammarErrors] = useState(false);
+  const grammarCheckerRef = useRef(null);
+  const quickGrammarCheckerRef = useRef(null);
+  const writeTabGrammarCheckerRef = useRef(null); // Separate ref for Write tab quick write area
   
   // Track save success for feedback
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
@@ -278,6 +288,19 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   useEffect(() => {
     setCurrentSlide(0);
   }, [entries]);
+
+  // Clear error message on component unmount or navigation
+  useEffect(() => {
+    return () => {
+      // Cleanup function - clear error when component unmounts
+      setError('');
+    };
+  }, []);
+
+  // Clear error message when navigating between tabs
+  useEffect(() => {
+    setError('');
+  }, [activeTab]);
 
 
   // Function to load today's entry for calendar
@@ -457,6 +480,10 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     setSelectedDate('');
     setSelectedDateEntry(null);
     
+    // Clear any grammar check state
+    setIsPerformingGrammarCheck(false);
+    setHasGrammarErrors(false);
+    
     // Reset recording state after a small delay to allow stop to complete
     setTimeout(() => {
       setRecordingState('idle');
@@ -492,7 +519,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     }
     
     setShowDatePicker(false);
-    // Stay in calendar view with inline writing interface - no need to open expanded form
+    setShowCreateForm(true); // Open expanded form modal - same as browse page
   };
 
   const fetchUserVoices = async () => {
@@ -741,25 +768,185 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     );
   };
 
-  const handleSaveEntry = async () => {
-    if (!formData.content.trim()) {
-      setError(t('contentRequired', 'Content is required'));
-      return;
-    }
+  // Function to apply grammar corrections to text
+  const applyCorrectionsSorted = (text, corrections) => {
+    if (!corrections || corrections.length === 0) return text;
+    
+    // Sort corrections by start position (descending) to maintain positions
+    const sortedCorrections = [...corrections].sort((a, b) => b.start - a.start);
+    
+    let correctedText = text;
+    sortedCorrections.forEach((correction) => {
+      const before = correctedText.substring(0, correction.start);
+      const after = correctedText.substring(correction.end);
+      let suggestion = correction.suggestion;
+      
+      // Preserve spacing
+      const originalError = correctedText.substring(correction.start, correction.end);
+      if (originalError.startsWith(' ') && !suggestion.startsWith(' ')) {
+        suggestion = ' ' + suggestion;
+      }
+      if (originalError.endsWith(' ') && !suggestion.endsWith(' ')) {
+        suggestion = suggestion + ' ';
+      }
+      
+      correctedText = before + suggestion + after;
+      console.log(`Applied correction: "${correction.error}" → "${suggestion}"`);
+    });
+    
+    return correctedText;
+  };
 
-    // Check minimum word count (10 words)
-    const wordCount = formData.content.trim().split(/\s+/).length;
-    if (wordCount < 10) {
-      setError(t('minimumWords', 'Minimaal 10 woorden nodig voor mood analyse. Je hebt nu {count} woorden.').replace('{count}', wordCount));
-      return;
+  // Function to render text with applied corrections highlighted
+  const renderCorrectedText = (text, corrections) => {
+    if (!corrections || corrections.length === 0) return text;
+    
+    // Sort corrections by start position for proper rendering
+    const sortedCorrections = [...corrections].sort((a, b) => a.start - b.start);
+    
+    const parts = [];
+    let lastIndex = 0;
+    
+    sortedCorrections.forEach((correction, index) => {
+      // Add text before correction
+      if (correction.start > lastIndex) {
+        parts.push(
+          <span key={`text-${index}`}>
+            {text.substring(lastIndex, correction.start)}
+          </span>
+        );
+      }
+      
+      // Add corrected text with highlighting
+      parts.push(
+        <span 
+          key={`correction-${index}`}
+          className="grammar-correction"
+          title={`Gecorrigeerd: "${correction.error}" → "${correction.suggestion}"`}
+        >
+          {correction.suggestion}
+        </span>
+      );
+      
+      lastIndex = correction.end;
+    });
+    
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push(
+        <span key="text-end">
+          {text.substring(lastIndex)}
+        </span>
+      );
     }
+    
+    return <span>{parts}</span>;
+  };
 
-    // Check maximum word count (250 words)
-    if (wordCount > 250) {
-      setError(t('maximumWords', 'Maximaal 250 woorden toegestaan. Je hebt nu {count} woorden.').replace('{count}', wordCount));
-      return;
+  // Function to perform automatic grammar correction and nonsense detection before saving
+const performPreSaveChecks = async () => {
+  console.log('Performing automatic grammar correction and nonsense detection...');
+  console.log('Is this an update?', !!editingEntry);
+  console.log('Entry being edited:', editingEntry?._id);
+  
+  if (!formData.content.trim()) {
+    return { passed: true };
+  }
+  
+  // Always perform grammar check, auto-correction and nonsense detection for ALL entries (both new and updates)
+  try {
+    setIsPerformingGrammarCheck(true);
+    setError('');
+    setHasGrammarErrors(false);
+    
+    // Use the appropriate grammar checker ref based on which form is active
+    // Check for Write tab ref first, then showCreateForm, then quickGrammarCheckerRef
+    let grammarRef;
+    if (activeTab === 'write' && !showCreateForm) {
+      grammarRef = writeTabGrammarCheckerRef;
+    } else if (showCreateForm) {
+      grammarRef = grammarCheckerRef;
+    } else {
+      grammarRef = quickGrammarCheckerRef;
     }
+    
+    if (!grammarRef.current) {
+      console.log('Grammar checker ref not available, skipping automatic correction');
+      console.log('Active tab:', activeTab, 'Show create form:', showCreateForm);
+      console.log('Refs:', {
+        writeTabGrammarCheckerRef: writeTabGrammarCheckerRef.current,
+        grammarCheckerRef: grammarCheckerRef.current,
+        quickGrammarCheckerRef: quickGrammarCheckerRef.current
+      });
+      setIsPerformingGrammarCheck(false);
+      return { passed: true };
+    }
+    
+    const checkResult = await grammarRef.current.checkText();
+    console.log('Grammar check full result:', JSON.stringify(checkResult, null, 2));
+    
+    if (!checkResult) {
+      console.log('Invalid grammar check result, continuing with save');
+      setIsPerformingGrammarCheck(false);
+      return { passed: true };
+    }
+    
+    // Check for nonsense text first - this blocks saving (for both new and updates)
+    console.log('Checking isNonsense flag:', checkResult.isNonsense);
+    console.log('Type of isNonsense:', typeof checkResult.isNonsense);
+    
+    if (checkResult.isNonsense === true) {
+      console.log('NONSENSE DETECTED - BLOCKING SAVE');
+      console.log('Is update:', !!editingEntry);
+      setIsPerformingGrammarCheck(false);
+      
+      const errorMessage = editingEntry ? 
+        t('nonsenseTextDetectedUpdate', 'Onzin tekst gedetecteerd. Wijzig je entry met betekenisvolle content.') :
+        t('nonsenseTextDetected', 'Onzin tekst gedetecteerd. Schrijf een echte dagboekentry.');
+      
+      setError(errorMessage);
+      return { passed: false, reason: 'nonsense_text' };
+    }
+    
+    // Apply grammar corrections automatically (never blocks saving)
+    if (checkResult.hasErrors && checkResult.suggestions && checkResult.suggestions.length > 0) {
+      console.log(`Automatically applying ${checkResult.suggestions.length} grammar corrections`);
+      
+      // Apply all grammar corrections automatically
+      let correctedText = formData.content;
+      const corrections = [...checkResult.suggestions].sort((a, b) => b.start - a.start); // Apply from end to start
+      
+      for (const suggestion of corrections) {
+        if (suggestion.start >= 0 && suggestion.end <= correctedText.length && suggestion.start < suggestion.end) {
+          const before = correctedText.substring(0, suggestion.start);
+          const after = correctedText.substring(suggestion.end);
+          correctedText = before + suggestion.suggestion + after;
+          console.log(`Applied correction: "${suggestion.error}" → "${suggestion.suggestion}"`);
+        }
+      }
+      
+      // Update the form with corrected text
+      if (correctedText !== formData.content) {
+        setFormData({...formData, content: correctedText});
+        console.log('Text automatically corrected');
+      }
+    }
+    
+    setIsPerformingGrammarCheck(false);
+    console.log('Automatic grammar correction completed, no nonsense detected');
+    return { passed: true };
+    
+  } catch (error) {
+    console.error('Automatic grammar correction failed:', error);
+    setIsPerformingGrammarCheck(false);
+    return { passed: true }; // Continue with save even if correction fails
+  }
+};
 
+// No force save allowed for nonsense text - it pollutes journal and AI analysis
+
+// Separate function for the actual save process (used by both normal and force save)
+const proceedWithSave = async () => {
     // Stop any ongoing recording before saving
     if (recordingState === 'recording') {
       console.log('Stopping recording before save');
@@ -770,6 +957,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
     try {
       setError('');
+      setIsSavingEntry(true); // Start saving state
       const payload = {
         userId: user.id,
         title: formatDate(formData.date), // Use date as title
@@ -853,11 +1041,71 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         
         // Keep the form open so user can see the updated text
         // Don't call resetForm() here anymore
+        return true; // Success
       }
+      return false; // Server response indicated failure
     } catch (error) {
       console.error('Error saving journal entry:', error);
       setError(t('failedToSaveEntry', 'Failed to save journal entry'));
+      return false; // Error occurred
+    } finally {
+      setIsSavingEntry(false); // Always reset saving state
     }
+};
+
+const handleSaveEntry = async () => {
+    // Clear any existing error messages when save/update button is clicked
+    setError('');
+    
+    if (!formData.content.trim()) {
+      setError(t('contentRequired', 'Content is required'));
+      return false;
+    }
+
+    // Check minimum word count (10 words)
+    const wordCount = formData.content.trim().split(/\s+/).length;
+    if (wordCount < 10) {
+      setError(t('minimumWords', 'Minimaal 10 woorden nodig voor mood analyse. Je hebt nu {count} woorden.').replace('{count}', wordCount));
+      return false;
+    }
+
+    // Check maximum word count (250 words)
+    if (wordCount > 250) {
+      setError(t('maximumWords', 'Maximaal 250 woorden toegestaan. Je hebt nu {count} woorden.').replace('{count}', wordCount));
+      return false;
+    }
+
+    // Perform automatic grammar correction and nonsense detection
+    console.log('Starting automatic grammar correction and nonsense detection...');
+    console.log('Current content:', formData.content);
+    console.log('Is editing entry?', !!editingEntry);
+    
+    const checksResult = await performPreSaveChecks();
+    console.log('Pre-save checks result:', checksResult);
+    
+    if (!checksResult || checksResult.passed === undefined) {
+      console.error('Invalid check result, blocking save for safety');
+      setError(t('checkFailed', 'Controle mislukt, probeer opnieuw'));
+      return false;
+    }
+    
+    if (!checksResult.passed) {
+      console.log('Pre-save checks failed:', checksResult.reason);
+      setIsSavingEntry(false); // Make sure to reset saving state
+      
+      // Auto-clear error message after 5 seconds for nonsense detection
+      if (checksResult.reason === 'nonsense_text') {
+        setTimeout(() => {
+          setError('');
+        }, 5000);
+      }
+      
+      return false; // Error already set in performPreSaveChecks
+    }
+    
+    console.log('Pre-save checks passed, proceeding with save');
+    const saveSuccess = await proceedWithSave();
+    return saveSuccess;
   };
 
   const handleEditEntry = (entry) => {
@@ -878,11 +1126,40 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       t('confirmDeleteEntry', 'Are you sure you want to delete this journal entry?'),
       async () => {
         try {
+          // Immediately remove from local state for instant UI update
+          setEntries(prevEntries => prevEntries.filter(entry => entry._id !== entryId));
+          
+          // Clear states that might still reference the deleted entry
+          if (editingEntry && editingEntry._id === entryId) {
+            setEditingEntry(null);
+            setShowCreateForm(false);
+            
+            // Reset form data if we were editing this entry
+            setFormData({
+              title: '',
+              content: '',
+              mood: '',
+              date: new Date().toISOString().split('T')[0]
+            });
+            setOriginalContent('');
+          }
+          
+          // Clear todaysEntry if it matches the deleted entry
+          if (todaysEntry && todaysEntry._id === entryId) {
+            setTodaysEntry(null);
+            setHasTodaysEntry(false);
+          }
+          
+          // Make the API call to delete from backend
           await axios.delete(getFullUrl(`/api/journal/${entryId}?userId=${user.id}`));
-          await fetchEntries();
+          
+          // Refresh today's entry to ensure consistency
+          await fetchTodaysEntry();
         } catch (error) {
           console.error('Error deleting journal entry:', error);
           setError(t('failedToDeleteEntry', 'Failed to delete journal entry'));
+          // If API call failed, restore the entries by refetching
+          await fetchEntries();
         }
       }
     );
@@ -1231,12 +1508,23 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
           
           // Auto-scroll to bottom after transcription
           setTimeout(() => {
-            if (textareaRef.current) {
-              textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
-              textareaRef.current.focus();
+            // Use the appropriate grammar checker ref based on which form is active
+            let activeGrammarRef;
+            if (activeTab === 'write' && !showCreateForm) {
+              activeGrammarRef = writeTabGrammarCheckerRef;
+            } else if (showCreateForm) {
+              activeGrammarRef = grammarCheckerRef;
+            } else {
+              activeGrammarRef = quickGrammarCheckerRef;
+            }
+            const activeTextareaRef = activeGrammarRef?.current?.textareaRef;
+            
+            if (activeTextareaRef && activeTextareaRef.current) {
+              activeTextareaRef.current.scrollTop = activeTextareaRef.current.scrollHeight;
+              activeTextareaRef.current.focus();
               // Set cursor to end of text
-              const textLength = textareaRef.current.value.length;
-              textareaRef.current.setSelectionRange(textLength, textLength);
+              const textLength = activeTextareaRef.current.value.length;
+              activeTextareaRef.current.setSelectionRange(textLength, textLength);
             }
           }, 100);
           
@@ -1339,48 +1627,13 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     }
   };
 
-  // Auto-save functionality
+  // Auto-save functionality - DISABLED to prevent bypassing nonsense detection
   const autoSave = useCallback(async () => {
-    if (!formData.content.trim() || formData.content === lastSavedContent || autoSaving) {
-      return;
-    }
-
-    try {
-      setAutoSaving(true);
-      const payload = {
-        userId: user.id,
-        title: formatDate(formData.date),
-        content: formData.content.trim(),
-        date: formData.date
-      };
-
-      // Mood is now automatically detected by AI, no need to send manually
-
-
-      let response;
-      if (editingEntry && editingEntry._id) {
-        response = await axios.put(getFullUrl(`/api/journal/${editingEntry._id}`), payload);
-      } else {
-        response = await axios.post(getFullUrl('/api/journal/create'), payload);
-      }
-
-      if (response.data.success) {
-        setLastSavedContent(formData.content);
-        // Update editingEntry if it was a new entry
-        if (!editingEntry && response.data.entry) {
-          setEditingEntry(response.data.entry);
-        }
-        // Silently refresh entries in background
-        fetchEntries(false);
-        fetchTodaysEntry();
-      }
-    } catch (error) {
-      console.error('Auto-save failed:', error);
-      // Don't show error for auto-save failures to avoid interrupting user
-    } finally {
-      setAutoSaving(false);
-    }
-  }, [formData, editingEntry, user, lastSavedContent, autoSaving]);
+    // Auto-save is completely disabled to ensure all saves go through proper nonsense detection
+    // Users must manually save with the save button which includes all checks
+    console.log('Auto-save is disabled - manual save required to ensure nonsense detection');
+    return;
+  }, []);
 
   // Auto-save effect - triggers after user stops typing for 2 seconds
   useEffect(() => {
@@ -1772,6 +2025,13 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       {/* Tab Navigation */}
       <div className="journal-tabs">
         <button 
+          className={`tab ${activeTab === 'write' ? 'active' : ''}`}
+          onClick={() => setActiveTab('write')}
+        >
+          <span className="tab-icon">✏️</span>
+          <span className="tab-label">{t('write', 'Schrijven')}</span>
+        </button>
+        <button 
           className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
           onClick={() => setActiveTab('calendar')}
         >
@@ -1779,11 +2039,11 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
           <span className="tab-label">{t('calendar', 'Kalender')}</span>
         </button>
         <button 
-          className={`tab ${activeTab === 'browse' ? 'active' : ''}`}
-          onClick={() => setActiveTab('browse')}
+          className={`tab ${activeTab === 'archive' ? 'active' : ''}`}
+          onClick={() => setActiveTab('archive')}
         >
-          <span className="tab-icon">📖</span>
-          <span className="tab-label">{t('browse', 'Bladeren')}</span>
+          <span className="tab-icon">📚</span>
+          <span className="tab-label">{t('archive', 'Archief')}</span>
         </button>
         <button 
           className={`tab ${activeTab === 'voice' ? 'active' : ''}`}
@@ -1811,9 +2071,110 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       {/* Tab Content */}
       <div className="journal-tab-content">
 
-        {/* Browse Tab */}
-        {activeTab === 'browse' && (
-          <div className="browse-tab-content">
+        {/* Write Tab - New Modern Dashboard */}
+        {activeTab === 'write' && (
+          <div className="write-tab-content">
+            
+            {/* Today's Writing Card */}
+            <div className="todays-writing-section">
+              <div className="writing-card-header-centered">
+                <span className="today-date-styled">📅 {formatDate(new Date().toISOString().split('T')[0])}</span>
+              </div>
+
+              {/* Quick Write Area */}
+              <div className="quick-write-card">
+                {todaysEntry ? (
+                  // Continue existing entry
+                  <div className="existing-entry-preview">
+                    <div className="entry-mood-badge">
+                      {todaysEntry.mood && moods.find(m => m.value === todaysEntry.mood)?.emoji || '😐'} 
+                      <span className="mood-label">
+                        {todaysEntry.mood ? moods.find(m => m.value === todaysEntry.mood)?.label || t('neutral', 'Neutraal') : t('detectingMood', 'Stemming detecteren...')}
+                      </span>
+                    </div>
+                    <div className="entry-preview-text">
+                      {todaysEntry.content.substring(0, 150)}
+                      {todaysEntry.content.length > 150 && '...'}
+                    </div>
+                    <div className="entry-actions">
+                      <button 
+                        className="continue-writing-btn"
+                        onClick={() => {
+                          handleEditEntry(todaysEntry);
+                        }}
+                      >
+                        📝 {t('continueWriting', 'Verder schrijven')}
+                      </button>
+                      <button 
+                        className="read-entry-btn"
+                        onClick={() => {
+                          handleEditEntry(todaysEntry);
+                        }}
+                      >
+                        👁️ {t('readEntry', 'Lezen')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // New entry quick start
+                  <div className="new-entry-quick-start">
+                    {/* Error Banner */}
+                    {error && (
+                      <div className="error-banner">
+                        <span>⚠️</span>
+                        <span>{error}</span>
+                        <button onClick={() => setError('')}>✕</button>
+                      </div>
+                    )}
+                    
+                    <SpellingChecker
+                      ref={writeTabGrammarCheckerRef}
+                      text={formData.content}
+                      onTextChange={(newText) => setFormData({...formData, content: newText})}
+                      placeholder={t('quickWritePlaceholder', 'Begin hier te schrijven over je dag, gedachten of gevoelens...')}
+                      className="quick-write-textarea"
+                      rows={4}
+                      maxLength={200}
+                      enabled={true}
+                    />
+                    <div className="quick-write-actions">
+                      <button 
+                        className="expand-editor-btn"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            date: new Date().toISOString().split('T')[0]
+                          });
+                          setShowCreateForm(true);
+                        }}
+                        disabled={!formData.content.trim()}
+                      >
+                        ✏️ {t('writeMore', 'Uitgebreid schrijven')}
+                      </button>
+                      <button 
+                        className="quick-save-btn"
+                        onClick={async () => {
+                          setFormData({
+                            ...formData,
+                            date: new Date().toISOString().split('T')[0]
+                          });
+                          await handleSaveEntry();
+                        }}
+                        disabled={!formData.content.trim() || formData.content.trim().split(/\s+/).length < 10}
+                      >
+                        💾 {t('quickSave', 'Snel opslaan')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Archive Tab (previously Browse) */}
+        {activeTab === 'archive' && (
+          <div className="archive-tab-content">
 
             {/* Entries Slider */}
             <div className="entries-slider-container">
@@ -2324,6 +2685,10 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                       <SpellingChecker
                         text={addictionForm.description}
                         onTextChange={(newText) => setAddictionForm({...addictionForm, description: newText})}
+                        onTextUpdated={(newText) => {
+                          console.log('Grammar suggestion applied in addiction form, forcing state update');
+                          setAddictionForm(prev => ({...prev, description: newText}));
+                        }}
                         placeholder={t('addictionDescription', 'Beschrijf je verslaving, triggers, of andere details...')}
                         rows={3}
                         enabled={true}
@@ -2510,23 +2875,8 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         {/* Calendar Tab */}
         {activeTab === 'calendar' && (
           <div className="calendar-tab-content">
-            {/* Button to show calendar when hidden - fallback if header button is not visible */}
-            {!showCalendar && !selectedDate && (
-              <div className="show-calendar-section">
-                <button 
-                  className="show-calendar-btn"
-                  onClick={() => setShowCalendar(true)}
-                >
-                  📅 {t('showCalendar', 'Toon kalender')}
-                </button>
-                <p className="calendar-help-text">
-                  {t('pressEscToReturn', 'Druk op ESC om terug te keren naar de kalender')}
-                </p>
-              </div>
-            )}
-            
-            {/* Mini Calendar for History */}
-            {showCalendar && <div className="journal-calendar">
+            {/* Always show calendar in calendar tab - no conditional rendering */}
+            <div className="journal-calendar">
               <div className="calendar-header">
                 <div className="calendar-navigation">
                   <button 
@@ -2587,220 +2937,11 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                   ))}
                 </div>
               </div>
-            </div>}
-            
-            {/* Today's Writing Interface */}
-            <div className={`today-writing-section ${!showCalendar && selectedDate ? 'entry-mode' : 'calendar-mode'}`}>
-              <div className="today-writing-header">
-                <div className="writing-header-content">
-                  {/* Back to Calendar button - positioned at top left */}
-                  {!showCalendar && (
-                    <button 
-                      className="back-to-calendar-btn"
-                      onClick={() => {
-                        setShowCalendar(true);
-                        // Optionally reset form if no changes were made
-                        if (!hasContentChanged()) {
-                          setSelectedDate('');
-                          setFormData({ title: '', content: '', mood: '' });
-                          setEditingEntry(null);
-                        }
-                      }}
-                      title={t('backToCalendar', 'Terug naar kalender')}
-                    >
-                      ← {t('back', 'Terug')}
-                    </button>
-                  )}
-                  
-                  
-                </div>
-              </div>
-              
-              <div className="quick-write-interface">
-                <div className="quick-write-form">
-                  
-
-                  {/* AI-Detected Multi-Mood Display */}
-                  {(() => {
-                    // Only show for current editing entry, not general today's entry when editing different date
-                    const currentEntry = editingEntry || (selectedDate === '' ? todaysEntry : null);
-                    return currentEntry && currentEntry.content && currentEntry.content.trim() && currentEntry.moodAnalysis && currentEntry.moodAnalysis.aiGenerated && (
-                      <div className="ai-mood-analysis-display">
-                        <div className="mood-analysis-header">
-                          <span className="mood-label">{t('aiMoodAnalysis', 'AI Mood Analysis')} 🤖</span>
-                          <span className="overall-sentiment sentiment-{currentEntry.moodAnalysis.overallSentiment}">
-                            {t('overallSentiment', 'Overall')}: {currentEntry.moodAnalysis.overallSentiment}
-                          </span>
-                        </div>
-                        <div className="detected-moods-container">
-                          {/* Display all detected moods */}
-                          <div className="detected-moods-grid">
-                            {currentEntry.moodAnalysis.detectedMoods && currentEntry.moodAnalysis.detectedMoods.slice(0, 6).map((detectedMood, index) => (
-                              <div key={index} className={`detected-mood-item ${index === 0 ? 'primary-mood' : 'secondary-mood'}`}>
-                                <div className="mood-icon">
-                                  {moods.find(m => m.value === detectedMood.mood)?.emoji || '😐'}
-                                </div>
-                                <div className="mood-details">
-                                  <span className="mood-name">
-                                    {moods.find(m => m.value === detectedMood.mood)?.label || detectedMood.mood}
-                                  </span>
-                                  <span className="mood-strength">
-                                    {Math.round(detectedMood.strength * 20)}%
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                            {(currentEntry.moodAnalysis.detectedMoods?.length || 0) > 6 && (
-                              <div className="mood-count-more">
-                                +{(currentEntry.moodAnalysis.detectedMoods?.length || 0) - 6} meer
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Confidence and sentiment info */}
-                          <div className="mood-analysis-footer">
-                            <span className="confidence-info">
-                              {t('confidence', 'Confidence')}: {Math.round((currentEntry.moodAnalysis.confidence || 0) * 100)}%
-                            </span>
-                            <span className="mood-count-info">
-                              {currentEntry.moodAnalysis.detectedMoods?.length || 0} {t('moodsDetected', 'moods detected')}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  
-                  <div className="textarea-container">
-                    <SpellingChecker
-                      text={formData.content}
-                      onTextChange={(newText) => {
-                        setFormData({...formData, content: newText});
-                        if (editingEntry && newText !== lastSavedContent) {
-                          // Auto-save logic can be added here
-                        }
-                      }}
-                      placeholder={t('writeHere', 'Schrijf hier je gedachten, gevoelens of ervaringen van vandaag...')}
-                      className={`quick-content-textarea ${recordingState === 'processing' ? 'processing' : ''}`}
-                      rows={6}
-                      enabled={true}
-                      language="auto"
-                      debounceMs={1500}
-                    />
-                    
-                    {/* Spinner overlay during transcription */}
-                    {recordingState === 'processing' && (
-                      <div className="textarea-spinner-overlay">
-                        <div className="spinner-content">
-                          <div className="loading-spinner">
-                            <div className="spinner"></div>
-                          </div>
-                          <span className="processing-text">{t('processing', 'Verwerken...')}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="quick-write-actions">
-                    {/* Voice Recording Button */}
-                    <div className="voice-recording-quick">
-                      {audioSupported && recordingState === 'idle' && (
-                        <button
-                          type="button"
-                          className="voice-quick-btn"
-                          onClick={startRecording}
-                          title={t('voiceToText', 'Spraak naar tekst')}
-                        >
-                          🎤
-                        </button>
-                      )}
-                      
-                      {recordingState === 'recording' && (
-                        <div className="recording-indicator-quick">
-                          <button
-                            type="button"
-                            className="stop-recording-btn-quick"
-                            onClick={stopRecording}
-                            title={t('stopRecording', 'Stop opname')}
-                          >
-                            ⏹️ {recordingTime}s
-                          </button>
-                        </div>
-                      )}
-                      
-                      {recordingState === 'processing' && (
-                        <div className="processing-indicator-quick">
-                          <span className="processing-text">🔄 {t('processing', 'Verwerken...')}</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="quick-save-actions">
-                      <button
-                        className="save-entry-btn"
-                        onClick={handleSaveEntry}
-                        disabled={!formData.content.trim() || (editingEntry && !hasContentChanged())}
-                      >
-                        💾 {editingEntry ? t('update', 'Bijwerken') : t('save', 'Opslaan')}
-                      </button>
-                      
-                      {showSaveSuccess && (
-                        <span className="save-success-indicator">
-                          ✅ {t('saved', 'Opgeslagen!')}
-                        </span>
-                      )}
-                      
-                      {editingEntry && (
-                        <button
-                          className="delete-entry-btn"
-                          onClick={() => {
-                            showConfirmDialog(
-                              t('confirmDeleteJournal', 'Weet je zeker dat je deze dagboek entry wilt verwijderen?'),
-                              async () => {
-                                try {
-                                  await axios.delete(getFullUrl(`/api/journal/${editingEntry._id}?userId=${user.id}`));
-                                  // Reset form and refresh
-                                  resetForm();
-                                  fetchEntries();
-                                  const today = new Date().toISOString().split('T')[0];
-                                  if (selectedDate === today) {
-                                    // If deleting today's entry, refresh today's status
-                                    loadTodayForCalendar();
-                                  }
-                                } catch (error) {
-                                  console.error('Error deleting entry:', error);
-                                  setError(t('errorDeleting', 'Fout bij verwijderen van entry'));
-                                }
-                              }
-                            );
-                          }}
-                        >
-                          🗑️ {t('delete', 'Verwijderen')}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {formData.content.trim() && (
-                    <div className="word-count-display">
-                      {countWords(formData.content)} {t('words', 'woorden')}
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
+            
           </div>
         )}
       </div>
-
-      {/* Error Banner */}
-      {error && (
-        <div className="error-banner">
-          <span>⚠️</span>
-          <span>{error}</span>
-          <button onClick={() => setError('')}>✕</button>
-        </div>
-      )}
 
       {/* Date Picker Modal */}
       {showDatePicker && (
@@ -2860,7 +3001,8 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
               {/* AI-Detected Mood Display */}
               {(() => {
                 const currentEntry = editingEntry || (selectedDate === '' ? todaysEntry : null);
-                return currentEntry && currentEntry.mood && currentEntry.content?.trim() && (
+                const entryStillExists = !currentEntry || !currentEntry._id || entries.some(e => e._id === currentEntry._id);
+                return currentEntry && entryStillExists && currentEntry.mood && currentEntry.content?.trim() && (
                 <div className="quick-mood-bar mood-display-bar">
                   <span className="mood-label">{t('moodDetectedAutomatically', 'Mood detected automatically')} 🤖</span>
                   <div className="detected-mood-expanded">
@@ -2965,14 +3107,26 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
               </div>
 
               <div className="writing-area">
+                {/* Error Banner */}
+                {error && (
+                  <div className="error-banner">
+                    <span>⚠️</span>
+                    <span>{error}</span>
+                    <button onClick={() => setError('')}>✕</button>
+                  </div>
+                )}
+                
                 <SpellingChecker
+                  ref={grammarCheckerRef}
                   text={formData.content}
-                  onTextChange={(newText) => setFormData({...formData, content: newText})}
-                  placeholder={t('startWriting', 'Begin met schrijven... Wat houd je vandaag bezig?')}
-                  className="expanded-writing-textarea"
-                  rows={15}
+                  onTextChange={(newText) => {
+                    setFormData({...formData, content: newText});
+                  }}
+                  placeholder={isSavingEntry ? t('generatingMoods', 'Mood wordt gegenereerd...') : t('startWriting', 'Begin met schrijven... Wat houd je vandaag bezig?')}
+                  className={`expanded-writing-textarea ${isSavingEntry ? 'processing' : ''}`}
+                  rows={7}
                   maxLength={1500}
-                  enabled={true}
+                  enabled={!isSavingEntry}
                   language="auto"
                   debounceMs={1500}
                 />
@@ -2993,29 +3147,41 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
               {/* Action Buttons */}
               <div className="form-actions-expanded">
-                <button 
-                  className="save-btn-primary" 
-                  onClick={handleSaveEntry}
-                  disabled={!formData.content.trim() || (editingEntry && !hasContentChanged())}
-                >
-                  💾 {editingEntry ? t('update', 'Bijwerken') : t('save', 'Opslaan')}
-                </button>
+                <div className="save-options">
+                  <button 
+                    className="save-btn-primary" 
+                    onClick={handleSaveEntry}
+                    disabled={!formData.content.trim() || (editingEntry && !hasContentChanged()) || isPerformingGrammarCheck || isSavingEntry}
+                  >
+                    {isPerformingGrammarCheck ? 
+                      '🔍 ' + t('checking', 'Controleren...') :
+                      isSavingEntry ? 
+                        '🔄 ' + t('savingAndGeneratingMoods', 'Opslaan & mood genereren...') :
+                        '💾 ' + (editingEntry ? t('update', 'Bijwerken') : t('save', 'Opslaan'))
+                    }
+                  </button>
+
+                  {/* Delete button - only shown when editing existing entry */}
+                  {editingEntry && (
+                    <button 
+                      className="delete-btn-expanded" 
+                      onClick={() => {
+                        handleDeleteEntry(editingEntry._id);
+                        setShowCreateForm(false);
+                      }}
+                      disabled={isPerformingGrammarCheck || isSavingEntry}
+                      title={t('deleteEntry', 'Dagboek entry verwijderen')}
+                    >
+                      🗑️ {t('delete', 'Verwijderen')}
+                    </button>
+                  )}
+                </div>
                 
                 {showSaveSuccess && (
                   <span className="save-success-indicator">
                     ✅ {t('saved', 'Opgeslagen!')}
                   </span>
                 )}
-                <button 
-                  className="save-and-close-btn" 
-                  onClick={async () => {
-                    await handleSaveEntry();
-                    setShowCreateForm(false);
-                  }}
-                  disabled={!formData.content.trim() || (editingEntry && !hasContentChanged())}
-                >
-                  ✅ {t('saveAndClose', 'Opslaan & Sluiten')}
-                </button>
               </div>
             </div>
           </div>
@@ -3076,6 +3242,8 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
         initialMessage={coachInitialMessage}
         initialTab={coachInitialTab}
       />
+      
+      {/* Grammar correction feedback panel removed */}
       
       {/* Trigger Alert */}
       {showTriggerAlert && activeTrigger && (

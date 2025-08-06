@@ -696,5 +696,12 @@
   
   "country": "Pays",
   "city": "Ville",
-  "selectUILanguage": "Choisir la Langue"
+  "selectUILanguage": "Choisir la Langue",
+  
+  "inappropriateJournalContent": "Le texte saisi ne semble pas approprié pour une entrée de journal. {reason}",
+  "lowJournalContext": "Le texte semble contenir peu de réflexion personnelle pour une entrée de journal. {reason} Essayez d'écrire davantage sur vos propres pensées et sentiments.",
+  "nonsenseDetected": "Le texte saisi semble contenir des non-sens. Veuillez vérifier votre saisie et réessayer.",
+  "grammarErrorsFound": "{count} erreurs de grammaire trouvées. Veuillez les corriger en cliquant sur les erreurs, ou cliquez sur \"Enregistrer quand même\" pour ignorer.",
+  "nonsenseTextDetected": "Texte insensé détecté. Écrivez une vraie entrée de journal.",
+  "nonsenseTextDetectedUpdate": "Texte insensé détecté. Mettez à jour votre entrée avec du contenu significatif."
 }

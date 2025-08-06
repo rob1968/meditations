@@ -692,5 +692,12 @@
   
   "country": "国家",
   "city": "城市",
-  "selectUILanguage": "选择语言"
+  "selectUILanguage": "选择语言",
+  
+  "inappropriateJournalContent": "输入的文本似乎不适合日记条目。{reason}",
+  "lowJournalContext": "文本似乎缺乏日记条目所需的个人反思。{reason} 尝试写更多关于你自己的想法和感受。",
+  "nonsenseDetected": "输入的文本似乎包含无意义的内容。请检查您的输入并重试。",
+  "grammarErrorsFound": "发现{count}个语法错误。请通过点击错误来纠正它们，或点击\"仍然保存\"来忽略。",
+  "nonsenseTextDetected": "检测到无意义文本。请写真正的日记条目。",
+  "nonsenseTextDetectedUpdate": "检测到无意义文本。请用有意义的内容更新您的条目。"
 }

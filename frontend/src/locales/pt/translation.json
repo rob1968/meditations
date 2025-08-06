@@ -696,5 +696,12 @@
   
   "country": "País",
   "city": "Cidade",
-  "selectUILanguage": "Selecionar Idioma"
+  "selectUILanguage": "Selecionar Idioma",
+  
+  "inappropriateJournalContent": "O texto inserido não parece apropriado para uma entrada de diário. {reason}",
+  "lowJournalContext": "O texto parece conter pouca reflexão pessoal para uma entrada de diário. {reason} Tente escrever mais sobre seus próprios pensamentos e sentimentos.",
+  "nonsenseDetected": "O texto inserido parece conter disparates. Por favor, verifique sua entrada e tente novamente.",
+  "grammarErrorsFound": "Encontrados {count} erros de gramática. Por favor, corrija-os clicando nos erros, ou clique em \"Salvar mesmo assim\" para ignorar.",
+  "nonsenseTextDetected": "Texto sem sentido detectado. Escreva uma entrada de diário real.",
+  "nonsenseTextDetectedUpdate": "Texto sem sentido detectado. Atualize sua entrada com conteúdo significativo."
 }

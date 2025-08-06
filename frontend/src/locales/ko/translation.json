@@ -695,5 +695,12 @@
   
   "country": "국가",
   "city": "도시",
-  "selectUILanguage": "언어 선택"
+  "selectUILanguage": "언어 선택",
+  
+  "inappropriateJournalContent": "입력된 텍스트가 일기 항목에 적합하지 않은 것 같습니다. {reason}",
+  "lowJournalContext": "텍스트에 일기 항목으로서 개인적인 성찰이 부족한 것 같습니다. {reason} 자신의 생각과 감정에 대해 더 많이 써보세요.",
+  "nonsenseDetected": "입력된 텍스트에 무의미한 내용이 포함되어 있는 것 같습니다. 입력 내용을 확인하고 다시 시도해 주세요.",
+  "grammarErrorsFound": "{count}개의 문법 오류를 발견했습니다. 오류를 클릭하여 수정하거나 \"그래도 저장\"을 클릭하여 무시하세요.",
+  "nonsenseTextDetected": "의미없는 텍스트가 감지되었습니다. 진짜 일기 항목을 작성하세요.",
+  "nonsenseTextDetectedUpdate": "의미없는 텍스트가 감지되었습니다. 의미 있는 내용으로 항목을 업데이트하세요."
 }

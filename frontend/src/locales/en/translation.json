@@ -803,5 +803,15 @@
   
   "country": "Country",
   "city": "City",
-  "selectUILanguage": "Select Language"
+  "selectUILanguage": "Select Language",
+  
+  "inappropriateJournalContent": "The entered text does not seem suitable for a journal entry. {reason}",
+  "lowJournalContext": "The text seems to contain little personal reflection for a journal entry. {reason} Try writing more about your own thoughts and feelings.",
+  "nonsenseDetected": "The entered text appears to contain nonsense. Please check your input and try again.",
+  "grammarErrorsFound": "Found {count} grammar errors. Please correct them by clicking on the errors, or click \"Save Anyway\" to ignore.",
+  "grammarAutoCorected": "Grammar automatically corrected. The adjusted text will be saved.",
+  "grammarCorrected": "Grammar Corrected!",
+  "correctionHint": "The corrected words are highlighted in the journal",
+  "nonsenseTextDetected": "Nonsense text detected. Write a real journal entry.",
+  "nonsenseTextDetectedUpdate": "Nonsense text detected. Update your entry with meaningful content."
 }

@@ -2111,7 +2111,26 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
         detectedLanguage = await this.detectLanguage(text);
       }
       
-      // Build analysis types based on checkTypes
+      // If nonsense check is requested, do it first and return early if nonsense is detected
+      if (checkTypes.includes('nonsense')) {
+        console.log('Performing nonsense check first...');
+        const isNonsense = await this.checkForNonsense(text, detectedLanguage);
+        if (isNonsense) {
+          console.log('Nonsense detected - skipping grammar check');
+          return {
+            errors: [],
+            isNonsense: true,
+            nonsenseReason: "Text contains gibberish or meaningless content",
+            detectedLanguage: detectedLanguage,
+            overallQuality: "poor",
+            readabilityScore: 1,
+            suggestions: []
+          };
+        }
+        console.log('No nonsense detected - proceeding with grammar check');
+      }
+      
+      // Build analysis types based on checkTypes (excluding nonsense since it's already checked)
       const analysisTypes = [];
       if (checkTypes.includes('spelling')) analysisTypes.push('1. Spelling errors');
       if (checkTypes.includes('grammar')) analysisTypes.push('2. Grammar mistakes');
@@ -2121,23 +2140,6 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
         You are a professional text checker specializing in ${detectedLanguage === 'nl' ? 'Dutch' : detectedLanguage === 'en' ? 'English' : 'multiple languages'}. Analyze the following text for:
         ${analysisTypes.join('\n        ')}
         
-        Be thorough and check for common grammatical errors including:
-        ${detectedLanguage === 'nl' ? `
-        - Subject-verb agreement (onderwerp-werkwoord overeenstemming)
-        - Incorrect use of "de/het" articles
-        - Wrong verb conjugations
-        - Incorrect preposition usage
-        - Word order mistakes in Dutch sentences
-        ` : `
-        - Subject-verb agreement
-        - Incorrect verb tenses
-        - Wrong preposition usage  
-        - Sentence fragments
-        - Run-on sentences
-        `}
-        
-        Only report actual errors, not stylistic preferences. Be helpful but accurate.
-        
         Text language: ${detectedLanguage}
         Text to analyze: "${text}"
         
@@ -2145,12 +2147,12 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
         {
           "errors": [
             {
-              "type": "grammar",
+              "type": "grammar|spelling|punctuation",
               "error": "incorrect text",
               "suggestion": "corrected text", 
               "start": start_position,
               "end": end_position,
-              "explanation": "clear explanation of the grammar rule"
+              "explanation": "clear explanation"
             }
           ],
           "isNonsense": false,
@@ -2161,17 +2163,18 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
           "suggestions": []
         }
         
+        For Dutch texts, check for:
+        - Subject-verb agreement
+        - Incorrect use of "de/het" articles
+        - Wrong verb conjugations
+        - Word order mistakes
+        - Common spelling errors
+        
         For position indices:
-        - Use character positions (0-based)
-        - Be precise with start/end positions
-        - Focus on grammar errors only since that's what was requested
+        - Use 0-based character positions
+        - Ensure text.substring(start, end) equals the error text
         
-        For nonsense detection:
-        - Mark as nonsense if text is gibberish, random characters, or completely incoherent
-        - Don't mark as nonsense just because of poor grammar or spelling
-        - Consider the language context
-        
-        Be helpful but not overly pedantic. Focus on meaningful errors that affect understanding.
+        Be helpful but not overly pedantic. Focus on meaningful errors.
       `;
       
       const result = await this.model.generateContent(prompt);
@@ -2200,14 +2203,86 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
       if (!analysis.readabilityScore) analysis.readabilityScore = 7;
       if (!analysis.suggestions) analysis.suggestions = [];
       
-      // Sort errors by position
-      analysis.errors.sort((a, b) => a.start - b.start);
+      // Validate and fix error positions
+      if (analysis.errors && analysis.errors.length > 0) {
+        analysis.errors = analysis.errors.filter(error => {
+          if (!error.error || typeof error.start !== 'number' || typeof error.end !== 'number') {
+            console.warn('Invalid error object, removing:', error);
+            return false;
+          }
+          
+          // Check if positions are correct
+          const actualText = text.substring(error.start, error.end);
+          if (actualText !== error.error) {
+            console.warn(`Position mismatch for error "${error.error}": found "${actualText}" at ${error.start}-${error.end}`);
+            
+            // Try to find correct position
+            const correctStart = text.indexOf(error.error);
+            if (correctStart !== -1) {
+              error.start = correctStart;
+              error.end = correctStart + error.error.length;
+              console.log(`Corrected positions to ${error.start}-${error.end}`);
+            } else {
+              console.warn(`Could not find error text "${error.error}" in original text`);
+              return false;
+            }
+          }
+          
+          return true;
+        });
+        
+        // Sort errors by position
+        analysis.errors.sort((a, b) => a.start - b.start);
+        
+        // Map errors to suggestions format for frontend
+        analysis.suggestions = analysis.errors;
+      }
       
       return analysis;
       
     } catch (error) {
       console.error('Error checking grammar and spelling:', error);
       return this.getDefaultGrammarAnalysis();
+    }
+  }
+
+  /**
+   * Check if text is nonsense (gibberish or meaningless content)
+   */
+  async checkForNonsense(text, language = 'en') {
+    try {
+      const prompt = `
+        Analyze if the following text is nonsense, gibberish, or meaningless content:
+        
+        Text: "${text}"
+        
+        Return only "true" if the text is nonsense/gibberish, or "false" if it contains meaningful content.
+        
+        Consider as nonsense:
+        - Random characters or symbols
+        - Repeated nonsensical strings
+        - Complete gibberish without any meaningful words
+        - Test strings like "asdkasd" or keyboard mashing
+        
+        Do NOT consider as nonsense:
+        - Poor grammar or spelling
+        - Simple sentences
+        - Emotional expressions
+        - Different languages
+        - Short entries
+        
+        Return only: true or false
+      `;
+      
+      const result = await this.model.generateContent(prompt);
+      const responseText = result.response.text().trim().toLowerCase();
+      
+      return responseText === 'true';
+      
+    } catch (error) {
+      console.error('Error checking for nonsense:', error);
+      // Default to false (not nonsense) on error
+      return false;
     }
   }
 
@@ -2242,6 +2317,108 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
     } catch (error) {
       console.error('Error detecting language:', error);
       return 'en'; // Default fallback
+    }
+  }
+
+  /**
+   * Verify if content is appropriate for a journal entry
+   */
+  async verifyJournalContext(text, language = 'auto') {
+    try {
+      console.log(`Verifying journal context for text in language: ${language}`);
+      
+      // Detect language if auto
+      let detectedLanguage = language;
+      if (language === 'auto') {
+        detectedLanguage = await this.detectLanguage(text);
+      }
+      
+      const prompt = `
+        You are an AI assistant helping to verify if text content is appropriate for a personal journal entry.
+        
+        A journal entry should typically:
+        - Express personal thoughts, feelings, or experiences
+        - Describe events from the author's life or perspective  
+        - Reflect on emotions, relationships, or personal growth
+        - Share daily activities, goals, or challenges
+        - Be written in first person or from a personal perspective
+        - Show introspection or self-reflection
+        
+        Content that is NOT appropriate for a journal:
+        - Commercial advertisements or product promotions
+        - Technical documentation or code snippets
+        - News articles or factual reporting (unless personally reflective)
+        - Recipe instructions or how-to guides
+        - Academic papers or formal reports
+        - Random text, spam, or gibberish
+        - Inappropriate or offensive content
+        - Content clearly copy-pasted from other sources without personal reflection
+        
+        Analyze this text: "${text}"
+        
+        Provide your analysis in this exact JSON format:
+        {
+          "isAppropriate": true/false,
+          "contextScore": 8,
+          "reason": "brief explanation of why it's appropriate or not",
+          "suggestions": ["suggestion to improve journal context if needed"],
+          "detectedLanguage": "${detectedLanguage}",
+          "personalityIndicators": ["list of personal elements found"],
+          "contentType": "personal_reflection|daily_experience|emotional_expression|goal_setting|inappropriate|unclear"
+        }
+        
+        Score from 1-10 where:
+        - 9-10: Excellent personal journal content with clear self-reflection
+        - 7-8: Good journal content with personal elements
+        - 5-6: Acceptable but could be more personal or reflective
+        - 3-4: Questionable journal content, lacks personal perspective
+        - 1-2: Inappropriate or completely unrelated to journaling
+        
+        Be helpful but accurate in your assessment.
+      `;
+      
+      const result = await this.model.generateContent(prompt);
+      const responseText = result.response.text();
+      console.log('Raw Gemini response for context verification:', responseText);
+      
+      // Clean the response text - remove markdown code blocks if present
+      let cleanedText = responseText.trim();
+      
+      // Remove ```json and ``` markers
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+      } else if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.replace(/^```\s*/, '').replace(/```\s*$/, '');
+      }
+      
+      console.log('Cleaned Gemini response for context verification:', cleanedText);
+      
+      const analysis = JSON.parse(cleanedText);
+      
+      // Validate and fix the response
+      if (typeof analysis.isAppropriate !== 'boolean') analysis.isAppropriate = true;
+      if (!analysis.contextScore || analysis.contextScore < 1 || analysis.contextScore > 10) analysis.contextScore = 7;
+      if (!analysis.reason) analysis.reason = 'Content appears suitable for journaling';
+      if (!analysis.suggestions) analysis.suggestions = [];
+      if (!analysis.personalityIndicators) analysis.personalityIndicators = [];
+      if (!analysis.contentType) analysis.contentType = 'unclear';
+      if (!analysis.detectedLanguage) analysis.detectedLanguage = detectedLanguage;
+      
+      console.log('Final context verification analysis:', analysis);
+      return analysis;
+      
+    } catch (error) {
+      console.error('Error verifying journal context:', error);
+      // Return default allowing analysis
+      return {
+        isAppropriate: true,
+        contextScore: 7,
+        reason: 'Unable to verify context, allowing entry',
+        suggestions: [],
+        detectedLanguage: language === 'auto' ? 'en' : language,
+        personalityIndicators: [],
+        contentType: 'unclear'
+      };
     }
   }
 

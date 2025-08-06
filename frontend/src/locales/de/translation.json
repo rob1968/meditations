@@ -683,5 +683,12 @@
   
   "country": "Land",
   "city": "Stadt",
-  "selectUILanguage": "Sprache Wählen"
+  "selectUILanguage": "Sprache Wählen",
+  
+  "inappropriateJournalContent": "Der eingegebene Text scheint nicht für einen Tagebucheintrag geeignet zu sein. {reason}",
+  "lowJournalContext": "Der Text scheint wenig persönliche Reflexion für einen Tagebucheintrag zu enthalten. {reason} Versuchen Sie, mehr über Ihre eigenen Gedanken und Gefühle zu schreiben.",
+  "nonsenseDetected": "Der eingegebene Text scheint Unsinn zu enthalten. Bitte überprüfen Sie Ihre Eingabe und versuchen Sie es erneut.",
+  "grammarErrorsFound": "{count} Grammatikfehler gefunden. Bitte korrigieren Sie diese, indem Sie auf die Fehler klicken, oder klicken Sie auf \"Trotzdem speichern\" zum Ignorieren.",
+  "nonsenseTextDetected": "Unsinniger Text erkannt. Schreiben Sie einen echten Tagebucheintrag.",
+  "nonsenseTextDetectedUpdate": "Unsinniger Text erkannt. Aktualisieren Sie Ihren Eintrag mit sinnvollem Inhalt."
 }

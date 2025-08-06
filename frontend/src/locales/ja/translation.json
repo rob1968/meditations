@@ -696,5 +696,12 @@
   
   "country": "国",
   "city": "都市",
-  "selectUILanguage": "言語を選択"
+  "selectUILanguage": "言語を選択",
+  
+  "inappropriateJournalContent": "入力されたテキストは日記エントリーに適していないようです。{reason}",
+  "lowJournalContext": "テキストには日記エントリーとしての個人的な反映が不足しているようです。{reason} あなた自身の思考や感情についてもっと書いてみてください。",
+  "nonsenseDetected": "入力されたテキストに無意味な内容が含まれているようです。入力内容を確認して再度お試しください。",
+  "grammarErrorsFound": "{count}つの文法エラーが見つかりました。エラーをクリックして修正するか、「それでも保存」をクリックして無視してください。",
+  "nonsenseTextDetected": "意味不明なテキストが検出されました。本当の日記エントリを書いてください。",
+  "nonsenseTextDetectedUpdate": "意味不明なテキストが検出されました。意味のあるコンテンツでエントリを更新してください。"
 }
