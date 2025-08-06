@@ -694,5 +694,9 @@
   "countrySearchHelp": "Inizia a digitare per cercare paesi",
   "citySearchHelp": "Inizia a digitare per cercare città",
   "locationSearchHelp": "Inizia a digitare per cercare località",
-  "manualLocationHelp": "Inserisci località manualmente (autocompletamento disabilitato)"
+  "manualLocationHelp": "Inserisci località manualmente (autocompletamento disabilitato)",
+  
+  "country": "Paese",
+  "city": "Città",
+  "selectUILanguage": "Seleziona Lingua"
 }

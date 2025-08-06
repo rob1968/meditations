@@ -1,0 +1,18 @@
+{
+  "id": "93d22c179df99c58d1cb15d39eb73d32",
+  "userId": "688b9fbb4798f1359c5d19d5",
+  "meditationType": "focus",
+  "language": "en",
+  "text": "Generate a calming 2-minute meditation",
+  "audioFiles": [
+    {
+      "filename": "meditation_en_1753991497796_a77d7707.mp3",
+      "voiceId": "21m00Tcm4TlvDq8ikWAM",
+      "background": "ocean",
+      "duration": 3.422,
+      "language": "en"
+    }
+  ],
+  "createdAt": "2025-07-31T19:51:37.905Z",
+  "updatedAt": "2025-07-31T19:51:37.905Z"
+}

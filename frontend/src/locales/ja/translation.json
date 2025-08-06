@@ -692,5 +692,9 @@
   "countrySearchHelp": "入力を開始して国を検索",
   "citySearchHelp": "入力を開始して都市を検索",
   "locationSearchHelp": "入力を開始して場所を検索",
-  "manualLocationHelp": "手動で場所を入力（オートコンプリート無効）"
+  "manualLocationHelp": "手動で場所を入力（オートコンプリート無効）",
+  
+  "country": "国",
+  "city": "都市",
+  "selectUILanguage": "言語を選択"
 }

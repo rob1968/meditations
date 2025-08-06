@@ -715,6 +715,13 @@ class AICoachService {
    */
   async analyzeMoodFromText(text, userId = null) {
     try {
+      // Check minimum word count (10 words)
+      const wordCount = text.trim().split(/\s+/).length;
+      if (wordCount < 10) {
+        console.log(`Text too short for mood analysis: ${wordCount} words (minimum: 10)`);
+        return null; // Return null for texts that are too short
+      }
+
       let userContextInfo = '';
       
       // If userId provided, get user context for better analysis
@@ -756,6 +763,8 @@ class AICoachService {
           ],
           "moodCount": number_of_detected_moods
         }
+        
+        IMPORTANT: Return a maximum of 5 moods in the detectedMoods array, ordered by strength/confidence from highest to lowest.
         
         Consider:
         - Word choice and emotional language
@@ -828,7 +837,7 @@ class AICoachService {
         };
 
         // Fix primaryMood if it's invalid
-        const validMoods = ['happy', 'calm', 'stressed', 'anxious', 'energetic', 'peaceful', 'grateful', 'reflective', 'sad', 'angry', 'frustrated', 'confused', 'lonely'];
+        const validMoods = ['happy', 'calm', 'stressed', 'anxious', 'energetic', 'peaceful', 'grateful', 'reflective', 'sad', 'angry', 'frustrated', 'confused', 'lonely', 'mixed', 'neutral'];
         moodAnalysis.primaryMood = normalizeMood(moodAnalysis.primaryMood);
         
         if (!validMoods.includes(moodAnalysis.primaryMood)) {
@@ -846,7 +855,10 @@ class AICoachService {
           moodAnalysis.detectedMoods = moodAnalysis.detectedMoods.map(detectedMood => ({
             ...detectedMood,
             mood: normalizeMood(detectedMood.mood)
-          })).filter(detectedMood => validMoods.includes(detectedMood.mood)); // Remove invalid moods
+          }))
+          .filter(detectedMood => validMoods.includes(detectedMood.mood)) // Remove invalid moods
+          .sort((a, b) => (b.strength || 0) - (a.strength || 0)) // Sort by strength descending
+          .slice(0, 5); // Limit to maximum 5 moods
         }
         
         // Ensure mood score is between 1-10
@@ -1075,8 +1087,9 @@ class AICoachService {
       }
     }
     
-    // Sort moods by strength (most prominent first)
+    // Sort moods by strength (most prominent first) and limit to 5
     detectedMoods.sort((a, b) => b.strength - a.strength);
+    detectedMoods = detectedMoods.slice(0, 5);
     
     // Determine overall sentiment based on detected moods
     if (detectedMoods.length > 0) {
@@ -2088,9 +2101,9 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
   /**
    * Check grammar and spelling for text input
    */
-  async checkGrammarAndSpelling(text, language = 'auto') {
+  async checkGrammarAndSpelling(text, language = 'auto', checkTypes = ['spelling', 'grammar']) {
     try {
-      console.log(`Checking grammar for text in language: ${language}`);
+      console.log(`Checking text for ${checkTypes.join(', ')} in language: ${language}`);
       
       // Detect language if auto
       let detectedLanguage = language;
@@ -2098,12 +2111,32 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
         detectedLanguage = await this.detectLanguage(text);
       }
       
+      // Build analysis types based on checkTypes
+      const analysisTypes = [];
+      if (checkTypes.includes('spelling')) analysisTypes.push('1. Spelling errors');
+      if (checkTypes.includes('grammar')) analysisTypes.push('2. Grammar mistakes');
+      if (checkTypes.includes('punctuation')) analysisTypes.push('3. Punctuation issues');
+      
       const prompt = `
-        You are a professional grammar and spelling checker. Analyze the following text for:
-        1. Spelling errors
-        2. Grammar mistakes
-        3. Punctuation issues
-        4. Whether the text makes sense or is nonsensical
+        You are a professional text checker specializing in ${detectedLanguage === 'nl' ? 'Dutch' : detectedLanguage === 'en' ? 'English' : 'multiple languages'}. Analyze the following text for:
+        ${analysisTypes.join('\n        ')}
+        
+        Be thorough and check for common grammatical errors including:
+        ${detectedLanguage === 'nl' ? `
+        - Subject-verb agreement (onderwerp-werkwoord overeenstemming)
+        - Incorrect use of "de/het" articles
+        - Wrong verb conjugations
+        - Incorrect preposition usage
+        - Word order mistakes in Dutch sentences
+        ` : `
+        - Subject-verb agreement
+        - Incorrect verb tenses
+        - Wrong preposition usage  
+        - Sentence fragments
+        - Run-on sentences
+        `}
+        
+        Only report actual errors, not stylistic preferences. Be helpful but accurate.
         
         Text language: ${detectedLanguage}
         Text to analyze: "${text}"
@@ -2112,26 +2145,26 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
         {
           "errors": [
             {
-              "type": "spelling|grammar|punctuation",
+              "type": "grammar",
               "error": "incorrect text",
-              "suggestion": "corrected text",
+              "suggestion": "corrected text", 
               "start": start_position,
               "end": end_position,
-              "explanation": "brief explanation"
+              "explanation": "clear explanation of the grammar rule"
             }
           ],
-          "isNonsense": boolean,
-          "nonsenseReason": "reason if nonsense, null otherwise",
-          "detectedLanguage": "language_code",
+          "isNonsense": false,
+          "nonsenseReason": null,
+          "detectedLanguage": "${detectedLanguage}",
           "overallQuality": "excellent|good|fair|poor",
-          "readabilityScore": number_between_1_and_10,
-          "suggestions": ["general improvement suggestion1", "suggestion2"]
+          "readabilityScore": 7,
+          "suggestions": []
         }
         
         For position indices:
         - Use character positions (0-based)
         - Be precise with start/end positions
-        - Only flag actual errors, not stylistic preferences
+        - Focus on grammar errors only since that's what was requested
         
         For nonsense detection:
         - Mark as nonsense if text is gibberish, random characters, or completely incoherent

@@ -1,49 +1,71 @@
-/* Grammar Checker Component Styles */
+/* Spelling Checker Component Styles */
 
-.grammar-checker-container {
+.spelling-checker-container {
   position: relative;
 }
 
-.grammar-checker-controls {
+.spelling-checker-controls {
   display: flex;
   align-items: center;
   gap: 15px;
   margin-bottom: 10px;
   padding: 8px 0;
   border-bottom: 1px solid #e0e0e0;
+  flex-wrap: wrap;
 }
 
-.grammar-toggle {
+.check-type-toggles {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.check-type-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  cursor: pointer;
   font-size: 14px;
-  color: #555;
+  user-select: none;
+}
+
+.check-type-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #4CAF50;
   cursor: pointer;
 }
 
-.grammar-toggle input[type="checkbox"] {
-  margin: 0;
+.toggle-label {
+  color: #333;
+  font-weight: 500;
 }
 
-.manual-check-btn {
+
+.spelling-check-btn {
   background: #4CAF50;
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
 }
 
-.manual-check-btn:hover:not(:disabled) {
+.spelling-check-btn:hover:not(:disabled) {
   background: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
 }
 
-.manual-check-btn:disabled {
+.spelling-check-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .error-count {
@@ -59,11 +81,11 @@
   margin-left: 10px;
 }
 
-.grammar-input-container {
+.spelling-input-container {
   position: relative;
 }
 
-.grammar-textarea {
+.spelling-textarea {
   width: 100%;
   border: 2px solid #ddd;
   border-radius: 8px;
@@ -78,14 +100,14 @@
   z-index: 1;
 }
 
-.grammar-textarea:focus {
+.spelling-textarea:focus {
   border-color: #4CAF50;
   outline: none;
   box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
-  background: #ffffff !important;
+  background: var(--glass-medium) !important;
 }
 
-.grammar-overlay {
+.spelling-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -103,13 +125,13 @@
   background: transparent;
 }
 
-.grammar-highlight-text {
+.spelling-highlight-text {
   color: transparent;
   white-space: pre-wrap;
   word-wrap: break-word;
 }
 
-.grammar-error {
+.spelling-error {
   position: relative;
   cursor: pointer;
   pointer-events: auto;
@@ -125,16 +147,20 @@
   background-color: rgba(255, 152, 0, 0.1);
 }
 
-.grammar-error:hover {
+.spelling-error:hover {
   background-color: rgba(244, 67, 54, 0.2);
 }
 
-.grammar-suggestion-popup {
+.grammar-error:hover {
+  background-color: rgba(255, 152, 0, 0.2);
+}
+
+.spelling-suggestion-popup {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: white;
+  background: var(--glass-dark);
   border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -220,7 +246,7 @@
 }
 
 .nonsense-warning-modal .modal-content {
-  background: white;
+  background: var(--glass-dark);
   padding: 25px;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -274,13 +300,18 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .grammar-checker-controls {
+  .spelling-checker-controls {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
+
+  .check-type-toggles {
+    order: -1;
+    margin-bottom: 5px;
+  }
   
-  .grammar-suggestion-popup,
+  .spelling-suggestion-popup,
   .nonsense-warning-modal .modal-content {
     width: 95%;
     margin: 10px;

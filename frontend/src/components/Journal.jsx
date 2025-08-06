@@ -8,7 +8,7 @@ import Alert from './Alert';
 import ConfirmDialog from './ConfirmDialog';
 import AICoachChat from './AICoachChat';
 import TriggerAlert from './TriggerAlert';
-import GrammarChecker from './GrammarChecker';
+import SpellingChecker from './GrammarChecker';
 
 const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
   const [entries, setEntries] = useState([]);
@@ -235,7 +235,14 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     { value: 'reflective', emoji: '🤔', label: t('reflective', 'Reflectief'), description: t('reflectiveDesc', 'Ik denk na over het leven'), color: '#C0C0C0', bg: 'linear-gradient(135deg, #C0C0C0, #708090)' },
     { value: 'energetic', emoji: '😄', label: t('energetic', 'Energiek'), description: t('energeticDesc', 'Ik voel me vol energie en motivatie'), color: '#FF6347', bg: 'linear-gradient(135deg, #FF6347, #DC143C)' },
     { value: 'stressed', emoji: '😫', label: t('stressed', 'Gestrest'), description: t('stressedDesc', 'Ik voel me onder druk staan'), color: '#FF4500', bg: 'linear-gradient(135deg, #FF4500, #B22222)' },
-    { value: 'anxious', emoji: '😰', label: t('anxious', 'Bezorgd'), description: t('anxiousDesc', 'Ik maak me zorgen over dingen'), color: '#708090', bg: 'linear-gradient(135deg, #708090, #2F4F4F)' }
+    { value: 'anxious', emoji: '😰', label: t('anxious', 'Bezorgd'), description: t('anxiousDesc', 'Ik maak me zorgen over dingen'), color: '#708090', bg: 'linear-gradient(135deg, #708090, #2F4F4F)' },
+    { value: 'sad', emoji: '😢', label: t('sad', 'Verdrietig'), description: t('sadDesc', 'Ik voel me bedroefd of neerslachtig'), color: '#4682B4', bg: 'linear-gradient(135deg, #4682B4, #2F4F4F)' },
+    { value: 'angry', emoji: '😠', label: t('angry', 'Boos'), description: t('angryDesc', 'Ik voel boosheid of irritatie'), color: '#DC143C', bg: 'linear-gradient(135deg, #DC143C, #8B0000)' },
+    { value: 'frustrated', emoji: '😤', label: t('frustrated', 'Gefrustreerd'), description: t('frustratedDesc', 'Ik voel me gefrustreerd door situaties'), color: '#FF8C00', bg: 'linear-gradient(135deg, #FF8C00, #FF4500)' },
+    { value: 'confused', emoji: '😕', label: t('confused', 'In de war'), description: t('confusedDesc', 'Ik voel me verward of onzeker'), color: '#9370DB', bg: 'linear-gradient(135deg, #9370DB, #663399)' },
+    { value: 'lonely', emoji: '😔', label: t('lonely', 'Eenzaam'), description: t('lonelyDesc', 'Ik voel me alleen of geïsoleerd'), color: '#778899', bg: 'linear-gradient(135deg, #778899, #556B2F)' },
+    { value: 'mixed', emoji: '😐', label: t('mixed', 'Gemengd'), description: t('mixedDesc', 'Ik voel verschillende emoties tegelijk'), color: '#A9A9A9', bg: 'linear-gradient(135deg, #A9A9A9, #696969)' },
+    { value: 'neutral', emoji: '😶', label: t('neutral', 'Neutraal'), description: t('neutralDesc', 'Ik voel me emotioneel neutraal'), color: '#D3D3D3', bg: 'linear-gradient(135deg, #D3D3D3, #A9A9A9)' }
   ];
 
   useEffect(() => {
@@ -737,6 +744,19 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const handleSaveEntry = async () => {
     if (!formData.content.trim()) {
       setError(t('contentRequired', 'Content is required'));
+      return;
+    }
+
+    // Check minimum word count (10 words)
+    const wordCount = formData.content.trim().split(/\s+/).length;
+    if (wordCount < 10) {
+      setError(t('minimumWords', 'Minimaal 10 woorden nodig voor mood analyse. Je hebt nu {count} woorden.').replace('{count}', wordCount));
+      return;
+    }
+
+    // Check maximum word count (250 words)
+    if (wordCount > 250) {
+      setError(t('maximumWords', 'Maximaal 250 woorden toegestaan. Je hebt nu {count} woorden.').replace('{count}', wordCount));
       return;
     }
 
@@ -1776,7 +1796,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
           className={`tab ${activeTab === 'addictions' ? 'active' : ''}`}
           onClick={() => setActiveTab('addictions')}
         >
-          <span className="tab-icon">🔒</span>
+          <span className="tab-icon">🧠</span>
           <span className="tab-label">{t('addictions', 'Addictions')}</span>
         </button>
         <button 
@@ -2301,12 +2321,12 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                     
                     <div className="form-group">
                       <label>{t('description', 'Beschrijving')} ({t('optional', 'optioneel')}):</label>
-                      <GrammarChecker
+                      <SpellingChecker
                         text={addictionForm.description}
                         onTextChange={(newText) => setAddictionForm({...addictionForm, description: newText})}
                         placeholder={t('addictionDescription', 'Beschrijf je verslaving, triggers, of andere details...')}
                         rows={3}
-                        enabled={false}
+                        enabled={true}
                         language="auto"
                         debounceMs={2000}
                       />
@@ -2652,7 +2672,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                   })()}
                   
                   <div className="textarea-container">
-                    <GrammarChecker
+                    <SpellingChecker
                       text={formData.content}
                       onTextChange={(newText) => {
                         setFormData({...formData, content: newText});
@@ -2663,9 +2683,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                       placeholder={t('writeHere', 'Schrijf hier je gedachten, gevoelens of ervaringen van vandaag...')}
                       className={`quick-content-textarea ${recordingState === 'processing' ? 'processing' : ''}`}
                       rows={6}
-                      enabled={false}
+                      enabled={true}
                       language="auto"
-                      debounceMs={2000}
+                      debounceMs={1500}
                     />
                     
                     {/* Spinner overlay during transcription */}
@@ -2944,17 +2964,31 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
                 </div>
               </div>
 
-              <GrammarChecker
-                text={formData.content}
-                onTextChange={(newText) => setFormData({...formData, content: newText})}
-                placeholder={t('startWriting', 'Begin met schrijven... Wat houd je vandaag bezig?')}
-                className="expanded-writing-textarea"
-                rows={15}
-                maxLength={5000}
-                enabled={false}
-                language="auto"
-                debounceMs={1500}
-              />
+              <div className="writing-area">
+                <SpellingChecker
+                  text={formData.content}
+                  onTextChange={(newText) => setFormData({...formData, content: newText})}
+                  placeholder={t('startWriting', 'Begin met schrijven... Wat houd je vandaag bezig?')}
+                  className="expanded-writing-textarea"
+                  rows={15}
+                  maxLength={1500}
+                  enabled={true}
+                  language="auto"
+                  debounceMs={1500}
+                />
+                <div className="word-counter">
+                  {(() => {
+                    const wordCount = formData.content.trim().split(/\s+/).filter(word => word.length > 0).length;
+                    const isValidRange = wordCount >= 10 && wordCount <= 250;
+                    return (
+                      <span className={`word-count ${!isValidRange ? 'warning' : ''}`}>
+                        {wordCount}/250 {t('words', 'woorden')}
+                        {wordCount < 10 && <span className="min-warning"> (min 10)</span>}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
 
 
               {/* Action Buttons */}

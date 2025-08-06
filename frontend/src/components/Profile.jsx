@@ -694,7 +694,7 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
           zIndex: 1000
         }}>
           <div className="modal-content" style={{
-            backgroundColor: 'white',
+            background: 'var(--glass-dark)',
             padding: '24px',
             borderRadius: '12px',
             maxWidth: '400px',
@@ -746,9 +746,9 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
                 style={{
                   flex: 1,
                   padding: '12px',
-                  border: '2px solid #ddd',
-                  backgroundColor: 'white',
-                  color: '#333',
+                  border: '2px solid var(--glass-border)',
+                  backgroundColor: 'var(--glass-light)',
+                  color: 'var(--text-primary)',
                   borderRadius: '8px',
                   fontSize: '14px',
                   cursor: 'pointer'

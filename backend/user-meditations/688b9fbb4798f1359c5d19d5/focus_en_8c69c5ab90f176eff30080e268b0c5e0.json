@@ -1,0 +1,18 @@
+{
+  "id": "8c69c5ab90f176eff30080e268b0c5e0",
+  "userId": "688b9fbb4798f1359c5d19d5",
+  "meditationType": "focus",
+  "language": "en",
+  "text": "Test with real user",
+  "audioFiles": [
+    {
+      "filename": "meditation_en_1753991283587_f8ae0612.mp3",
+      "voiceId": "21m00Tcm4TlvDq8ikWAM",
+      "background": "ocean",
+      "duration": 2.168125,
+      "language": "en"
+    }
+  ],
+  "createdAt": "2025-07-31T19:48:03.694Z",
+  "updatedAt": "2025-07-31T19:48:03.694Z"
+}

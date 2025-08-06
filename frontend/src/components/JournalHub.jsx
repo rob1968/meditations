@@ -18,12 +18,19 @@ const JournalHub = ({ user }) => {
   const moods = [
     { value: 'happy', emoji: '😊', label: t('happy', 'Happy') },
     { value: 'calm', emoji: '😌', label: t('calm', 'Calm') },
-    { value: 'peaceful', emoji: '🕊️', label: t('peaceful', 'Peaceful') },
-    { value: 'grateful', emoji: '🙏', label: t('grateful', 'Grateful') },
+    { value: 'peaceful', emoji: '😇', label: t('peaceful', 'Peaceful') },
+    { value: 'grateful', emoji: '🥰', label: t('grateful', 'Grateful') },
     { value: 'reflective', emoji: '🤔', label: t('reflective', 'Reflective') },
-    { value: 'energetic', emoji: '⚡', label: t('energetic', 'Energetic') },
-    { value: 'stressed', emoji: '😰', label: t('stressed', 'Stressed') },
-    { value: 'anxious', emoji: '😟', label: t('anxious', 'Anxious') }
+    { value: 'energetic', emoji: '😄', label: t('energetic', 'Energetic') },
+    { value: 'stressed', emoji: '😫', label: t('stressed', 'Stressed') },
+    { value: 'anxious', emoji: '😰', label: t('anxious', 'Anxious') },
+    { value: 'sad', emoji: '😢', label: t('sad', 'Sad') },
+    { value: 'angry', emoji: '😠', label: t('angry', 'Angry') },
+    { value: 'frustrated', emoji: '😤', label: t('frustrated', 'Frustrated') },
+    { value: 'confused', emoji: '😕', label: t('confused', 'Confused') },
+    { value: 'lonely', emoji: '😔', label: t('lonely', 'Lonely') },
+    { value: 'mixed', emoji: '😐', label: t('mixed', 'Mixed') },
+    { value: 'neutral', emoji: '😶', label: t('neutral', 'Neutral') }
   ];
 
   const languages = [

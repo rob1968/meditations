@@ -1,0 +1,21 @@
+{
+  "id": "5df9d1ff15fc6dbccf309ea20a7a6166",
+  "userId": "6890e6bd4d527f8121ac5684",
+  "meditationType": "sleep",
+  "language": "en",
+  "text": "Welcome to this soothing ocean sleep meditation...... Settle into your bed and make yourself completely comfortable...... Close your eyes and imagine you're lying on a beautiful beach at sunset...... The sound of gentle waves will guide you to peaceful sleep..........\r\n\r\nBegin by breathing deeply... Inhale the fresh ocean air... feeling it fill your lungs completely... Exhale ",
+  "audioFiles": [
+    {
+      "filename": "meditation_en_1754332112657_c70f1783.mp3",
+      "voiceId": "EXAVITQu4vr4xnSDxMaL",
+      "background": "saved-ce9b604bcc24c181aa11af6eb49f8dec",
+      "duration": 73.608,
+      "language": "en"
+    }
+  ],
+  "createdAt": "2025-08-04T18:28:33.858Z",
+  "updatedAt": "2025-08-04T18:29:45.491Z",
+  "isShared": true,
+  "sharedMeditationId": "6890fc19f155727f28d95c42",
+  "sharedAt": "2025-08-04T18:29:45.491Z"
+}

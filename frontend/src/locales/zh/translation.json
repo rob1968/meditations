@@ -688,5 +688,9 @@
   "countrySearchHelp": "开始输入以搜索国家",
   "citySearchHelp": "开始输入以搜索城市",
   "locationSearchHelp": "开始输入以搜索位置",
-  "manualLocationHelp": "手动输入位置（自动完成已禁用）"
+  "manualLocationHelp": "手动输入位置（自动完成已禁用）",
+  
+  "country": "国家",
+  "city": "城市",
+  "selectUILanguage": "选择语言"
 }

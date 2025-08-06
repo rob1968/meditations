@@ -18,7 +18,7 @@ const JournalEntrySchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    maxlength: 5000
+    maxlength: 1500
   },
   
   date: {
@@ -29,7 +29,7 @@ const JournalEntrySchema = new mongoose.Schema({
   mood: {
     type: String,
     enum: {
-      values: ['happy', 'calm', 'stressed', 'anxious', 'energetic', 'peaceful', 'grateful', 'reflective', 'sad', 'angry', 'frustrated', 'confused', 'lonely', 'mixed'],
+      values: ['happy', 'calm', 'stressed', 'anxious', 'energetic', 'peaceful', 'grateful', 'reflective', 'sad', 'angry', 'frustrated', 'confused', 'lonely', 'mixed', 'neutral'],
       message: '{VALUE} is not a valid mood'
     },
     required: false,
@@ -71,7 +71,7 @@ const JournalEntrySchema = new mongoose.Schema({
     detectedMoods: [{
       mood: {
         type: String,
-        enum: ['happy', 'calm', 'stressed', 'anxious', 'energetic', 'peaceful', 'grateful', 'reflective', 'sad', 'angry', 'frustrated', 'confused', 'lonely', 'mixed'],
+        enum: ['happy', 'calm', 'stressed', 'anxious', 'energetic', 'peaceful', 'grateful', 'reflective', 'sad', 'angry', 'frustrated', 'confused', 'lonely', 'mixed', 'neutral'],
         required: false
       },
       score: {

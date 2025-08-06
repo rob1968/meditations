@@ -1,0 +1,18 @@
+{
+  "id": "108a36a6839773b4b0edfceb593930f3",
+  "userId": "6890e6bd4d527f8121ac5684",
+  "meditationType": "stress",
+  "language": "en",
+  "text": "test meditation",
+  "audioFiles": [
+    {
+      "filename": "meditation_en_1754332018581_95f3f249.mp3",
+      "voiceId": "EXAVITQu4vr4xnSDxMaL",
+      "background": "ocean",
+      "duration": 41.424,
+      "language": "en"
+    }
+  ],
+  "createdAt": "2025-08-04T18:26:59.271Z",
+  "updatedAt": "2025-08-04T18:26:59.271Z"
+}

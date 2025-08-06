@@ -453,6 +453,18 @@
   "bio": "Bio",
   "bioPlaceholder": "Vertel over jezelf...",
   "charactersRemaining": "karakters over",
+  "maxWords": "Max 50 woorden",
+  "plaats": "Plaats",
+  "countryRequired": "Land is verplicht",
+  "cityRequired": "Plaats is verplicht",
+  "selectCity": "Selecteer je plaats",
+  "selectCountryFirst": "Selecteer eerst een land",
+  "typeToSearchCity": "Typ om een plaats te zoeken...",
+  "noCitiesFound": "Geen plaatsen gevonden. Blijf typen of controleer de spelling.",
+  "searchError": "Fout bij het zoeken naar plaatsen",
+  "enterCity": "Voer je plaats in",
+  "cityAutocompleteTemporarilyDisabled": "Plaats autocomplete is tijdelijk uitgeschakeld. Typ je plaats handmatig in.",
+  "loadingCities": "Plaatsen laden...",
   "notSet": "Niet ingesteld",
   "yearsOld": "jaar oud",
   "minutesOfMeditation": "minuten meditatie",
@@ -719,5 +731,9 @@
   "countrySearchHelp": "Begin met typen om landen te zoeken",
   "citySearchHelp": "Begin met typen om steden te zoeken",
   "locationSearchHelp": "Begin met typen om locaties te zoeken",
-  "manualLocationHelp": "Voer locatie handmatig in (autocomplete uitgeschakeld)"
+  "manualLocationHelp": "Voer locatie handmatig in (autocomplete uitgeschakeld)",
+  
+  "country": "Land",
+  "city": "Stad",
+  "selectUILanguage": "Taal Kiezen"
 }

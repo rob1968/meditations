@@ -701,5 +701,9 @@
   "countrySearchHelp": "ابدأ الكتابة للبحث عن دول",
   "citySearchHelp": "ابدأ الكتابة للبحث عن مدن",
   "locationSearchHelp": "ابدأ الكتابة للبحث عن مواقع",
-  "manualLocationHelp": "أدخل الموقع يدوياً (الإكمال التلقائي معطل)"
+  "manualLocationHelp": "أدخل الموقع يدوياً (الإكمال التلقائي معطل)",
+  
+  "country": "الدولة",
+  "city": "المدينة",
+  "selectUILanguage": "اختيار اللغة"
 }

@@ -679,5 +679,9 @@
   "countrySearchHelp": "Tippen Sie, um Länder zu suchen",
   "citySearchHelp": "Tippen Sie, um Städte zu suchen",
   "locationSearchHelp": "Tippen Sie, um Orte zu suchen",
-  "manualLocationHelp": "Ort manuell eingeben (Autovervollständigung deaktiviert)"
+  "manualLocationHelp": "Ort manuell eingeben (Autovervollständigung deaktiviert)",
+  
+  "country": "Land",
+  "city": "Stadt",
+  "selectUILanguage": "Sprache Wählen"
 }

@@ -691,5 +691,9 @@
   "countrySearchHelp": "입력을 시작하여 국가 검색",
   "citySearchHelp": "입력을 시작하여 도시 검색",
   "locationSearchHelp": "입력을 시작하여 위치 검색",
-  "manualLocationHelp": "수동으로 위치 입력 (자동완성 비활성화)"
+  "manualLocationHelp": "수동으로 위치 입력 (자동완성 비활성화)",
+  
+  "country": "국가",
+  "city": "도시",
+  "selectUILanguage": "언어 선택"
 }

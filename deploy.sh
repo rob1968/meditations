@@ -64,12 +64,14 @@ cp -r "$FRONTEND_DIR/build/"* "$DEPLOY_DIR/"
 
 print_status "Build files deployed to $DEPLOY_DIR"
 
-# Restart PM2 services
-print_status "Restarting services..."
-npx pm2 restart meditations-backend meditations-frontend
+# Restart systemd service
+print_status "Restarting backend service..."
+systemctl --user restart meditations-backend
 
 if [ $? -eq 0 ]; then
-    print_status "Services restarted successfully"
+    print_status "Backend service restarted successfully"
+    print_status "Service status:"
+    systemctl --user status meditations-backend --no-pager -l
 else
     print_warning "Service restart had issues, but deployment completed"
 fi

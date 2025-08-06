@@ -158,7 +158,7 @@ const PiPaymentSimple = ({ user, onPaymentComplete, onClose }) => {
       justifyContent: 'center', alignItems: 'center', zIndex: 1000
     }}>
       <div style={{
-        backgroundColor: 'white', borderRadius: '12px', padding: '24px',
+        background: 'var(--glass-dark)', borderRadius: '12px', padding: '24px',
         maxWidth: '500px', width: '90%', maxHeight: '90vh', overflow: 'auto'
       }}>
         {/* Header */}
@@ -210,7 +210,7 @@ const PiPaymentSimple = ({ user, onPaymentComplete, onClose }) => {
                     padding: '16px',
                     border: pkg.popular ? '2px solid #6B46C1' : '1px solid #E2E8F0',
                     borderRadius: '8px',
-                    backgroundColor: pkg.popular ? '#F3E8FF' : 'white',
+                    backgroundColor: pkg.popular ? 'var(--glass-medium)' : 'var(--glass-light)',
                     cursor: 'pointer',
                     textAlign: 'left',
                     position: 'relative'

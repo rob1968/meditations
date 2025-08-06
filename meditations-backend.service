@@ -1,0 +1,35 @@
+[Unit]
+Description=Meditations Backend - Node.js API Server
+Documentation=https://github.com/your-org/meditations-app
+After=network.target mongod.service
+
+[Service]
+Type=simple
+User=flop
+Group=psacln
+WorkingDirectory=/var/www/vhosts/pihappy.me/meditations.pihappy.me
+ExecStart=/var/www/vhosts/pihappy.me/.nodenv/shims/node backend/server.js
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=5002
+Environment=HOST=127.0.0.1
+Environment=PATH=/var/www/vhosts/pihappy.me/.nodenv/shims:/var/www/vhosts/pihappy.me/.nodenv/bin:/usr/local/bin:/usr/bin:/bin
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=meditations-backend
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/vhosts/pihappy.me/meditations.pihappy.me
+PrivateTmp=true
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

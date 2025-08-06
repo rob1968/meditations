@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import './GrammarChecker.css';
 
-const GrammarChecker = ({ 
+const SpellingChecker = ({ 
   text, 
   onTextChange, 
   className = '', 
@@ -17,11 +17,11 @@ const GrammarChecker = ({
   debounceMs = 1000
 }) => {
   const { t } = useTranslation();
-  const [grammarAnalysis, setGrammarAnalysis] = useState(null);
+  const [spellingAnalysis, setSpellingAnalysis] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(null);
-  const [showNonsenseWarning, setShowNonsenseWarning] = useState(false);
-  const [checkingEnabled, setCheckingEnabled] = useState(false); // Start disabled
+  const [checkingEnabled, setCheckingEnabled] = useState(true);
+  const [checkTypes, setCheckTypes] = useState(['grammar']); // Default to grammar only
   const textareaRef = useRef(null);
   const debounceRef = useRef(null);
   const overlayRef = useRef(null);
@@ -62,10 +62,10 @@ const GrammarChecker = ({
     'zh': '中文 (Chinese)'
   };
 
-  // Debounced grammar check
-  const checkGrammar = useCallback(async (textToCheck) => {
+  // Check spelling and/or grammar
+  const checkText = useCallback(async (textToCheck) => {
     if (!textToCheck || textToCheck.trim().length === 0 || !checkingEnabled) {
-      setGrammarAnalysis(null);
+      setSpellingAnalysis(null);
       return;
     }
 
@@ -74,25 +74,29 @@ const GrammarChecker = ({
       const currentLang = getCurrentLanguage();
       const response = await axios.post(getFullUrl(API_ENDPOINTS.AI_COACH + '/check-grammar'), {
         text: textToCheck,
-        language: currentLang
+        language: currentLang,
+        checkTypes: checkTypes
       });
 
       if (response.data.success) {
         const analysis = response.data.analysis;
-        setGrammarAnalysis(analysis);
-        
-        // Show nonsense warning if detected
-        if (analysis.isNonsense && !showNonsenseWarning) {
-          setShowNonsenseWarning(true);
-        }
+        // Filter for grammar errors only
+        const filteredAnalysis = {
+          ...analysis,
+          suggestions: (analysis.errors || analysis.suggestions || []).filter(suggestion => {
+            const suggestionType = suggestion.type || suggestion.category;
+            return suggestionType === 'grammar' || suggestionType === 'grammatical';
+          })
+        };
+        setSpellingAnalysis(filteredAnalysis);
       }
     } catch (error) {
-      console.error('Error checking grammar:', error);
-      setGrammarAnalysis(null);
+      console.error('Error checking text:', error);
+      setSpellingAnalysis(null);
     } finally {
       setIsChecking(false);
     }
-  }, [getCurrentLanguage, checkingEnabled, showNonsenseWarning]);
+  }, [getCurrentLanguage, checkingEnabled, checkTypes]);
 
   // Debounced effect for auto-checking (disabled - only manual checking now)
   useEffect(() => {
@@ -103,12 +107,15 @@ const GrammarChecker = ({
         clearTimeout(debounceRef.current);
       }
     };
-  }, [text, checkGrammar, debounceMs]);
+  }, [text, checkText, debounceMs]);
 
   // Manual check function
   const handleManualCheck = () => {
-    checkGrammar(text);
+    setCheckingEnabled(true);
+    checkText(text);
   };
+
+  // Grammar checking only - no type toggling needed
 
   // Handle clicking on error suggestion
   const handleErrorClick = (error, index) => {
@@ -131,7 +138,7 @@ const GrammarChecker = ({
 
   // Render text with error highlights
   const renderHighlightedText = () => {
-    if (!grammarAnalysis || !grammarAnalysis.errors || grammarAnalysis.errors.length === 0) {
+    if (!spellingAnalysis || !spellingAnalysis.suggestions || spellingAnalysis.suggestions.length === 0) {
       return null;
     }
 
@@ -139,7 +146,7 @@ const GrammarChecker = ({
     let lastIndex = 0;
 
     // Sort errors by start position
-    const sortedErrors = [...grammarAnalysis.errors].sort((a, b) => a.start - b.start);
+    const sortedErrors = [...spellingAnalysis.suggestions].sort((a, b) => a.start - b.start);
 
     sortedErrors.forEach((error, index) => {
       // Add text before error
@@ -155,7 +162,7 @@ const GrammarChecker = ({
       parts.push(
         <span
           key={`error-${index}`}
-          className={`grammar-error ${error.type}-error`}
+          className={`spelling-error ${error.type}-error`}
           onClick={() => handleErrorClick(error, index)}
           title={`${error.type} error: ${error.explanation}`}
         >
@@ -179,66 +186,62 @@ const GrammarChecker = ({
   };
 
   return (
-    <div className="grammar-checker-container">
+    <div className="spelling-checker-container">
       {/* Controls */}
-      <div className="grammar-checker-controls">
-        <label className="grammar-toggle">
-          <input
-            type="checkbox"
-            checked={checkingEnabled}
-            onChange={(e) => setCheckingEnabled(e.target.checked)}
-          />
-          <span>{t('grammarCheck', 'Spelling & Grammar Check')}</span>
-        </label>
-        
+      <div className="spelling-checker-controls">
+        {/* Check type toggles - Removed, only grammar checking now */}
+
         <button
           type="button"
-          className="manual-check-btn"
+          className="spelling-check-btn"
           onClick={handleManualCheck}
           disabled={isChecking || !text.trim()}
         >
-          {isChecking ? t('checking', 'Checking...') : t('checkText', 'Check Text')}
+          {isChecking ? 
+            t('checkingText', 'Checking text...') : 
+            t('checkGrammar', 'Check Grammar')
+          }
         </button>
 
-        {grammarAnalysis && (
+        {spellingAnalysis && (
           <span className="error-count">
-            {grammarAnalysis.errors.length} 
-            {grammarAnalysis.errors.length === 1 ? 
+            {spellingAnalysis.suggestions.length} 
+            {spellingAnalysis.suggestions.length === 1 ? 
               ` ${t('issue', 'issue')} ${t('found', 'found')}` : 
               ` ${t('issues', 'issues')} ${t('found', 'found')}`
             }
           </span>
         )}
 
-        {grammarAnalysis && grammarAnalysis.detectedLanguage && (
+        {spellingAnalysis && spellingAnalysis.detectedLanguage && (
           <span className="detected-language">
-            {t('language', 'Language')}: {supportedLanguages[grammarAnalysis.detectedLanguage] || grammarAnalysis.detectedLanguage}
+            {t('language', 'Language')}: {supportedLanguages[spellingAnalysis.detectedLanguage] || spellingAnalysis.detectedLanguage}
           </span>
         )}
       </div>
 
       {/* Text input area */}
-      <div className="grammar-input-container">
+      <div className="spelling-input-container">
         <textarea
           ref={textareaRef}
           value={text}
           onChange={(e) => onTextChange(e.target.value)}
-          className={`grammar-textarea ${className}`}
+          className={`spelling-textarea ${className}`}
           placeholder={placeholder}
           rows={rows}
           maxLength={maxLength}
         />
         
         {/* Error highlighting overlay */}
-        {checkingEnabled && grammarAnalysis && grammarAnalysis.errors.length > 0 && (
+        {spellingAnalysis && spellingAnalysis.suggestions.length > 0 && (
           <div
             ref={overlayRef}
-            className="grammar-overlay"
+            className="spelling-overlay"
             style={{
               height: textareaRef.current?.scrollHeight || 'auto'
             }}
           >
-            <div className="grammar-highlight-text">
+            <div className="spelling-highlight-text">
               {renderHighlightedText()}
             </div>
           </div>
@@ -246,24 +249,24 @@ const GrammarChecker = ({
       </div>
 
       {/* Error suggestion popup */}
-      {showSuggestions !== null && grammarAnalysis && grammarAnalysis.errors[showSuggestions] && (
-        <div className="grammar-suggestion-popup">
+      {showSuggestions !== null && spellingAnalysis && spellingAnalysis.suggestions[showSuggestions] && (
+        <div className="spelling-suggestion-popup">
           <div className="suggestion-content">
-            <h4>{t(grammarAnalysis.errors[showSuggestions].type + 'Error', grammarAnalysis.errors[showSuggestions].type + ' Error')}</h4>
+            <h4>{t(spellingAnalysis.suggestions[showSuggestions].type + 'Error', spellingAnalysis.suggestions[showSuggestions].type + ' Error')}</h4>
             <p className="error-text">
-              <strong>{t('error', 'Error')}:</strong> "{grammarAnalysis.errors[showSuggestions].error}"
+              <strong>{t('error', 'Error')}:</strong> "{spellingAnalysis.suggestions[showSuggestions].error}"
             </p>
             <p className="suggestion-text">
-              <strong>{t('suggestion', 'Suggestion')}:</strong> "{grammarAnalysis.errors[showSuggestions].suggestion}"
+              <strong>{t('suggestion', 'Suggestion')}:</strong> "{spellingAnalysis.suggestions[showSuggestions].suggestion}"
             </p>
             <p className="explanation">
-              {grammarAnalysis.errors[showSuggestions].explanation}
+              {spellingAnalysis.suggestions[showSuggestions].explanation}
             </p>
             
             <div className="suggestion-actions">
               <button 
                 className="apply-btn"
-                onClick={() => applySuggestion(grammarAnalysis.errors[showSuggestions])}
+                onClick={() => applySuggestion(spellingAnalysis.suggestions[showSuggestions])}
               >
                 {t('apply', 'Apply')}
               </button>
@@ -278,41 +281,15 @@ const GrammarChecker = ({
         </div>
       )}
 
-      {/* Nonsense warning modal */}
-      {showNonsenseWarning && grammarAnalysis?.isNonsense && (
-        <div className="nonsense-warning-modal">
-          <div className="modal-content">
-            <h3>{t('textQualityWarning', 'Text Quality Warning')}</h3>
-            <p>
-              {t('nonsenseText', 'The entered text appears to be nonsensical or incoherent.')}
-              {grammarAnalysis.nonsenseReason && (
-                <span> {grammarAnalysis.nonsenseReason}</span>
-              )}
-            </p>
-            <p>
-              {t('reviewText', 'Please review your text to ensure it expresses your thoughts clearly. This helps create more meaningful journal entries.')}
-            </p>
-            
-            <div className="modal-actions">
-              <button 
-                className="understood-btn"
-                onClick={() => setShowNonsenseWarning(false)}
-              >
-                {t('understand', 'I Understand')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Loading indicator */}
       {isChecking && (
         <div className="checking-indicator">
-          <span>{t('checkingGrammar', 'Checking grammar...')}</span>
+          <span>{t('checkingText', 'Checking text...')}</span>
         </div>
       )}
     </div>
   );
 };
 
-export default GrammarChecker;
+export default SpellingChecker;

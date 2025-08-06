@@ -1,16 +1,1 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"/><link rel="icon" href="/favicon.ico"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/><meta http-equiv="Pragma" content="no-cache"/><meta http-equiv="Expires" content="0"/><title>Meditation App - v3 CACHE FIX</title><script>
-console.log('=== CACHE FIX VERSION v3 ===');
-console.log('If you see old /create errors, your browser cache is NOT cleared!');
-// Force reload if service worker exists
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for(let registration of registrations) {
-      registration.unregister();
-    }
-  });
-}
-</script><script src="https://sdk.minepi.com/pi-sdk.js"></script><script defer="defer" src="/static/js/main.620ac7d3.js?v=202580204231515"></script><link href="/static/css/main.a20e6855.css?v=202580204231515" rel="stylesheet"></head><body><div id="root"></div><script>
-// Additional cache bust
-console.log('Loading at:', new Date().toISOString());
-console.log('Expected: NO /create calls, only /approve and /complete');
-</script></body></html>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"/><link rel="icon" href="/favicon.ico"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><title>Meditation App</title><script src="https://sdk.minepi.com/pi-sdk.js"></script><script defer="defer" src="/static/js/main.73c9f602.js"></script><link href="/static/css/main.eea95cce.css" rel="stylesheet"></head><body><div id="root"></div></body></html>

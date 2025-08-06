@@ -753,6 +753,18 @@
   "bio": "Bio",
   "bioPlaceholder": "Tell us about yourself...",
   "charactersRemaining": "characters remaining",
+  "maxWords": "Max 50 words",
+  "plaats": "City",
+  "countryRequired": "Country is required",
+  "cityRequired": "City is required",
+  "selectCity": "Select your city",
+  "selectCountryFirst": "Select country first",
+  "typeToSearchCity": "Type to search for a city...",
+  "noCitiesFound": "No cities found. Keep typing or check spelling.",
+  "searchError": "Error searching for cities",
+  "enterCity": "Enter your city",
+  "cityAutocompleteTemporarilyDisabled": "City autocomplete is temporarily disabled. Please type your city manually.",
+  "loadingCities": "Loading cities...",
   "profileUpdated": "Profile updated successfully!",
   "profileUpdateError": "Failed to update profile. Please try again.",
   "language_en": "English",
@@ -787,5 +799,9 @@
   "countrySearchHelp": "Start typing to search countries",
   "citySearchHelp": "Start typing to search cities",
   "locationSearchHelp": "Start typing to search locations",
-  "manualLocationHelp": "Enter location manually (autocomplete disabled)"
+  "manualLocationHelp": "Enter location manually (autocomplete disabled)",
+  
+  "country": "Country",
+  "city": "City",
+  "selectUILanguage": "Select Language"
 }

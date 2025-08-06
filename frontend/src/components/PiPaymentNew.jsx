@@ -180,7 +180,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
       justifyContent: 'center', alignItems: 'center', zIndex: 1000
     }}>
       <div style={{
-        backgroundColor: 'white', borderRadius: '12px', padding: '24px',
+        background: 'var(--glass-dark)', borderRadius: '12px', padding: '24px',
         maxWidth: '500px', width: '90%', maxHeight: '90vh', overflow: 'auto'
       }}>
         {/* Header */}
@@ -228,7 +228,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
                 <div key={index} style={{
                   border: pkg.popular ? '2px solid #6B46C1' : '1px solid #E5E7EB',
                   borderRadius: '8px', padding: '16px', position: 'relative',
-                  cursor: 'pointer', backgroundColor: pkg.popular ? '#F8F7FF' : 'white'
+                  cursor: 'pointer', backgroundColor: pkg.popular ? 'var(--glass-medium)' : 'var(--glass-light)'
                 }} onClick={() => startPiPayment(pkg)}>
                   
                   {pkg.popular && (

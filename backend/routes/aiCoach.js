@@ -533,14 +533,16 @@ router.get('/crisis-resources', async (req, res) => {
  */
 router.post('/check-grammar', async (req, res) => {
   try {
-    const { text, language = 'auto' } = req.body;
+    const { text, language = 'auto', checkTypes = ['spelling', 'grammar'] } = req.body;
     
     if (!text || text.trim().length === 0) {
       return res.status(400).json({ error: 'text is required' });
     }
     
+    console.log(`Checking text with types: ${checkTypes.join(', ')}`);
+    
     // Check grammar and spelling
-    const analysis = await aiCoachService.checkGrammarAndSpelling(text, language);
+    const analysis = await aiCoachService.checkGrammarAndSpelling(text, language, checkTypes);
     
     res.json({
       success: true,

@@ -11,6 +11,7 @@
     "eject": "react-scripts eject"
   },
   "dependencies": {
+    "@vis.gl/react-google-maps": "^1.5.4",
     "axios": "^1.6.0",
     "i18next": "^25.3.2",
     "react": "^18.2.0",
