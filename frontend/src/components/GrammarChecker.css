@@ -143,8 +143,8 @@
 }
 
 .grammar-error {
-  border-bottom: 2px wavy #ff9800;
-  background-color: rgba(255, 152, 0, 0.1);
+  border-bottom: 2px wavy #FFD700;
+  background-color: rgba(255, 215, 0, 0.1);
 }
 
 .spelling-error:hover {
@@ -256,7 +256,7 @@
 }
 
 .nonsense-warning-modal h3 {
-  color: #ff9800;
+  color: #FFD700;
   margin: 0 0 15px 0;
   font-size: 18px;
 }
@@ -272,8 +272,8 @@
 }
 
 .understood-btn {
-  background: #ff9800;
-  color: white;
+  background: #FFD700;
+  color: #000;
   border: none;
   padding: 10px 20px;
   border-radius: 4px;

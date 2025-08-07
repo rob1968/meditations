@@ -638,3 +638,74 @@
   opacity: 0.9;
 }
 
+/* Warning and Error Message Styles - Yellow for better visibility on dark background */
+.error-banner,
+.error-message {
+  color: #FFD700 !important;
+  background: rgba(255, 215, 0, 0.1) !important;
+  border: 1px solid rgba(255, 215, 0, 0.3) !important;
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 8px 0;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.warning-text,
+.min-warning {
+  color: #FFD700 !important;
+  font-weight: 600;
+}
+
+.credits-warning {
+  color: #FFD700 !important;
+  background: rgba(255, 215, 0, 0.1) !important;
+  border: 1px solid rgba(255, 215, 0, 0.3) !important;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.upload-error,
+.upload-error-display {
+  color: #FFD700 !important;
+  background: rgba(255, 215, 0, 0.1) !important;
+  border: 1px solid rgba(255, 215, 0, 0.3) !important;
+}
+
+.word-count.warning {
+  color: #FFD700 !important;
+}
+
+/* All Warning and Error Message Styles - Yellow for better visibility on dark background */
+.error-banner,
+.error-message,
+.save-message.error,
+.emergency-error,
+.city-autocomplete-error,
+.city-selector-error,
+.location-selector-error,
+.error-text,
+.tts-tier-info.error,
+.warning-text,
+.min-warning {
+  color: #FFD700 !important;
+  background: rgba(255, 215, 0, 0.1) !important;
+  border: 1px solid rgba(255, 215, 0, 0.3) !important;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Auto-fade animation for warnings */
+@keyframes warning-fade {
+  0% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+

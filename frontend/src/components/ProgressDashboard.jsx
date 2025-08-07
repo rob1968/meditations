@@ -16,6 +16,17 @@ const ProgressDashboard = ({ user, onStartCoaching }) => {
     }
   }, [user, timeframe]);
 
+  // Auto-hide error messages after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError('');
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const fetchInsights = async () => {
     try {
       setIsLoading(true);
@@ -26,11 +37,11 @@ const ProgressDashboard = ({ user, onStartCoaching }) => {
       if (response.data.success) {
         setInsights(response.data.insights);
       } else {
-        setError('Failed to load insights');
+        setError(t('failedToLoadInsights', 'Failed to load insights'));
       }
     } catch (error) {
       console.error('Error fetching insights:', error);
-      setError('Failed to load progress insights');
+      setError(t('failedToLoadProgressInsights', 'Failed to load progress insights'));
     } finally {
       setIsLoading(false);
     }

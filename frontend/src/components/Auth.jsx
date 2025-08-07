@@ -104,6 +104,17 @@ const Auth = ({ onLogin }) => {
     initializeAuth();
   }, [onLogin]);
   
+  // Auto-hide error messages after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError('');
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+  
   // Get localized language names
   const availableLanguages = getLocalizedLanguages(t);
 
@@ -634,45 +645,6 @@ const Auth = ({ onLogin }) => {
 
         {!needsRegistration && showTraditionalAuth && (
           <>
-            {/* Pi Network Login Option */}
-            <div style={{ 
-              margin: '20px 0', 
-              padding: '20px 0', 
-              borderTop: '1px solid rgba(255,255,255,0.1)',
-              textAlign: 'center' 
-            }}>
-              <p style={{ marginBottom: '10px', opacity: 0.8 }}>
-                {t('orLoginWith', 'Or login with')}
-              </p>
-              <button
-                type="button"
-                onClick={handleManualPiLogin}
-                disabled={isPiLoginAttempting || isLoading}
-                className="auth-button"
-                style={{
-                  background: 'linear-gradient(135deg, #FFC700 0%, #FFB000 100%)',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  margin: '0 auto'
-                }}
-              >
-                {isPiLoginAttempting ? (
-                  <div className="loading-spinner">
-                    <div className="spinner"></div>
-                    {t('connectingPi', 'Connecting to Pi Network...')}
-                  </div>
-                ) : (
-                  <>
-                    <span style={{ fontSize: '20px' }}>π</span>
-                    {t('loginWithPi', 'Login with Pi Network')}
-                  </>
-                )}
-              </button>
-            </div>
-            
             <div className="auth-switch">
             <p>
               {isLogin ? t('noAccount', "Don't have an account?") : t('haveAccount', 'Already have an account?')}

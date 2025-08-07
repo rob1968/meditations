@@ -22,6 +22,17 @@ const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxCl
     }
   }, [user]);
 
+  // Auto-hide error messages after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError('');
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const fetchMeditations = async () => {
     try {
       setIsLoading(true);
@@ -374,10 +385,10 @@ const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxCl
 
               {selectedMeditation.status !== 'pending' && selectedMeditation.moderationNotes && (
                 <div className="existing-notes">
-                  <h5>Moderation Notes:</h5>
+                  <h5>{t('moderationNotesHeader', 'Moderation Notes:')}:</h5>
                   <p>{selectedMeditation.moderationNotes}</p>
                   <p className="note-date">
-                    {selectedMeditation.status === 'approved' ? 'Approved' : 'Rejected'} on {formatDate(selectedMeditation.updatedAt)}
+                    {selectedMeditation.status === 'approved' ? t('approved', 'Approved') : t('rejected', 'Rejected')} on {formatDate(selectedMeditation.updatedAt)}
                   </p>
                 </div>
               )}

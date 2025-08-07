@@ -52,6 +52,17 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
     fetchSharedMeditations();
   }, []);
 
+  // Auto-hide error messages after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError('');
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const fetchSharedMeditations = async () => {
     try {
       setIsLoading(true);
