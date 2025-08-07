@@ -22,6 +22,7 @@ const Auth = ({ onLogin }) => {
   const [isCheckingPiAuth, setIsCheckingPiAuth] = useState(true);
   const [piCheckCompleted, setPiCheckCompleted] = useState(false);
   const [showTraditionalAuth, setShowTraditionalAuth] = useState(false);
+  const [isPiLoginAttempting, setIsPiLoginAttempting] = useState(false);
   const { t, i18n } = useTranslation();
 
 
@@ -136,6 +137,48 @@ const Auth = ({ onLogin }) => {
   };
 
 
+
+  // Manual Pi Network login
+  const handleManualPiLogin = async () => {
+    setIsPiLoginAttempting(true);
+    setError('');
+
+    try {
+      console.log('[Auth] Manual Pi login requested');
+      
+      // Initialize Pi SDK if needed
+      const initialized = await piAuthService.initialize();
+      if (!initialized) {
+        throw new Error(t('piNotAvailable', 'Pi Network is not available'));
+      }
+
+      // Attempt manual authentication (clears session flag)
+      const result = await piAuthService.manualAuthenticate();
+      
+      if (result.success) {
+        console.log('[Auth] Manual Pi authentication successful');
+        
+        // Check if user needs registration
+        if (result.needsProfileCompletion) {
+          console.log('[Auth] New Pi user - needs profile completion');
+          setPiUserData(result.user);
+          setNeedsRegistration(true);
+          setShowTraditionalAuth(false);
+        } else {
+          console.log('[Auth] Existing Pi user - logging in');
+          localStorage.setItem('user', JSON.stringify(result.user));
+          localStorage.setItem('authToken', result.token);
+          localStorage.setItem('authMethod', 'pi');
+          onLogin(result.user);
+        }
+      }
+    } catch (error) {
+      console.error('[Auth] Manual Pi login failed:', error);
+      setError(error.message || t('piLoginFailed', 'Pi Network login failed'));
+    } finally {
+      setIsPiLoginAttempting(false);
+    }
+  };
 
   // Traditional login function (Pi detection now happens automatically at startup)
   const handleLogin = async (e) => {
@@ -590,7 +633,47 @@ const Auth = ({ onLogin }) => {
         ) : null}
 
         {!needsRegistration && showTraditionalAuth && (
-          <div className="auth-switch">
+          <>
+            {/* Pi Network Login Option */}
+            <div style={{ 
+              margin: '20px 0', 
+              padding: '20px 0', 
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              textAlign: 'center' 
+            }}>
+              <p style={{ marginBottom: '10px', opacity: 0.8 }}>
+                {t('orLoginWith', 'Or login with')}
+              </p>
+              <button
+                type="button"
+                onClick={handleManualPiLogin}
+                disabled={isPiLoginAttempting || isLoading}
+                className="auth-button"
+                style={{
+                  background: 'linear-gradient(135deg, #FFC700 0%, #FFB000 100%)',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  margin: '0 auto'
+                }}
+              >
+                {isPiLoginAttempting ? (
+                  <div className="loading-spinner">
+                    <div className="spinner"></div>
+                    {t('connectingPi', 'Connecting to Pi Network...')}
+                  </div>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '20px' }}>π</span>
+                    {t('loginWithPi', 'Login with Pi Network')}
+                  </>
+                )}
+              </button>
+            </div>
+            
+            <div className="auth-switch">
             <p>
               {isLogin ? t('noAccount', "Don't have an account?") : t('haveAccount', 'Already have an account?')}
               <button 
@@ -605,6 +688,7 @@ const Auth = ({ onLogin }) => {
               </button>
             </p>
           </div>
+          </>
         )}
       </div>
     </div>

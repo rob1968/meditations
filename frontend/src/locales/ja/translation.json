@@ -583,6 +583,8 @@
   "write": "書く",
   "quickWrite": "クイック記入",
   "quickWritePlaceholder": "今日は何が気になりますか？ここから書き始めてください...",
+  "voiceRecordingActive": "🎙️ 音声録音中...",
+  "voiceProcessing": "⏳ 音声処理中...",
   "writeHere": "今日の思考、感情、体験をここに書いてください...または下のマイクを使って話すこともできます",
   "startWritingCalendar": "「カレンダー」タブで書き始める",
   "goToCalendar": "カレンダーに移動",

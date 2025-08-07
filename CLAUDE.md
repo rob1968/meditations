@@ -83,15 +83,16 @@ npm run deploy-quick    # Quick deployment (build + copy + restart frontend only
 # Manual deployment steps:
 cd frontend && GENERATE_SOURCEMAP=false npm run build
 cp -r frontend/build/* .
-npx pm2 restart meditations-backend
+./service.sh restart    # Restart backend service
 ```
 
 ### Development and Debugging
 ```bash
 # Backend development
 cd backend && npm run dev     # Start with nodemon for auto-restart
-npx pm2 logs meditations-backend --lines 50    # View recent logs
-npx pm2 restart meditations-backend           # Restart after changes
+./service.sh logs            # View live logs
+./service.sh restart         # Restart after changes
+./service.sh status          # Check service status
 
 # Frontend development  
 cd frontend && npm start      # Start React dev server on port 3000
@@ -132,7 +133,7 @@ cd frontend && npm install && npm start   # Frontend only
    - **ElevenLabs**: Premium TTS for high-quality meditation audio
    - **Google Cloud TTS**: Fallback TTS with quota management
 
-2. **PM2 Process Management**: Backend runs via PM2 with process name `meditations-backend`. Always use `npx pm2 restart meditations-backend` after backend changes. Check logs with `npx pm2 logs meditations-backend`.
+2. **Systemd Service Management**: Backend runs as a systemd service named `meditations-backend`. Use `./service.sh restart` to restart after backend changes. Check logs with `./service.sh logs` or `journalctl --user -u meditations-backend -f`.
 
 3. **Dynamic API Configuration**: Frontend automatically detects API URL based on current domain. Uses relative URLs (`/api/`) proxied through Nginx to backend on port 5002. Comment out `REACT_APP_API_URL` in frontend/.env for production.
 
@@ -147,9 +148,9 @@ cd frontend && npm install && npm start   # Frontend only
    - **Voice-to-Text**: Speech recognition for journal input
 
 6. **Deployment Architecture**:
-   - **Backend**: PM2 process serving on port 5002
+   - **Backend**: Systemd service serving on port 5002 (managed via `./service.sh`)
    - **Frontend**: Static files served from root directory via Nginx
-   - **Build Process**: `npm run build` → `cp -r frontend/build/* .` → `npx pm2 restart all`
+   - **Build Process**: `npm run build` → `cp -r frontend/build/* .` → `./service.sh restart`
    - **Critical**: Always deploy after frontend changes or users see cached old versions
 
 7. **Error Handling Patterns**:

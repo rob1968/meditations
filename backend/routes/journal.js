@@ -23,6 +23,108 @@ const triggerAICoachAnalysis = async (journalEntry) => {
 };
 
 // Set up multer for file uploads
+// Helper function to format transcribed text with proper line breaks
+const formatTranscribedText = (text, language = 'nl') => {
+  if (!text || typeof text !== 'string') return text;
+  
+  // Multilingual abbreviations that should NOT be split
+  const abbreviationsByLanguage = {
+    // Dutch
+    'nl': ['bijv', 'etc', 'o.a', 'd.w.z', 'm.b.v', 'b.v', 'n.v', 'v.s', 'p.s', 
+           'nr', 'tel', 'fax', 'e.d', 'a.u.b', 'z.o.z', 'v.v', 'o.v.v',
+           'dr', 'drs', 'prof', 'ir', 'ing', 'mr', 'mw', 'dhr', 'mevr'],
+    
+    // English
+    'en': ['etc', 'e.g', 'i.e', 'vs', 'p.s', 'a.m', 'p.m', 'st', 'nd', 'rd', 'th',
+           'dr', 'prof', 'mr', 'mrs', 'ms', 'jr', 'sr', 'co', 'inc', 'ltd',
+           'no', 'vol', 'pp', 'ch', 'fig', 'ref'],
+    
+    // German  
+    'de': ['z.b', 'etc', 'd.h', 'u.a', 'bzw', 'ggf', 'evtl', 'ca', 'max', 'min',
+           'dr', 'prof', 'hr', 'fr', 'gmbh', 'ag', 'kg', 'tel', 'fax',
+           'nr', 'str', 'plz', 'brd', 'ddr', 'usa', 'eu'],
+    
+    // French
+    'fr': ['etc', 'p.ex', 'c.à.d', 'cf', 'p.s', 'n.b', 'vs', 'av', 'apr',
+           'dr', 'prof', 'm', 'mme', 'mlle', 'st', 'ste', 'cie', 's.a', 'sarl',
+           'tel', 'fax', 'no', 'vol', 'ch', 'fig', 'ref'],
+    
+    // Spanish
+    'es': ['etc', 'p.ej', 'es.decir', 'cf', 'p.d', 'vs', 'sr', 'sra', 'srta',
+           'dr', 'prof', 'ing', 'lic', 'arq', 's.a', 's.l', 'tel', 'fax',
+           'no', 'vol', 'cap', 'fig', 'ref', 'pág', 'ej'],
+    
+    // Italian  
+    'it': ['etc', 'ad.es', 'cioè', 'cf', 'p.s', 'vs', 'sig', 'sig.ra', 'sig.na',
+           'dr', 'prof', 'ing', 'arch', 'avv', 's.p.a', 's.r.l', 'tel', 'fax',
+           'no', 'vol', 'cap', 'fig', 'rif', 'pag'],
+    
+    // Portuguese
+    'pt': ['etc', 'p.ex', 'ou.seja', 'cf', 'p.s', 'vs', 'sr', 'sra', 'srta',
+           'dr', 'prof', 'eng', 'arq', 'adv', 's.a', 'ltda', 'tel', 'fax',
+           'no', 'vol', 'cap', 'fig', 'ref', 'pág'],
+    
+    // Russian (using Latin transliteration for speech recognition)
+    'ru': ['etc', 'i.t.d', 'i.t.p', 'vs', 'dr', 'prof', 'g', 'tel', 'fax',
+           'no', 'str', 'dom', 'kv', 'ooo', 'zao', 'oao'],
+    
+    // Chinese (using pinyin for speech recognition)
+    'zh': ['etc', 'deng.deng', 'ji.qi', 'vs', 'dr', 'prof', 'xian.sheng', 'nu.shi',
+           'tel', 'fax', 'no', 'ye', 'zhang'],
+    
+    // Japanese (using romaji for speech recognition)
+    'ja': ['etc', 'nado', 'mata.wa', 'vs', 'dr', 'prof', 'san', 'kun', 'chan',
+           'tel', 'fax', 'no', 'kai.sha', 'yu.gen'],
+    
+    // Korean (using romanization for speech recognition)
+    'ko': ['etc', 'deung.deung', 'ttoneun', 'vs', 'dr', 'prof', 'ssi', 'nim',
+           'tel', 'fax', 'no', 'hoe.sa', 'yu.han'],
+    
+    // Arabic (using transliteration for speech recognition)
+    'ar': ['etc', 'wa.ghair.ha', 'ay', 'vs', 'dr', 'prof', 'ustaz', 'sayyid',
+           'tel', 'fax', 'no', 'shar.ka', 'mu.as.sa.sa'],
+    
+    // Hindi (using transliteration for speech recognition)
+    'hi': ['etc', 'aadi', 'ya', 'vs', 'dr', 'prof', 'ji', 'sahib', 'madam',
+           'tel', 'fax', 'no', 'ltd', 'pvt']
+  };
+  
+  // Get abbreviations for the specified language (fallback to Dutch)
+  const abbreviations = abbreviationsByLanguage[language] || abbreviationsByLanguage['nl'];
+  
+  let formatted = text;
+  
+  // Simple approach: replace '. ' with '.\n' but avoid abbreviations
+  // First, protect abbreviations by temporarily replacing them
+  const protectedAbbrevs = [];
+  abbreviations.forEach((abbr, index) => {
+    const placeholder = `__ABBREV_${index}__`;
+    const regex = new RegExp(`\\b${abbr.replace(/\./g, '\\.')}\\. `, 'gi');
+    formatted = formatted.replace(regex, (match) => {
+      protectedAbbrevs.push({placeholder, original: match});
+      return placeholder;
+    });
+  });
+  
+  // Now replace '. ' with '.\n'
+  formatted = formatted.replace(/\.\s+/g, '.\n');
+  
+  // Restore protected abbreviations
+  protectedAbbrevs.forEach(({placeholder, original}) => {
+    formatted = formatted.replace(placeholder, original);
+  });
+  
+  // Handle time notations and numbers (restore incorrectly split decimals)
+  formatted = formatted.replace(/(\d+)\.\n(\d+)/g, '$1.$2');
+  
+  // Clean up whitespace but preserve newlines
+  formatted = formatted.replace(/[ \t]+/g, ' ').trim();
+  formatted = formatted.replace(/\n\s+/g, '\n').replace(/\s+\n/g, '\n');
+  formatted = formatted.replace(/\n{3,}/g, '\n\n');
+  
+  return formatted;
+};
+
 const upload = multer({
   dest: path.join(__dirname, '../../temp/'),
   limits: {
@@ -816,9 +918,18 @@ router.post('/transcribe', upload.single('audio'), async (req, res) => {
       transcription = transcription.trim();
       
       if (transcription) {
+        // Convert Google Speech language code to UI language code
+        const uiLanguage = language.split('-')[0]; // e.g., 'nl-NL' -> 'nl', 'en-US' -> 'en'
+        
+        // Apply text formatting to add line breaks after sentences
+        const formattedTranscription = formatTranscribedText(transcription, uiLanguage);
+        
+        // Log language used for debugging (can be removed in production)
+        console.log('Speech-to-text formatted for language:', uiLanguage);
+        
         res.json({
           success: true,
-          transcription: transcription
+          transcription: formattedTranscription
         });
       } else {
         res.status(400).json({ success: false, error: 'No speech detected in audio' });

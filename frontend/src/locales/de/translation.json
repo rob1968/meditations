@@ -571,6 +571,8 @@
   "write": "Schreiben",
   "quickWrite": "Schnell schreiben",
   "quickWritePlaceholder": "Was beschäftigt Sie heute? Beginnen Sie hier zu schreiben...",
+  "voiceRecordingActive": "🎙️ Sprachaufzeichnung läuft...",
+  "voiceProcessing": "⏳ Sprache wird verarbeitet...",
   "writeHere": "Schreibe hier deine Gedanken, Gefühle oder Erfahrungen von heute... oder nutze das Mikrofon unten zum Sprechen",
   "startWritingCalendar": "Beginnen Sie mit dem Schreiben im \"Kalender\"-Tab",
   "goToCalendar": "Zum Kalender gehen",

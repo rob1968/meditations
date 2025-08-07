@@ -12,6 +12,7 @@ const SpellingChecker = forwardRef(({
   onGrammarCheckComplete, // Callback when automatic grammar check is complete
   appliedCorrections = [], // Array of applied corrections to highlight
   showCorrectionHighlights = false, // Whether to show red highlights for corrections
+  autoApplyCorrections = false, // Automatically apply corrections without showing UI
   className = '', 
   placeholder = '', 
   rows = 6,
@@ -133,10 +134,34 @@ const SpellingChecker = forwardRef(({
         console.log('Filtered analysis with suggestions:', filteredAnalysis);
         console.log('Number of suggestions:', filteredAnalysis.suggestions?.length || 0);
         
-        // Mark that we're setting new analysis to prevent clearing
-        isSettingAnalysisRef.current = true;
-        setSpellingAnalysis(filteredAnalysis);
-        console.log('SpellingAnalysis state updated');
+        // Auto-apply corrections if enabled
+        if (autoApplyCorrections && filteredAnalysis.suggestions && filteredAnalysis.suggestions.length > 0) {
+          console.log(`Auto-applying ${filteredAnalysis.suggestions.length} grammar corrections`);
+          
+          let correctedText = textToCheck;
+          const corrections = [...filteredAnalysis.suggestions].sort((a, b) => b.start - a.start);
+          
+          for (const suggestion of corrections) {
+            if (suggestion.start >= 0 && suggestion.end <= correctedText.length && suggestion.start < suggestion.end) {
+              const before = correctedText.substring(0, suggestion.start);
+              const after = correctedText.substring(suggestion.end);
+              correctedText = before + suggestion.suggestion + after;
+              console.log(`Auto-applied: "${suggestion.error}" → "${suggestion.suggestion}"`);
+            }
+          }
+          
+          if (correctedText !== textToCheck) {
+            onTextChange(correctedText);
+            // Don't show analysis UI when auto-applying
+            setSpellingAnalysis(null);
+            console.log('Grammar corrections auto-applied');
+          }
+        } else {
+          // Mark that we're setting new analysis to prevent clearing
+          isSettingAnalysisRef.current = true;
+          setSpellingAnalysis(filteredAnalysis);
+          console.log('SpellingAnalysis state updated');
+        }
         
         // Notify parent of grammar check completion
         if (onGrammarCheckComplete) {
@@ -594,8 +619,8 @@ const SpellingChecker = forwardRef(({
   return (
     <div className="spelling-checker-container">
 
-      {/* Grammar results info - only show when analysis exists */}
-      {spellingAnalysis && (
+      {/* Grammar results info - only show when analysis exists and not auto-applying */}
+      {spellingAnalysis && !autoApplyCorrections && (
         <div className="spelling-checker-controls">
           {spellingAnalysis.suggestions && spellingAnalysis.suggestions.length > 1 && (
             <button
@@ -620,10 +645,12 @@ const SpellingChecker = forwardRef(({
           placeholder={placeholder}
           rows={rows}
           maxLength={maxLength}
+          disabled={!enabled}
+          readOnly={!enabled}
         />
         
         {/* Error highlighting overlay */}
-        {spellingAnalysis && spellingAnalysis.suggestions.length > 0 && (
+        {spellingAnalysis && spellingAnalysis.suggestions.length > 0 && !autoApplyCorrections && (
           <div
             ref={overlayRef}
             className="spelling-overlay"

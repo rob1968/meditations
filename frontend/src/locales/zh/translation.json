@@ -579,6 +579,8 @@
   "write": "写入",
   "quickWrite": "快速写入",
   "quickWritePlaceholder": "今天什么让你烦恼？从这里开始写...",
+  "voiceRecordingActive": "🎙️ 语音录制进行中...",
+  "voiceProcessing": "⏳ 处理语音中...",
   "writeHere": "在这里写下你今天的想法、感受或经历...或使用下面的麦克风来说话",
   "startWritingCalendar": "在\"日历\"标签页中开始写作",
   "goToCalendar": "前往日历",

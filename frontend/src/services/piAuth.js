@@ -25,6 +25,40 @@ class PiAuthService {
     this.isInitialized = false;
     this.isAuthenticating = false;
     this.currentUser = null;
+    this.SESSION_AUTH_KEY = 'piAuthAttempted';
+    this.SESSION_AUTH_RESULT_KEY = 'piAuthResult';
+  }
+
+  // Check if authentication has been attempted this session
+  hasAuthenticationBeenAttempted() {
+    return sessionStorage.getItem(this.SESSION_AUTH_KEY) === 'true';
+  }
+
+  // Mark authentication as attempted for this session
+  markAuthenticationAttempted(result = null) {
+    sessionStorage.setItem(this.SESSION_AUTH_KEY, 'true');
+    if (result) {
+      sessionStorage.setItem(this.SESSION_AUTH_RESULT_KEY, JSON.stringify(result));
+    }
+  }
+
+  // Get cached authentication result from session
+  getCachedAuthResult() {
+    const cached = sessionStorage.getItem(this.SESSION_AUTH_RESULT_KEY);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  // Clear session authentication data (for manual retry)
+  clearSessionAuthData() {
+    sessionStorage.removeItem(this.SESSION_AUTH_KEY);
+    sessionStorage.removeItem(this.SESSION_AUTH_RESULT_KEY);
   }
 
   // Initialize Pi authentication service following working example pattern
@@ -340,7 +374,25 @@ class PiAuthService {
 
   // Auto-authenticate if possible (for app startup)
   async autoAuthenticate() {
+    // Check if authentication has already been attempted this session
+    if (this.hasAuthenticationBeenAttempted()) {
+      console.log('[PiAuth Service] Authentication already attempted this session, checking cached result...');
+      const cachedResult = this.getCachedAuthResult();
+      if (cachedResult) {
+        console.log('[PiAuth Service] Using cached authentication result');
+        // Restore user data if authentication was successful
+        if (cachedResult.success && cachedResult.user) {
+          this.currentUser = cachedResult.user;
+        }
+        return cachedResult;
+      }
+      // If no cached result, return failure to avoid re-prompting
+      return { success: false, reason: 'Authentication already attempted this session' };
+    }
+
     if (!this.isAvailable()) {
+      // Mark as attempted even if not available, to avoid repeated checks
+      this.markAuthenticationAttempted({ success: false, reason: 'Pi authentication not available' });
       return { success: false, reason: 'Pi authentication not available' };
     }
 
@@ -348,10 +400,40 @@ class PiAuthService {
       console.log('Attempting Pi auto-authentication...');
       const result = await this.authenticateUser();
       console.log('Pi auto-authentication successful');
+      // Cache the successful result
+      this.markAuthenticationAttempted(result);
       return result;
     } catch (error) {
       console.log('Pi auto-authentication failed:', error.message);
-      return { success: false, reason: error.message };
+      const failureResult = { success: false, reason: error.message };
+      // Mark as attempted even on failure
+      this.markAuthenticationAttempted(failureResult);
+      return failureResult;
+    }
+  }
+
+  // Manual authentication (clears session flag and re-attempts)
+  async manualAuthenticate() {
+    console.log('[PiAuth Service] Manual authentication requested, clearing session data...');
+    this.clearSessionAuthData();
+    
+    if (!this.isAvailable()) {
+      throw new Error('Pi authentication is not available');
+    }
+
+    try {
+      console.log('[PiAuth Service] Starting manual Pi authentication...');
+      const result = await this.authenticateUser();
+      console.log('[PiAuth Service] Manual authentication successful');
+      // Cache the successful result
+      this.markAuthenticationAttempted(result);
+      return result;
+    } catch (error) {
+      console.log('[PiAuth Service] Manual authentication failed:', error.message);
+      const failureResult = { success: false, reason: error.message };
+      // Mark as attempted even on failure
+      this.markAuthenticationAttempted(failureResult);
+      throw error;
     }
   }
 

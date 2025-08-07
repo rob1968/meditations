@@ -619,3 +619,22 @@
   box-shadow: 0 1px 4px rgba(255, 255, 255, 0.3);
 }
 
+/* Voice-to-Text Active State Styling */
+.voice-active {
+  background: rgba(255, 193, 7, 0.1) !important;
+  border-color: rgba(255, 193, 7, 0.5) !important;
+  cursor: not-allowed !important;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+}
+
+.voice-active:focus {
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.3) !important;
+}
+
+.voice-active::placeholder {
+  color: #ff6b35 !important;
+  font-style: italic;
+  opacity: 0.9;
+}
+

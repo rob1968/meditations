@@ -299,6 +299,8 @@
   "continueWriting": "Verder schrijven",
   "readEntry": "Lezen",
   "quickWritePlaceholder": "Begin hier te schrijven over je dag, gedachten of gevoelens...",
+  "voiceRecordingActive": "🎙️ Spraak wordt opgenomen...",
+  "voiceProcessing": "⏳ Spraak wordt verwerkt...",
   "writeMore": "Uitgebreid schrijven",
   "quickSave": "Snel opslaan",
   "recentEntries": "Recente entries",

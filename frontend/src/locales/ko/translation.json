@@ -582,6 +582,8 @@
   "write": "쓰기",
   "quickWrite": "빠른 작성",
   "quickWritePlaceholder": "오늘 무엇이 마음에 걸리나요? 여기서 작성을 시작하세요...",
+  "voiceRecordingActive": "🎙️ 음성 녹음 중...",
+  "voiceProcessing": "⏳ 음성 처리 중...",
   "writeHere": "오늘의 생각, 감정 또는 경험을 여기에 적어보세요... 또는 아래 마이크를 사용해서 말할 수도 있습니다",
   "startWritingCalendar": "\"달력\" 탭에서 작성을 시작하세요",
   "goToCalendar": "달력으로 이동",

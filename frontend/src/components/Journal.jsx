@@ -60,6 +60,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const [activeTrigger, setActiveTrigger] = useState(null);
   const [showTriggerAlert, setShowTriggerAlert] = useState(false);
   const [expandedCards, setExpandedCards] = useState(new Set());
+  const [selectedMoodForDescription, setSelectedMoodForDescription] = useState(null);
   const [addictionForm, setAddictionForm] = useState({
     type: '',
     description: '',
@@ -2131,11 +2132,13 @@ const handleSaveEntry = async () => {
                       ref={writeTabGrammarCheckerRef}
                       text={formData.content}
                       onTextChange={(newText) => setFormData({...formData, content: newText})}
-                      placeholder={t('quickWritePlaceholder', 'Begin hier te schrijven over je dag, gedachten of gevoelens...')}
-                      className="quick-write-textarea"
+                      placeholder={voiceRecordingState === 'recording' ? t('voiceRecordingActive', '🎙️ Spraak wordt opgenomen...') : 
+                                 voiceRecordingState === 'processing' ? t('voiceProcessing', '⏳ Spraak wordt verwerkt...') :
+                                 t('quickWritePlaceholder', 'Begin hier te schrijven over je dag, gedachten of gevoelens...')}
+                      className={`quick-write-textarea ${(voiceRecordingState === 'recording' || voiceRecordingState === 'processing') ? 'voice-active' : ''}`}
                       rows={4}
                       maxLength={200}
-                      enabled={true}
+                      enabled={voiceRecordingState !== 'recording' && voiceRecordingState !== 'processing'}
                     />
                     <div className="quick-write-actions">
                       <button 
@@ -2238,37 +2241,68 @@ const handleSaveEntry = async () => {
                         key={entry._id} 
                         className="mood-grid-card clickable"
                         data-mood={entry.mood || 'neutral'}
-                        style={{ '--card-index': index }}
+                        style={{ 
+                          '--card-index': index,
+                          background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)',
+                          backdropFilter: 'blur(25px)',
+                          borderRadius: '20px',
+                          boxShadow: '0 10px 40px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          height: '240px',
+                          transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)'
+                        }}
                         onClick={() => handleEditEntry(entry)}
                         title={`${t('openJournalEntry', 'Open journal entry')}: ${entry.title}`}
                       >
                         {/* Mood Badge */}
-                        <div className="mood-badge" data-mood={entry.mood || 'neutral'}>
+                        <div 
+                          className="mood-badge" 
+                          data-mood={entry.mood || 'neutral'}
+                          style={{
+                            position: 'absolute',
+                            top: '16px',
+                            right: '16px',
+                            width: '50px',
+                            height: '50px',
+                            borderRadius: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '24px',
+                            background: 'rgba(255,255,255,0.1)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                          }}
+                        >
                           {moods.find(m => m.value === entry.mood)?.emoji || '😐'}
                         </div>
 
                         {/* Card Content */}
-                        <div className="mood-card-content">
+                        <div className="mood-card-content" style={{ padding: '20px' }}>
                           <div className="mood-card-header">
                             <div className="mood-card-meta">
-                              <span title={t('wordCount', 'Word count')}>
+                              <span title={t('wordCount', 'Word count')} style={{ fontSize: '11px', opacity: '0.7' }}>
                                 📝 {countWords(entry.content)}
                               </span>
-                              <span title={t('readingTime', 'Reading time')}>
+                              <span title={t('readingTime', 'Reading time')} style={{ fontSize: '11px', opacity: '0.7' }}>
                                 ⏱️ {Math.ceil(countWords(entry.content) / 200)}m
                               </span>
                             </div>
+                            <div className="mood-card-date" style={{ fontSize: '12px', opacity: '0.8', fontWeight: '500' }}>
+                              {new Date(entry.date).toLocaleDateString()}
+                            </div>
                           </div>
 
-                          <h3 className="mood-card-title">
+                          <h3 className="mood-card-title" style={{ fontSize: '18px', fontWeight: '600', marginTop: '12px', marginBottom: '8px' }}>
                             {entry.title}
                           </h3>
 
-                          <div className="mood-card-preview">
+                          <div className="mood-card-preview" style={{ fontSize: '14px', lineHeight: '1.5', opacity: '0.85', marginBottom: '16px' }}>
                             {entry.content.split(' ').slice(0, 12).join(' ')}{entry.content.split(' ').length > 12 ? '...' : ''}
                           </div>
 
-                          <div className="mood-card-actions">
+                          <div className="mood-card-actions" style={{ marginTop: 'auto' }}>
                             <button 
                               className="mood-action-btn primary"
                               onClick={(e) => {
@@ -2689,9 +2723,12 @@ const handleSaveEntry = async () => {
                           console.log('Grammar suggestion applied in addiction form, forcing state update');
                           setAddictionForm(prev => ({...prev, description: newText}));
                         }}
-                        placeholder={t('addictionDescription', 'Beschrijf je verslaving, triggers, of andere details...')}
+                        placeholder={voiceRecordingState === 'recording' ? t('voiceRecordingActive', '🎙️ Spraak wordt opgenomen...') : 
+                                   voiceRecordingState === 'processing' ? t('voiceProcessing', '⏳ Spraak wordt verwerkt...') :
+                                   t('addictionDescription', 'Beschrijf je verslaving, triggers, of andere details...')}
+                        className={`${(voiceRecordingState === 'recording' || voiceRecordingState === 'processing') ? 'voice-active' : ''}`}
                         rows={3}
-                        enabled={true}
+                        enabled={voiceRecordingState !== 'recording' && voiceRecordingState !== 'processing'}
                         language="auto"
                         debounceMs={2000}
                       />
@@ -2987,10 +3024,7 @@ const handleSaveEntry = async () => {
             <div className="form-header">
               <div className="date-indicator">
                 <span className="writing-for">
-                  {editingEntry ? 
-                    `📝 ${t('editing', 'Bewerken')}: ${formatDate(formData.date)}` : 
-                    `✏️ ${t('writingFor', 'Schrijven voor')}: ${formatDate(formData.date)}`
-                  }
+                  {formatDate(formData.date)}
                 </span>
               </div>
               <button className="close-btn" onClick={() => setShowCreateForm(false)}>✕</button>
@@ -3003,63 +3037,148 @@ const handleSaveEntry = async () => {
                 const currentEntry = editingEntry || (selectedDate === '' ? todaysEntry : null);
                 const entryStillExists = !currentEntry || !currentEntry._id || entries.some(e => e._id === currentEntry._id);
                 return currentEntry && entryStillExists && currentEntry.mood && currentEntry.content?.trim() && (
-                <div className="quick-mood-bar mood-display-bar">
-                  <span className="mood-label">{t('moodDetectedAutomatically', 'Mood detected automatically')} 🤖</span>
-                  <div className="detected-mood-expanded">
-                    {/* Show multiple moods if available in editing mode */}
-                    {(currentEntry?.moodAnalysis?.detectedMoods?.length > 1) ? (
-                      <div className="multiple-moods-display-expanded">
-                        <div className="moods-grid-expanded">
-                          {(currentEntry?.moodAnalysis?.detectedMoods || []).slice(0, 4).map((detectedMood, index) => (
-                            <div key={index} className={`mood-item-expanded ${index === 0 ? 'primary-mood' : 'secondary-mood'}`}>
-                              <div className="mood-icon-expanded">
-                                {moods.find(m => m.value === detectedMood.mood)?.emoji || '😐'}
-                              </div>
-                              <div className="mood-details-expanded-item">
-                                <span className="mood-name-small">
-                                  {moods.find(m => m.value === detectedMood.mood)?.label || detectedMood.mood}
-                                </span>
-                                <span className="mood-strength-small">
-                                  {Math.round(detectedMood.strength * 20)}%
-                                </span>
-                              </div>
-                            </div>
-                          ))}
+                <div className="quick-mood-bar mood-display-bar" style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%)',
+                  backdropFilter: 'blur(25px)',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  padding: '20px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                  margin: '16px 0',
+                  maxWidth: '100%'
+                }}>
+                  <div className="detected-mood-expanded" style={{
+                    display: 'block',
+                    width: '100%'
+                  }}>
+                    {/* Prominente hoofdstemming */}
+                    {currentEntry?.moodAnalysis?.detectedMoods?.length > 0 && (
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '20px',
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)',
+                        borderRadius: '16px',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        minWidth: '100%',
+                        margin: '0',
+                        display: 'block'
+                      }}>
+                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>
+                          {moods.find(m => m.value === currentEntry.moodAnalysis.detectedMoods[0]?.mood)?.emoji || '😐'}
                         </div>
-                        {(currentEntry?.moodAnalysis?.detectedMoods?.length > 4) && (
-                          <div className="mood-count-indicator-small">
-                            +{(currentEntry?.moodAnalysis?.detectedMoods?.length || 0) - 4}
+                        <div style={{
+                          fontSize: '24px',
+                          fontWeight: '700',
+                          color: '#fff',
+                          textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                          marginBottom: '4px'
+                        }}>
+                          {moods.find(m => m.value === currentEntry.moodAnalysis.detectedMoods[0]?.mood)?.label || currentEntry.moodAnalysis.detectedMoods[0]?.mood}
+                        </div>
+                        <div style={{
+                          fontSize: '11px',
+                          color: 'rgba(255,255,255,0.7)',
+                          fontWeight: '500'
+                        }}>
+                          {Math.round(currentEntry.moodAnalysis.detectedMoods[0]?.strength * 20)}%
+                        </div>
+                        {/* Overall sentiment */}
+                        {currentEntry?.moodAnalysis?.overallSentiment && (
+                          <div style={{
+                            marginTop: '8px',
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            background: currentEntry.moodAnalysis.overallSentiment === 'positive' ? 'rgba(34, 197, 94, 0.2)' :
+                                       currentEntry.moodAnalysis.overallSentiment === 'negative' ? 'rgba(239, 68, 68, 0.2)' :
+                                       'rgba(156, 163, 175, 0.2)',
+                            color: currentEntry.moodAnalysis.overallSentiment === 'positive' ? '#ffffff' :
+                                   currentEntry.moodAnalysis.overallSentiment === 'negative' ? '#ffffff' :
+                                   '#ffffff',
+                            border: `1px solid ${currentEntry.moodAnalysis.overallSentiment === 'positive' ? 'rgba(34, 197, 94, 0.3)' :
+                                                 currentEntry.moodAnalysis.overallSentiment === 'negative' ? 'rgba(239, 68, 68, 0.3)' :
+                                                 'rgba(156, 163, 175, 0.3)'}`
+                          }}>
+                            {currentEntry.moodAnalysis.overallSentiment === 'positive' ? 'Positief' :
+                             currentEntry.moodAnalysis.overallSentiment === 'negative' ? 'Negatief' :
+                             'Neutraal'}
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                      /* Single mood display (fallback) */
-                      <div className="mood-result-expanded">
-                        {moods.find(m => m.value === currentEntry?.mood)?.emoji || '😐'}
-                        <span className="mood-name">
-                          {moods.find(m => m.value === currentEntry?.mood)?.label || currentEntry?.mood}
-                        </span>
-                        {currentEntry?.moodScore && (
-                          <span className="mood-score">({currentEntry?.moodScore}/10)</span>
-                        )}
-                      </div>
-                    )}
-                    {currentEntry?.moodAnalysis?.aiGenerated && (
-                      <div className="mood-details-expanded">
-                        <span className="confidence-badge">
-                          {Math.round((currentEntry?.moodAnalysis?.confidence || 0) * 100)}% {t('moodAnalysisConfidence', 'confidence')}
-                        </span>
-                        <span className="sentiment-badge sentiment-{currentEntry?.moodAnalysis?.overallSentiment}">
-                          {currentEntry?.moodAnalysis?.overallSentiment}
-                        </span>
-                        {(currentEntry?.moodAnalysis?.moodCount > 1) && (
-                          <span className="mood-count-badge">
-                            {currentEntry?.moodAnalysis?.moodCount} moods
-                          </span>
                         )}
                       </div>
                     )}
                   </div>
+
+                  {/* Secundaire moods onder hoofdmood card */}
+                  {(currentEntry?.moodAnalysis?.detectedMoods?.length > 1) && (
+                    <div style={{ 
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '12px',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      width: '100%',
+                      marginTop: '16px'
+                    }}>
+                      {(currentEntry?.moodAnalysis?.detectedMoods || []).slice(1, 5).map((detectedMood, index) => {
+                        const moodId = `${detectedMood.mood}_${index}`;
+                        const isSelected = selectedMoodForDescription === moodId;
+                        return (
+                          <div 
+                            key={index} 
+                            className="mood-item-expanded secondary-mood" 
+                            style={{
+                              background: isSelected ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)',
+                              borderRadius: '10px',
+                              padding: '8px',
+                              backdropFilter: 'blur(10px)',
+                              border: `1px solid rgba(255,255,255,${isSelected ? '0.2' : '0.1'})`,
+                              textAlign: 'center',
+                              flex: '0 0 auto',
+                              minWidth: isSelected ? '90px' : '70px',
+                              maxWidth: isSelected ? '90px' : '70px',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              minHeight: isSelected ? '100px' : '70px'
+                            }}
+                            onClick={() => {
+                              setSelectedMoodForDescription(isSelected ? null : moodId);
+                            }}
+                          >
+                            <div className="mood-icon-expanded" style={{
+                              fontSize: '20px',
+                              marginBottom: '4px'
+                            }}>
+                              {moods.find(m => m.value === detectedMood.mood)?.emoji || '😐'}
+                            </div>
+                            <div className="mood-strength-small" style={{
+                              fontSize: '10px',
+                              color: 'rgba(255,255,255,0.7)',
+                              fontWeight: '500',
+                              marginBottom: isSelected ? '4px' : '0'
+                            }}>
+                              {Math.round(detectedMood.strength * 20)}%
+                            </div>
+                            {isSelected && (
+                              <div className="mood-name-small" style={{
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                color: '#fff',
+                                lineHeight: '1.2',
+                                textAlign: 'center'
+                              }}>
+                                {moods.find(m => m.value === detectedMood.mood)?.label || detectedMood.mood}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 );
               })()}
@@ -3122,13 +3241,17 @@ const handleSaveEntry = async () => {
                   onTextChange={(newText) => {
                     setFormData({...formData, content: newText});
                   }}
-                  placeholder={isSavingEntry ? t('generatingMoods', 'Mood wordt gegenereerd...') : t('startWriting', 'Begin met schrijven... Wat houd je vandaag bezig?')}
-                  className={`expanded-writing-textarea ${isSavingEntry ? 'processing' : ''}`}
+                  placeholder={voiceRecordingState === 'recording' ? t('voiceRecordingActive', '🎙️ Spraak wordt opgenomen...') : 
+                             voiceRecordingState === 'processing' ? t('voiceProcessing', '⏳ Spraak wordt verwerkt...') :
+                             isSavingEntry ? t('generatingMoods', 'Mood wordt gegenereerd...') : 
+                             t('startWriting', 'Begin met schrijven... Wat houd je vandaag bezig?')}
+                  className={`expanded-writing-textarea ${isSavingEntry ? 'processing' : ''} ${(voiceRecordingState === 'recording' || voiceRecordingState === 'processing') ? 'voice-active' : ''}`}
                   rows={7}
                   maxLength={1500}
-                  enabled={!isSavingEntry}
+                  enabled={!isSavingEntry && voiceRecordingState !== 'recording' && voiceRecordingState !== 'processing' && !transcribing && recordingState !== 'processing'}
                   language="auto"
                   debounceMs={1500}
+                  autoApplyCorrections={true}
                 />
                 <div className="word-counter">
                   {(() => {
@@ -3151,7 +3274,7 @@ const handleSaveEntry = async () => {
                   <button 
                     className="save-btn-primary" 
                     onClick={handleSaveEntry}
-                    disabled={!formData.content.trim() || (editingEntry && !hasContentChanged()) || isPerformingGrammarCheck || isSavingEntry}
+                    disabled={!formData.content.trim() || (editingEntry && !hasContentChanged()) || isPerformingGrammarCheck || isSavingEntry || transcribing || recordingState === 'processing'}
                   >
                     {isPerformingGrammarCheck ? 
                       '🔍 ' + t('checking', 'Controleren...') :
@@ -3169,7 +3292,7 @@ const handleSaveEntry = async () => {
                         handleDeleteEntry(editingEntry._id);
                         setShowCreateForm(false);
                       }}
-                      disabled={isPerformingGrammarCheck || isSavingEntry}
+                      disabled={isPerformingGrammarCheck || isSavingEntry || transcribing || recordingState === 'processing'}
                       title={t('deleteEntry', 'Dagboek entry verwijderen')}
                     >
                       🗑️ {t('delete', 'Verwijderen')}

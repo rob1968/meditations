@@ -603,6 +603,8 @@
   "today": "Today",
   "quickWrite": "Quick Write",
   "quickWritePlaceholder": "What's on your mind today? Start writing here...",
+  "voiceRecordingActive": "🎙️ Voice recording in progress...",
+  "voiceProcessing": "⏳ Processing speech...",
   "writeHere": "Write your thoughts, feelings or experiences from today here... or use the microphone below to speak",
   "startWritingCalendar": "Start writing in the \"Calendar\" tab",
   "goToCalendar": "Go to Calendar",
