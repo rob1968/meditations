@@ -702,6 +702,7 @@ const App = () => {
       }
     }
   }, [userMeditations]);
+
   
   // Track text modifications
   useEffect(() => {

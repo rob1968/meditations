@@ -81,6 +81,8 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
     };
   }, [profileMenuOpen]);
 
+  console.log('PageHeader rendering with user:', user?.username, 'profileMenuOpen:', profileMenuOpen);
+  
   return (
     <div className="page-header">
       <div className="page-header-left">
@@ -113,8 +115,36 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
                 <div 
                   className="profile-overlay" 
                   onClick={() => setProfileMenuOpen(false)}
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: 2147483645,
+                    display: 'block'
+                  }}
                 />
-                <div className="profile-slide-panel" ref={profileDropdownRef}>
+                <div className="profile-slide-panel" ref={profileDropdownRef} style={{ 
+                  position: 'fixed', 
+                  top: '0', 
+                  right: '0', 
+                  height: '100vh', 
+                  width: '300px', 
+                  background: 'rgba(15, 20, 25, 0.95)', 
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  zIndex: 2147483646,
+                  display: 'block',
+                  visibility: 'visible',
+                  opacity: 1,
+                  transform: 'translateX(0)',
+                  transition: 'transform 0.3s ease',
+                  padding: '20px',
+                  boxSizing: 'border-box',
+                  overflowY: 'auto'
+                }}>
                   <div className="profile-panel-header">
                     <div className="profile-panel-avatar">
                       <div className="panel-avatar-circle">
