@@ -50,6 +50,7 @@ This is a comprehensive full-stack meditation and wellness application that:
 - `Journal.jsx` - Comprehensive journaling with grammar checking, voice-to-text, mood detection
 - `AICoachChat.jsx` - Interactive AI coaching interface with crisis detection
 - `GrammarChecker.jsx` - Real-time grammar and spelling analysis with error highlighting
+- `PageHeader.jsx` - Page header with hamburger menu, language selector, tokens, and statistics access
 - `BottomNavigation.jsx` - Main app navigation between meditation, journal, community, profile
 - `BackgroundSlider.jsx` - Custom background audio upload and management
 - `PiPaymentNew.jsx` - Pi Network payment integration for credit purchases
@@ -193,3 +194,23 @@ cd frontend && npm install && npm start   # Frontend only
 - **AICoach**: Coaching sessions, interventions, progress tracking, crisis logs
 - **Notifications**: System alerts, coaching prompts, emergency notifications
 - **Addictions**: Recovery tracking with trigger identification and progress metrics
+
+## Common Troubleshooting
+
+### Frontend UI Issues
+1. **Missing PageHeader/Hamburger Menu**:
+   - Check that PageHeader CSS is present in `/frontend/src/styles/globals.css`
+   - Required styles: `.page-header`, `.hamburger-menu-button`, `.hamburger-icon`
+   - After CSS changes: rebuild frontend and redeploy static files
+   - PageHeader component should be imported and used in main page components
+
+2. **CSS Styles Missing After Build**:
+   - Verify CSS is added to the source file in `/frontend/src/styles/globals.css`
+   - Rebuild with `GENERATE_SOURCEMAP=false npm run build`
+   - Copy built files: `cp -r frontend/build/* .`
+   - Check that new CSS hash is reflected in `index.html` and `asset-manifest.json`
+
+3. **Components Not Rendering**:
+   - Check browser console for React errors and component warnings
+   - Verify component imports and prop passing in parent components
+   - Ensure user authentication state is properly passed to components requiring auth
