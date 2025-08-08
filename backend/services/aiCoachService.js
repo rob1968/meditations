@@ -740,64 +740,125 @@ class AICoachService {
         }
       }
       
+      // Calculate text metrics for enhanced analysis
+      const textMetrics = {
+        length: text.length,
+        wordCount: text.split(/\s+/).filter(word => word.length > 0).length,
+        sentenceCount: text.split(/[.!?]+/).filter(s => s.trim().length > 0).length,
+        avgWordsPerSentence: 0,
+        exclamationCount: (text.match(/!/g) || []).length,
+        questionCount: (text.match(/\?/g) || []).length,
+        ellipsisCount: (text.match(/\.\.\./g) || []).length,
+        capitalRatio: text.replace(/\s/g, '').length > 0 ? (text.match(/[A-Z]/g) || []).length / text.replace(/\s/g, '').length : 0,
+        hasTimeReference: /\b(morning|afternoon|evening|night|today|yesterday|tomorrow|vandaag|gisteren|morgen|ochtend|middag|avond|nacht|vanmorgen|vanavond)\b/i.test(text),
+        hasSocialContext: /\b(friend|family|people|alone|together|vrienden|familie|mensen|alleen|samen|together|with|met)\b/i.test(text),
+        hasWorkContext: /\b(work|job|boss|colleague|project|meeting|werk|baan|baas|collega|vergadering|klus)\b/i.test(text)
+      };
+      
+      if (textMetrics.sentenceCount > 0) {
+        textMetrics.avgWordsPerSentence = textMetrics.wordCount / textMetrics.sentenceCount;
+      }
+
       const prompt = `
-        You are an expert emotional intelligence analyst specializing in nuanced mood detection from journal entries.
-        Analyze the following text with deep understanding of human emotions, cultural context, and linguistic patterns.
+        You are an expert emotional intelligence analyst with advanced training in multilingual emotion detection and cultural psychology.
         
         ${userContextInfo}
         
+        TEXT ANALYSIS:
         Journal Entry: "${text}"
         
-        Analyze this text considering:
-        1. EMOTIONAL DEPTH: Look beyond surface words to understand underlying feelings
-        2. LINGUISTIC PATTERNS: 
-           - Sentence structure (short = stress/anger, long = reflection)
-           - Punctuation usage (exclamations = excitement/anger, ellipses = uncertainty)
-           - Word repetition (emphasis on certain emotions)
-        3. CONTEXTUAL CLUES:
-           - Time references (morning energy vs evening exhaustion)
-           - Social context (alone vs with others)
-           - Activity mentions (work stress, family joy, etc.)
-        4. CULTURAL EXPRESSIONS:
-           - Consider that emotions may be expressed differently in different languages
-           - Dutch/European emotional expressions may be more reserved
-           - Look for indirect emotional indicators
-        5. MIXED EMOTIONS:
-           - People often feel multiple emotions simultaneously
-           - Detect transitions between emotional states
-           - Identify dominant vs background emotions
+        TEXT METRICS:
+        - Word count: ${textMetrics.wordCount}
+        - Sentence count: ${textMetrics.sentenceCount}
+        - Avg words per sentence: ${textMetrics.avgWordsPerSentence.toFixed(1)}
+        - Exclamations: ${textMetrics.exclamationCount}
+        - Questions: ${textMetrics.questionCount}
+        - Ellipses: ${textMetrics.ellipsisCount}
+        - Capital letter ratio: ${(textMetrics.capitalRatio * 100).toFixed(1)}%
+        - Contains time references: ${textMetrics.hasTimeReference}
+        - Contains social context: ${textMetrics.hasSocialContext}
+        - Contains work context: ${textMetrics.hasWorkContext}
         
-        Provide your analysis in this exact JSON format:
+        ADVANCED ANALYSIS FRAMEWORK:
+        
+        1. EMOTIONAL LAYERS ANALYSIS:
+           - SURFACE EMOTIONS: Direct emotional expressions and obvious mood words
+           - UNDERLYING EMOTIONS: Implied feelings through context and subtext
+           - MASKED EMOTIONS: Hidden emotions behind neutral language or deflection
+           - EMERGING EMOTIONS: Emotional shifts or transitions within the text
+        
+        2. LINGUISTIC PSYCHOLOGY INDICATORS:
+           - Short sentences (< 8 words) = stress, urgency, or emotional overwhelm
+           - Long sentences (> 15 words) = reflection, processing, or explanation
+           - Repetitive words/phrases = emotional emphasis or rumination
+           - Negation patterns = avoidance, denial, or internal conflict
+           - Future vs past tense = hope/anxiety vs regret/nostalgia
+        
+        3. CULTURAL & MULTILINGUAL SENSITIVITY:
+           - Dutch: Reserved expression, understatement culture ("niet zo slecht" = actually good)
+           - English: Direct emotional expression, varied intensity markers
+           - German: Structured emotional expression, compound descriptive words
+           - Romance languages: Expressive, metaphorical emotional language
+           - Consider cultural context of emotional expression norms
+        
+        4. CONTEXTUAL EMOTIONAL INTELLIGENCE:
+           - Life domains: work, relationships, health, personal growth, spirituality
+           - Temporal context: time of day/week/season mentioned
+           - Social dynamics: interaction patterns, isolation indicators
+           - Achievement/failure mentions: success euphoria, disappointment processing
+           - Physical state references: energy, fatigue, health impacts on mood
+        
+        5. ADVANCED PATTERN RECOGNITION:
+           - Emotional contradiction indicators ("fine but...", "okay I guess")
+           - Projection patterns (describing others' emotions while avoiding own)
+           - Coping mechanism mentions (humor, distraction, avoidance)
+           - Growth mindset vs fixed mindset language patterns
+           - Self-compassion vs self-criticism indicators
+        
+        6. NUANCED MOOD COMBINATIONS:
+           - Anxious-excited (anticipation with nervousness)
+           - Sad-grateful (loss with appreciation)
+           - Angry-hurt (frustration masking pain)
+           - Happy-guilty (joy with self-judgment)
+           - Peaceful-lonely (contentment with isolation)
+        
+        RESPONSE FORMAT (EXACT JSON):
         {
           "primaryMood": "happy|calm|peaceful|grateful|reflective|energetic|stressed|anxious|sad|angry|frustrated|confused|lonely|mixed|neutral",
-          "moodScore": number_between_1_and_10 (1=very mild, 10=very intense),
-          "confidence": number_between_0_and_1 (your confidence in this assessment),
-          "emotionalIndicators": ["specific phrases or words that indicate emotion", "max 5 indicators"],
+          "moodScore": number_1_to_10,
+          "confidence": number_0_to_1,
+          "emotionalIndicators": ["max 5 specific phrases/words from text"],
           "overallSentiment": "positive|neutral|negative|mixed",
-          "emotionalIntensity": number_between_1_and_5 (1=very mild, 5=very intense),
-          "moodDescription": "A compassionate, nuanced description of the emotional state",
+          "emotionalIntensity": number_1_to_5,
+          "moodDescription": "Compassionate 2-3 sentence description",
           "detectedMoods": [
             {
-              "mood": "mood_name from the valid list",
-              "score": number_between_1_and_10,
-              "strength": number_between_0_and_5,
-              "keywords": ["actual words from text that indicate this mood", "max 3"]
+              "mood": "mood_name",
+              "score": number_1_to_10,
+              "strength": number_0_to_5,
+              "keywords": ["max 3 actual words from text"],
+              "layerType": "surface|underlying|masked|emerging"
             }
           ],
           "moodCount": number_of_detected_moods,
           "emotionalTransition": "stable|improving|declining|fluctuating",
-          "suggestedFocus": "brief suggestion for emotional wellbeing based on detected mood"
+          "suggestedFocus": "Specific wellbeing suggestion based on analysis",
+          "culturalContext": "Brief note on cultural expression patterns if relevant",
+          "emotionalComplexity": number_1_to_5,
+          "predominantTheme": "work|relationships|health|personal_growth|daily_life|crisis|celebration|transition"
         }
         
-        IMPORTANT RULES:
-        - Valid moods: happy, calm, peaceful, grateful, reflective, energetic, stressed, anxious, sad, angry, frustrated, confused, lonely, mixed, neutral
-        - Return maximum 5 moods in detectedMoods array, ordered by strength
-        - If text seems nonsensical or too short, default to "reflective" with low confidence
-        - For mixed emotions, identify all components but choose the strongest as primary
-        - Be especially sensitive to subtle expressions of distress or joy
-        - Consider that "fine" or "okay" often mask other emotions
-        
-        Be accurate, empathetic, and culturally aware in your analysis.
+        ENHANCED RULES:
+        - Use linguistic psychology to detect hidden emotions
+        - Weight surface vs underlying emotions appropriately  
+        - Consider cultural expression norms for confidence scoring
+        - Identify emotional masking patterns ("I'm fine" when clearly not)
+        - Detect mixed emotions and emotional transitions accurately
+        - Score confidence higher when multiple indicators align
+        - For very short text (< 20 words), focus on tone and word choice
+        - For longer text (> 100 words), analyze emotional arc and themes
+        - Always provide actionable, compassionate wellbeing suggestions
+        - Be especially sensitive to crisis indicators or breakthrough moments
       `;
       
       const result = await this.model.generateContent(prompt);
@@ -1015,28 +1076,85 @@ class AICoachService {
           moodAnalysis.emotionalTransition = 'stable';
         }
         
-        // Enhance confidence based on multiple factors
+        // Add new fields if missing (backward compatibility)
+        if (!moodAnalysis.culturalContext) {
+          moodAnalysis.culturalContext = null;
+        }
+        
+        if (!moodAnalysis.emotionalComplexity) {
+          // Calculate complexity based on number of detected moods and mixed emotions
+          const numMoods = (moodAnalysis.detectedMoods && moodAnalysis.detectedMoods.length) || 1;
+          const hasMixed = moodAnalysis.primaryMood === 'mixed' || moodAnalysis.overallSentiment === 'mixed';
+          moodAnalysis.emotionalComplexity = Math.min(5, Math.max(1, numMoods + (hasMixed ? 1 : 0)));
+        }
+        
+        if (!moodAnalysis.predominantTheme) {
+          // Auto-detect theme based on text metrics calculated earlier
+          if (textMetrics.hasWorkContext) {
+            moodAnalysis.predominantTheme = 'work';
+          } else if (textMetrics.hasSocialContext) {
+            moodAnalysis.predominantTheme = 'relationships';
+          } else {
+            moodAnalysis.predominantTheme = 'daily_life';
+          }
+        }
+        
+        // Enhanced confidence calculation based on multiple sophisticated factors
         if (moodAnalysis.confidence) {
           const factors = [];
           
-          // Factor 1: Multiple moods detected (more moods = more nuanced = higher confidence)
-          if (moodAnalysis.detectedMoods && moodAnalysis.detectedMoods.length > 1) {
-            factors.push(0.1);
-          }
+          // Factor 1: Text length and detail (more content = more context)
+          if (textMetrics.wordCount > 50) factors.push(0.08);
+          if (textMetrics.wordCount > 100) factors.push(0.07);
           
-          // Factor 2: Emotional indicators present
+          // Factor 2: Multiple emotional indicators align
           if (moodAnalysis.emotionalIndicators && moodAnalysis.emotionalIndicators.length > 2) {
             factors.push(0.1);
           }
           
-          // Factor 3: Text length (longer text = more context = higher confidence)
-          if (text.length > 100) {
+          // Factor 3: Multiple moods detected with consistent theme
+          if (moodAnalysis.detectedMoods && moodAnalysis.detectedMoods.length > 1) {
+            factors.push(0.08);
+          }
+          
+          // Factor 4: Punctuation patterns support mood assessment
+          if (textMetrics.exclamationCount > 0 && ['happy', 'angry', 'excited', 'energetic'].includes(moodAnalysis.primaryMood)) {
+            factors.push(0.06);
+          }
+          if (textMetrics.ellipsisCount > 0 && ['sad', 'confused', 'anxious', 'lonely'].includes(moodAnalysis.primaryMood)) {
+            factors.push(0.06);
+          }
+          
+          // Factor 5: Sentence structure aligns with detected mood
+          if (textMetrics.avgWordsPerSentence < 8 && ['stressed', 'angry', 'anxious'].includes(moodAnalysis.primaryMood)) {
+            factors.push(0.05);
+          }
+          if (textMetrics.avgWordsPerSentence > 12 && ['reflective', 'peaceful', 'grateful'].includes(moodAnalysis.primaryMood)) {
             factors.push(0.05);
           }
           
-          // Adjust confidence
+          // Factor 6: Cultural context awareness
+          if (moodAnalysis.culturalContext && moodAnalysis.culturalContext !== null) {
+            factors.push(0.04);
+          }
+          
+          // Apply confidence boost
           const boost = factors.reduce((sum, factor) => sum + factor, 0);
           moodAnalysis.confidence = Math.min(1, moodAnalysis.confidence + boost);
+          
+          // Ensure minimum confidence for very short texts
+          if (textMetrics.wordCount < 10 && moodAnalysis.confidence < 0.3) {
+            moodAnalysis.confidence = 0.3;
+          }
+        }
+        
+        // Add layerType to existing detectedMoods if missing
+        if (moodAnalysis.detectedMoods) {
+          moodAnalysis.detectedMoods.forEach(mood => {
+            if (!mood.layerType) {
+              mood.layerType = 'surface'; // Default for backward compatibility
+            }
+          });
         }
         
         console.log('Successfully parsed mood analysis:', moodAnalysis);
@@ -1060,7 +1178,49 @@ class AICoachService {
   getDefaultMoodAnalysis(text) {
     const textLower = text.toLowerCase();
     
-    // Define mood keywords (English + Dutch + German + French + Spanish + Italian + Portuguese)
+    // Calculate the same text metrics as in the main analysis
+    const textMetrics = {
+      length: text.length,
+      wordCount: text.split(/\s+/).filter(word => word.length > 0).length,
+      sentenceCount: text.split(/[.!?]+/).filter(s => s.trim().length > 0).length,
+      avgWordsPerSentence: 0,
+      exclamationCount: (text.match(/!/g) || []).length,
+      questionCount: (text.match(/\?/g) || []).length,
+      ellipsisCount: (text.match(/\.\.\./g) || []).length,
+      capitalRatio: text.replace(/\s/g, '').length > 0 ? (text.match(/[A-Z]/g) || []).length / text.replace(/\s/g, '').length : 0,
+      hasTimeReference: /\b(morning|afternoon|evening|night|today|yesterday|tomorrow|vandaag|gisteren|morgen|ochtend|middag|avond|nacht|vanmorgen|vanavond)\b/i.test(text),
+      hasSocialContext: /\b(friend|family|people|alone|together|vrienden|familie|mensen|alleen|samen|together|with|met)\b/i.test(text),
+      hasWorkContext: /\b(work|job|boss|colleague|project|meeting|werk|baan|baas|collega|vergadering|klus)\b/i.test(text)
+    };
+    
+    if (textMetrics.sentenceCount > 0) {
+      textMetrics.avgWordsPerSentence = textMetrics.wordCount / textMetrics.sentenceCount;
+    }
+    
+    // Enhanced mood detection with linguistic psychology patterns
+    const emotionalPatterns = {
+      // Masked emotions patterns
+      maskedPositive: /\b(not bad|could be worse|niet slecht|kan erger|ça va|va bene|não está mal)\b/i,
+      maskedNegative: /\b(fine|okay|whatever|meh|prima|bien|okay|bene|tudo bem|het gaat)\b/i,
+      
+      // Intensifiers and diminishers
+      intensifiers: /\b(very|really|extremely|super|heel|erg|très|molto|muy|really|zo|such|incredibly|absolutely)\b/gi,
+      diminishers: /\b(kind of|sort of|a bit|little|soort van|een beetje|un peu|un po|un poco|algo)\b/gi,
+      
+      // Temporal emotional indicators
+      pastRegret: /\b(wish|regret|should have|if only|als ik maar|had ik maar|si seulement|se solo|ojalá)\b/i,
+      futureAnxiety: /\b(worried about|afraid|nervous|hope|bang voor|ongerust|peur|preoccupato|preocupado)\b/i,
+      
+      // Social connection indicators
+      isolation: /\b(alone|lonely|nobody|no one|niemand|alleen|seul|solo|sozinho|eenzaam)\b/i,
+      connection: /\b(together|with|friends|family|samen|avec|con|com|vrienden|familie)\b/i,
+      
+      // Achievement/failure indicators
+      success: /\b(proud|accomplished|achieved|succeeded|trots|bereikt|gelukt|fier|orgulloso|orgoglioso)\b/i,
+      failure: /\b(failed|disappointed|let down|teleurgesteld|gefaald|échoué|fallito|fracasado)\b/i
+    };
+    
+    // Define enhanced mood keywords with cultural variations and context
     const moodKeywords = {
       happy: [
         // English
@@ -1349,12 +1509,27 @@ class AICoachService {
     let detectedMoods = [];
     let allEmotionalIndicators = [];
     let overallSentiment = 'neutral';
+    let contextualFactors = {};
     
-    // Check for ALL mood keywords and score them
+    // Enhanced emotional pattern detection
+    const patternMatches = {};
+    Object.keys(emotionalPatterns).forEach(pattern => {
+      const matches = text.match(emotionalPatterns[pattern]);
+      if (matches) {
+        patternMatches[pattern] = matches;
+      }
+    });
+    
+    // Detect intensifier/diminisher effects
+    const intensifierCount = (text.match(emotionalPatterns.intensifiers) || []).length;
+    const diminisherCount = (text.match(emotionalPatterns.diminishers) || []).length;
+    const intensityModifier = (intensifierCount * 0.3) - (diminisherCount * 0.2);
+    
+    // Check for ALL mood keywords and score them with enhanced analysis
     for (const [mood, keywords] of Object.entries(moodKeywords)) {
       const matchedKeywords = keywords.filter(keyword => textLower.includes(keyword));
       if (matchedKeywords.length > 0) {
-        // Calculate mood strength based on keyword matches and intensity
+        // Base mood strength from keyword matches
         let moodStrength = matchedKeywords.length;
         
         // Boost strength if multiple instances of same keyword
@@ -1365,35 +1540,110 @@ class AICoachService {
           if (matches > 1) moodStrength += (matches - 1) * 0.5;
         });
         
-        // Calculate mood score based on detected mood type
+        // Apply contextual pattern bonuses/penalties
+        
+        // Masked emotion detection
+        if (patternMatches.maskedPositive && ['happy', 'peaceful', 'grateful'].includes(mood)) {
+          moodStrength += 0.8; // "not bad" actually indicates some positivity
+          contextualFactors.maskedPositive = true;
+        }
+        if (patternMatches.maskedNegative && ['sad', 'anxious', 'confused'].includes(mood)) {
+          moodStrength += 1.2; // "fine" often masks negative emotions
+          contextualFactors.maskedNegative = true;
+        }
+        
+        // Temporal pattern adjustments
+        if (patternMatches.pastRegret && ['sad', 'regretful', 'reflective'].includes(mood)) {
+          moodStrength += 0.6;
+          contextualFactors.pastRegret = true;
+        }
+        if (patternMatches.futureAnxiety && ['anxious', 'stressed', 'worried'].includes(mood)) {
+          moodStrength += 0.7;
+          contextualFactors.futureAnxiety = true;
+        }
+        
+        // Social context adjustments
+        if (patternMatches.isolation && mood === 'lonely') {
+          moodStrength += 1.0;
+          contextualFactors.isolation = true;
+        }
+        if (patternMatches.connection && ['happy', 'grateful', 'peaceful'].includes(mood)) {
+          moodStrength += 0.5;
+          contextualFactors.socialConnection = true;
+        }
+        
+        // Achievement context adjustments
+        if (patternMatches.success && ['happy', 'grateful', 'energetic', 'proud'].includes(mood)) {
+          moodStrength += 0.8;
+          contextualFactors.achievement = true;
+        }
+        if (patternMatches.failure && ['sad', 'frustrated', 'disappointed'].includes(mood)) {
+          moodStrength += 0.9;
+          contextualFactors.failure = true;
+        }
+        
+        // Linguistic pattern adjustments
+        
+        // Sentence structure influence
+        if (textMetrics.avgWordsPerSentence < 6 && ['stressed', 'angry', 'anxious'].includes(mood)) {
+          moodStrength += 0.4; // Short sentences suggest urgency/stress
+        }
+        if (textMetrics.avgWordsPerSentence > 15 && ['reflective', 'peaceful', 'contemplative'].includes(mood)) {
+          moodStrength += 0.3; // Long sentences suggest reflection
+        }
+        
+        // Punctuation influence
+        if (textMetrics.exclamationCount > 0) {
+          if (['happy', 'energetic', 'excited'].includes(mood)) {
+            moodStrength += 0.5;
+          } else if (['angry', 'frustrated'].includes(mood)) {
+            moodStrength += 0.6;
+          }
+        }
+        
+        if (textMetrics.ellipsisCount > 0 && ['sad', 'confused', 'uncertain', 'lonely'].includes(mood)) {
+          moodStrength += 0.4; // Ellipses suggest hesitation/sadness
+        }
+        
+        if (textMetrics.questionCount > 0 && ['confused', 'anxious', 'uncertain'].includes(mood)) {
+          moodStrength += 0.3; // Questions suggest uncertainty
+        }
+        
+        // Apply intensity modifiers from intensifiers/diminishers
+        moodStrength += intensityModifier;
+        
+        // Calculate mood score with enhanced logic
         let moodScore;
         switch (mood) {
           case 'happy':
           case 'grateful':
           case 'peaceful':
           case 'energetic':
-            moodScore = Math.min(10, 6 + moodStrength);
+            moodScore = Math.min(10, Math.max(3, 6 + moodStrength));
             break;
           case 'sad':
           case 'anxious':
           case 'angry':
           case 'lonely':
-            moodScore = Math.max(1, 5 - moodStrength);
+          case 'frustrated':
+            moodScore = Math.min(10, Math.max(3, 4 + moodStrength));
             break;
           case 'confused':
           case 'reflective':
-            moodScore = 5;
+            moodScore = Math.min(10, Math.max(2, 4 + (moodStrength * 0.5)));
             break;
           default:
-            moodScore = 5;
+            moodScore = Math.min(10, Math.max(2, 5 + (moodStrength * 0.3)));
         }
         
         detectedMoods.push({
           mood: mood,
-          score: moodScore,
-          strength: moodStrength,
+          score: Math.round(moodScore * 10) / 10, // Round to 1 decimal
+          strength: Math.round(moodStrength * 10) / 10,
           keywords: [...new Set(matchedKeywords)], // Remove duplicates
-          keywordCounts: keywordCounts
+          keywordCounts: keywordCounts,
+          layerType: contextualFactors.maskedNegative || contextualFactors.maskedPositive ? 'masked' : 'surface',
+          contextualFactors: Object.keys(contextualFactors).length > 0 ? contextualFactors : null
         });
         
         allEmotionalIndicators.push(...matchedKeywords);
@@ -1438,23 +1688,105 @@ class AICoachService {
     // Make sure primaryMood is never 'mixed' - that's only for overallSentiment
     const validPrimaryMood = primaryMood.mood !== 'mixed' ? primaryMood.mood : 'reflective';
     
+    // Enhanced confidence calculation for fallback
+    let baseConfidence = 0.3; // Lower baseline for keyword-based detection
+    if (detectedMoods.length > 0) {
+      baseConfidence = 0.4 + (detectedMoods.length * 0.08); // Multiple moods increase confidence
+      
+      // Boost confidence for contextual patterns
+      if (Object.keys(contextualFactors).length > 0) {
+        baseConfidence += 0.1;
+      }
+      
+      // Boost for linguistic patterns alignment
+      const strongestMood = detectedMoods[0];
+      if (textMetrics.exclamationCount > 0 && ['happy', 'angry', 'energetic'].includes(strongestMood.mood)) {
+        baseConfidence += 0.05;
+      }
+      if (textMetrics.ellipsisCount > 0 && ['sad', 'confused', 'lonely'].includes(strongestMood.mood)) {
+        baseConfidence += 0.05;
+      }
+      
+      // Cap at reasonable maximum for keyword-based detection
+      baseConfidence = Math.min(0.8, baseConfidence);
+    }
+
+    // Determine predominant theme for fallback
+    let predominantTheme = 'daily_life';
+    if (textMetrics.hasWorkContext) {
+      predominantTheme = 'work';
+    } else if (textMetrics.hasSocialContext) {
+      predominantTheme = 'relationships';
+    } else if (patternMatches.success || patternMatches.failure) {
+      predominantTheme = 'personal_growth';
+    }
+
+    // Create enhanced mood description
+    let moodDescription = `Detected ${validPrimaryMood} mood`;
+    if (detectedMoods.length > 1) {
+      moodDescription = `Multiple emotional states detected: ${detectedMoods.slice(0, 3).map(m => m.mood).join(', ')}`;
+    }
+    if (Object.keys(contextualFactors).length > 0) {
+      moodDescription += ` with contextual indicators`;
+    }
+
+    // Generate wellbeing suggestion based on detected mood
+    let suggestedFocus = `Consider reflecting on your ${validPrimaryMood} feelings and what might be contributing to them.`;
+    switch (validPrimaryMood) {
+      case 'happy':
+      case 'grateful':
+        suggestedFocus = 'Try to identify what brought you joy today so you can cultivate more of these positive experiences.';
+        break;
+      case 'sad':
+      case 'lonely':
+        suggestedFocus = 'Consider reaching out to someone you trust or engaging in a self-care activity that brings you comfort.';
+        break;
+      case 'anxious':
+      case 'stressed':
+        suggestedFocus = 'Practice deep breathing or grounding techniques to help manage these feelings of tension.';
+        break;
+      case 'angry':
+      case 'frustrated':
+        suggestedFocus = 'Take some time to cool down and consider what specific issue is causing these feelings.';
+        break;
+      case 'confused':
+        suggestedFocus = 'Break down complex thoughts into smaller parts or talk through your concerns with someone.';
+        break;
+      case 'energetic':
+        suggestedFocus = 'Channel this positive energy into activities or projects that are meaningful to you.';
+        break;
+    }
+
     return {
       primaryMood: validPrimaryMood,
-      moodScore: primaryMood.score,
-      confidence: detectedMoods.length > 0 ? Math.min(0.95, 0.5 + (detectedMoods.length * 0.1)) : 0.3,
-      emotionalIndicators: [...new Set(allEmotionalIndicators)],
+      moodScore: Math.round(primaryMood.score * 10) / 10,
+      confidence: Math.round(baseConfidence * 100) / 100,
+      emotionalIndicators: [...new Set(allEmotionalIndicators.slice(0, 5))], // Limit to 5 most relevant
       overallSentiment,
-      moodDescription: detectedMoods.length > 1 
-        ? `Detected multiple moods: ${detectedMoods.map(m => `${m.mood} (${m.strength.toFixed(1)})`).join(', ')}`
-        : `Detected ${validPrimaryMood} mood based on keyword analysis`,
-      // New field for multiple moods
+      emotionalIntensity: Math.ceil(primaryMood.score / 2),
+      moodDescription,
       detectedMoods: detectedMoods.map(m => ({
         mood: m.mood,
         score: m.score,
         strength: m.strength,
-        keywords: m.keywords
+        keywords: m.keywords.slice(0, 3), // Limit to top 3 keywords per mood
+        layerType: m.layerType || 'surface'
       })),
-      moodCount: detectedMoods.length
+      moodCount: detectedMoods.length,
+      emotionalTransition: 'stable', // Default for keyword-based detection
+      suggestedFocus,
+      culturalContext: null, // Not available in keyword-based fallback
+      emotionalComplexity: Math.min(5, Math.max(1, detectedMoods.length + (overallSentiment === 'mixed' ? 1 : 0))),
+      predominantTheme,
+      // Additional metadata for debugging/improvement
+      fallbackMethod: 'enhanced-keyword-analysis',
+      textMetrics: {
+        wordCount: textMetrics.wordCount,
+        sentenceCount: textMetrics.sentenceCount,
+        avgWordsPerSentence: Math.round(textMetrics.avgWordsPerSentence * 10) / 10,
+        hasContextualPatterns: Object.keys(contextualFactors).length > 0,
+        detectedPatterns: Object.keys(patternMatches)
+      }
     };
   }
 
@@ -2596,6 +2928,44 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
       console.error('Error checking for nonsense:', error);
       // Default to false (not nonsense) on error
       return false;
+    }
+  }
+
+  /**
+   * Check only for nonsense text without grammar/spelling checking
+   */
+  async checkNonsenseOnly(text) {
+    try {
+      console.log('Performing nonsense-only check for text:', text.substring(0, 100) + '...');
+      
+      if (!text || text.trim().length === 0) {
+        return { isNonsense: false, reason: null };
+      }
+      
+      // Detect language first
+      const detectedLanguage = await this.detectLanguage(text);
+      console.log('Detected language:', detectedLanguage);
+      
+      // Check for nonsense
+      const isNonsense = await this.checkForNonsense(text, detectedLanguage);
+      
+      const result = {
+        isNonsense,
+        reason: isNonsense ? "Text contains gibberish or meaningless content" : null,
+        detectedLanguage
+      };
+      
+      console.log('Nonsense check result:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('Error in nonsense-only check:', error);
+      // Default to false (not nonsense) on error to allow saving
+      return { 
+        isNonsense: false, 
+        reason: null,
+        error: error.message 
+      };
     }
   }
 

@@ -557,6 +557,47 @@ router.post('/check-grammar', async (req, res) => {
 });
 
 /**
+ * POST /api/ai-coach/check-nonsense
+ * Check only for nonsense text without grammar/spelling checking
+ */
+router.post('/check-nonsense', async (req, res) => {
+  try {
+    const { text } = req.body;
+    
+    console.log('=== NONSENSE CHECK ENDPOINT HIT ===');
+    console.log('Text length:', text ? text.length : 0);
+    console.log('Text preview:', text ? text.substring(0, 100) + '...' : 'NO TEXT');
+    
+    if (!text || text.trim().length === 0) {
+      console.log('ERROR: Empty text provided');
+      return res.status(400).json({ error: 'text is required' });
+    }
+    
+    console.log('Calling aiCoachService.checkNonsenseOnly...');
+    
+    // Check only for nonsense text
+    const analysis = await aiCoachService.checkNonsenseOnly(text);
+    
+    console.log('=== NONSENSE CHECK RESULT ===');
+    console.log('Analysis:', JSON.stringify(analysis, null, 2));
+    
+    const response = {
+      success: true,
+      isNonsense: analysis.isNonsense,
+      reason: analysis.reason || null,
+      timestamp: new Date()
+    };
+    
+    console.log('Sending response:', JSON.stringify(response, null, 2));
+    res.json(response);
+    
+  } catch (error) {
+    console.error('=== ERROR CHECKING NONSENSE ===', error);
+    res.status(500).json({ error: 'Failed to check nonsense text' });
+  }
+});
+
+/**
  * POST /api/ai-coach/assess-crisis
  * Assess crisis level from user input and provide appropriate response
  */

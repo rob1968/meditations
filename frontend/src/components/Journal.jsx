@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import axios from 'axios';
-import { getFullUrl, getAssetUrl, API_ENDPOINTS } from '../config/api';
+import { getFullUrl, getAssetUrl, API_ENDPOINTS, API_BASE_URL } from '../config/api';
 import PageHeader from './PageHeader';
 import Alert from './Alert';
 import ConfirmDialog from './ConfirmDialog';
@@ -845,60 +845,67 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     return <span>{parts}</span>;
   };
 
-  // Function to perform automatic grammar correction and nonsense detection before saving
+  // Function to perform nonsense text detection only before saving (grammar checking disabled)
 const performPreSaveChecks = async () => {
-  console.log('Performing automatic grammar correction and nonsense detection...');
+  console.log('=== PERFORMING NONSENSE TEXT DETECTION (NEW VERSION) ===');
   console.log('Is this an update?', !!editingEntry);
   console.log('Entry being edited:', editingEntry?._id);
+  console.log('Form content:', formData.content.substring(0, 100) + '...');
+  console.log('API Base URL:', API_BASE_URL);
   
   if (!formData.content.trim()) {
+    console.log('Empty content, skipping checks');
     return { passed: true };
   }
   
-  // Always perform grammar check, auto-correction and nonsense detection for ALL entries (both new and updates)
+  // Perform nonsense detection only (grammar checking disabled)
   try {
-    setIsPerformingGrammarCheck(true);
+    setIsPerformingGrammarCheck(true); // Keep UI state for loading indicator
     setError('');
     setHasGrammarErrors(false);
     
-    // Use the appropriate grammar checker ref based on which form is active
-    // Check for Write tab ref first, then showCreateForm, then quickGrammarCheckerRef
-    let grammarRef;
-    if (activeTab === 'write' && !showCreateForm) {
-      grammarRef = writeTabGrammarCheckerRef;
-    } else if (showCreateForm) {
-      grammarRef = grammarCheckerRef;
-    } else {
-      grammarRef = quickGrammarCheckerRef;
-    }
+    console.log('Making API call to check-nonsense endpoint...');
     
-    if (!grammarRef.current) {
-      console.log('Grammar checker ref not available, skipping automatic correction');
-      console.log('Active tab:', activeTab, 'Show create form:', showCreateForm);
-      console.log('Refs:', {
-        writeTabGrammarCheckerRef: writeTabGrammarCheckerRef.current,
-        grammarCheckerRef: grammarCheckerRef.current,
-        quickGrammarCheckerRef: quickGrammarCheckerRef.current
-      });
+    // Simple nonsense detection without grammar checking
+    // Check directly with backend API for nonsense detection only
+    const apiUrl = `${API_BASE_URL}/api/ai-coach/check-nonsense`;
+    console.log('Full API URL:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: formData.content.trim()
+      })
+    });
+    
+    console.log('API Response status:', response.status);
+    console.log('API Response ok:', response.ok);
+    
+    if (!response.ok) {
+      console.log('Nonsense check API failed, continuing with save');
       setIsPerformingGrammarCheck(false);
       return { passed: true };
     }
     
-    const checkResult = await grammarRef.current.checkText();
-    console.log('Grammar check full result:', JSON.stringify(checkResult, null, 2));
+    const checkResult = await response.json();
+    console.log('=== NONSENSE CHECK API RESULT ===');
+    console.log('Full result:', JSON.stringify(checkResult, null, 2));
     
     if (!checkResult) {
-      console.log('Invalid grammar check result, continuing with save');
+      console.log('Invalid nonsense check result, continuing with save');
       setIsPerformingGrammarCheck(false);
       return { passed: true };
     }
     
-    // Check for nonsense text first - this blocks saving (for both new and updates)
+    // Check for nonsense text - this blocks saving (for both new and updates)
     console.log('Checking isNonsense flag:', checkResult.isNonsense);
     console.log('Type of isNonsense:', typeof checkResult.isNonsense);
     
     if (checkResult.isNonsense === true) {
-      console.log('NONSENSE DETECTED - BLOCKING SAVE');
+      console.log('=== NONSENSE DETECTED - BLOCKING SAVE ===');
       console.log('Is update:', !!editingEntry);
       setIsPerformingGrammarCheck(false);
       
@@ -910,38 +917,14 @@ const performPreSaveChecks = async () => {
       return { passed: false, reason: 'nonsense_text' };
     }
     
-    // Apply grammar corrections automatically (never blocks saving)
-    if (checkResult.hasErrors && checkResult.suggestions && checkResult.suggestions.length > 0) {
-      console.log(`Automatically applying ${checkResult.suggestions.length} grammar corrections`);
-      
-      // Apply all grammar corrections automatically
-      let correctedText = formData.content;
-      const corrections = [...checkResult.suggestions].sort((a, b) => b.start - a.start); // Apply from end to start
-      
-      for (const suggestion of corrections) {
-        if (suggestion.start >= 0 && suggestion.end <= correctedText.length && suggestion.start < suggestion.end) {
-          const before = correctedText.substring(0, suggestion.start);
-          const after = correctedText.substring(suggestion.end);
-          correctedText = before + suggestion.suggestion + after;
-          console.log(`Applied correction: "${suggestion.error}" → "${suggestion.suggestion}"`);
-        }
-      }
-      
-      // Update the form with corrected text
-      if (correctedText !== formData.content) {
-        setFormData({...formData, content: correctedText});
-        console.log('Text automatically corrected');
-      }
-    }
-    
     setIsPerformingGrammarCheck(false);
-    console.log('Automatic grammar correction completed, no nonsense detected');
+    console.log('=== NONSENSE DETECTION COMPLETED - TEXT IS VALID ===');
     return { passed: true };
     
   } catch (error) {
-    console.error('Automatic grammar correction failed:', error);
+    console.error('=== NONSENSE DETECTION FAILED ===', error);
     setIsPerformingGrammarCheck(false);
-    return { passed: true }; // Continue with save even if correction fails
+    return { passed: true }; // Continue with save even if nonsense detection fails
   }
 };
 
@@ -1056,10 +1039,15 @@ const proceedWithSave = async () => {
 };
 
 const handleSaveEntry = async () => {
+    console.log('=== HANDLE SAVE ENTRY CALLED ===');
+    console.log('Form data content:', formData.content);
+    console.log('Is editing entry:', !!editingEntry);
+    
     // Clear any existing error messages when save/update button is clicked
     setError('');
     
     if (!formData.content.trim()) {
+      console.log('ERROR: Empty content');
       setError(t('contentRequired', 'Content is required'));
       return false;
     }
@@ -1077,12 +1065,14 @@ const handleSaveEntry = async () => {
       return false;
     }
 
-    // Perform automatic grammar correction and nonsense detection
-    console.log('Starting automatic grammar correction and nonsense detection...');
+    // Perform nonsense detection
+    console.log('=== STARTING NONSENSE DETECTION ===');
     console.log('Current content:', formData.content);
     console.log('Is editing entry?', !!editingEntry);
+    console.log('About to call performPreSaveChecks...');
     
     const checksResult = await performPreSaveChecks();
+    console.log('=== PRE-SAVE CHECKS COMPLETED ===');
     console.log('Pre-save checks result:', checksResult);
     
     if (!checksResult || checksResult.passed === undefined) {
@@ -2219,11 +2209,18 @@ const handleSaveEntry = async () => {
                       <button 
                         className="quick-save-btn"
                         onClick={async () => {
-                          setFormData({
-                            ...formData,
-                            date: new Date().toISOString().split('T')[0]
-                          });
-                          await handleSaveEntry();
+                          console.log('=== QUICK SAVE BUTTON CLICKED ===');
+                          try {
+                            setFormData({
+                              ...formData,
+                              date: new Date().toISOString().split('T')[0]
+                            });
+                            console.log('About to call handleSaveEntry from quick save...');
+                            await handleSaveEntry();
+                            console.log('Quick save handleSaveEntry completed');
+                          } catch (error) {
+                            console.error('=== ERROR IN QUICK SAVE ===', error);
+                          }
                         }}
                         disabled={!formData.content.trim() || formData.content.trim().split(/\s+/).length < 10}
                       >
@@ -3418,7 +3415,16 @@ const handleSaveEntry = async () => {
                 <div className="save-options">
                   <button 
                     className="save-btn-primary" 
-                    onClick={handleSaveEntry}
+                    onClick={async () => {
+                      console.log('=== REGULAR SAVE BUTTON CLICKED ===');
+                      try {
+                        console.log('About to call handleSaveEntry from regular save...');
+                        await handleSaveEntry();
+                        console.log('Regular save handleSaveEntry completed');
+                      } catch (error) {
+                        console.error('=== ERROR IN REGULAR SAVE ===', error);
+                      }
+                    }}
                     disabled={!formData.content.trim() || (editingEntry && !hasContentChanged()) || isPerformingGrammarCheck || isSavingEntry || transcribing || recordingState === 'processing'}
                   >
                     {isPerformingGrammarCheck ? 
