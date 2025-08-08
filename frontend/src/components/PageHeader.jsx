@@ -274,14 +274,18 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
         )}
       </div>
 
-      <div className="page-header-center">
-        {title && (
+      {title && (
+        <div className="page-header-center">
           <div className="page-title-section">
             <h1 className="page-title">{title}</h1>
             {subtitle && <p className="page-subtitle">{subtitle}</p>}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {!title && (
+        <div className="page-header-spacer"></div>
+      )}
 
       <div className="page-header-right">
         {/* Language selector removed - now in profile page */}

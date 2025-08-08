@@ -372,6 +372,7 @@
   "failedToSaveEntry": "Failed to save journal entry",
   "confirmDeleteEntry": "Are you sure you want to delete this journal entry?",
   "failedToDeleteEntry": "Failed to delete journal entry",
+  "confirmDeleteBackground": "Are you sure you want to delete this background music?",
   "insufficientTokensAudio": "Insufficient tokens. You need 1 token to generate audio.",
   "failedToGenerateAudio": "Failed to generate audio",
   "needAudioToShare": "You need to generate audio before sharing",
@@ -465,10 +466,10 @@
   "normalTempo": "Normal",
   "fastTempo": "Faster",
   "saveText": "Save Text",
-  "reviewDescription": "Review your choices before generating audio",
+  "reviewDescription": "Review choices before generating",
   "textLength": "{{count}} characters",
   "tempo": "Tempo",
-  "noBackground": "No background",
+  "noBackground": "No music",
   "stepType": "Type",
   "stepText": "Text",
   "stepVoice": "Voice",
@@ -484,7 +485,7 @@
   "noData": "No data",
   "stepProgress": "Step {{current}} of {{total}}",
   "loadingBackgrounds": "Loading backgrounds...",
-  "noBackgroundsAvailable": "No backgrounds available",
+  "noBackgroundsAvailable": "No music available",
   "optional": "optional",
   "monthlyStatsReset": "Monthly stats reset on",
   "failedToLoadTTSInfo": "Failed to load TTS tier information",
@@ -858,5 +859,6 @@
   "rejected": "Rejected",
   "emergencyDanger": "If you're in immediate danger, call 911",
   "contactTrustedPerson": "Contact a trusted friend or family member",
-  "crisisTextLine": "Call the Crisis Text Line: Text HOME to 741741"
+  "crisisTextLine": "Call the Crisis Text Line: Text HOME to 741741",
+  "played": "Played"
 }

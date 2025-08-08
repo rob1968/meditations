@@ -320,10 +320,10 @@
   "fastTempo": "Schneller",
   "saveText": "Text Speichern",
   "voiceJournals": "Tagebücher",
-  "reviewDescription": "Überprüfen Sie Ihre Auswahl vor der Audiogenerierung",
+  "reviewDescription": "Auswahl vor Generierung prüfen",
   "textLength": "{{count}} Zeichen",
   "tempo": "Tempo",
-  "noBackground": "Kein Hintergrund",
+  "noBackground": "Keine Musik",
   "stepType": "Typ",
   "stepText": "Text",
   "stepVoice": "Stimme",
@@ -363,7 +363,7 @@
   "notSet": "Nicht eingestellt",
   "yearsOld": "Jahre alt",
   "loadingBackgrounds": "Hintergründe laden...",
-  "noBackgroundsAvailable": "Keine Hintergründe verfügbar",
+  "noBackgroundsAvailable": "Keine Musik verfügbar",
   "optional": "optional",
   "monthlyStatsReset": "Monatliche Statistiken zurücksetzen am",
   "failedToLoadTTSInfo": "TTS-Tier-Informationen konnten nicht geladen werden",
@@ -505,6 +505,7 @@
   "failedToSaveEntry": "Tagebucheintrag konnte nicht gespeichert werden",
   "confirmDeleteEntry": "Sind Sie sicher, dass Sie diesen Tagebucheintrag löschen möchten?",
   "failedToDeleteEntry": "Tagebucheintrag konnte nicht gelöscht werden",
+  "confirmDeleteBackground": "Sind Sie sicher, dass Sie diese Hintergrundmusik löschen möchten?",
   "insufficientTokensAudio": "Unzureichende Tokens. Sie benötigen 1 Token, um Audio zu generieren.",
   "failedToGenerateAudio": "Audio konnte nicht generiert werden",
   "needAudioToShare": "Sie müssen zuerst Audio generieren, bevor Sie teilen können",
@@ -738,5 +739,6 @@
   "checkFailed": "Überprüfung fehlgeschlagen, bitte erneut versuchen",
   "failedToUpdateContact": "Notfallkontakt konnte nicht aktualisiert werden",
   "failedToAddContact": "Notfallkontakt konnte nicht hinzugefügt werden",
-  "failedToDeleteContact": "Notfallkontakt konnte nicht gelöscht werden"
+  "failedToDeleteContact": "Notfallkontakt konnte nicht gelöscht werden",
+  "played": "Abgespielt"
 }

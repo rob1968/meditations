@@ -310,10 +310,10 @@
   "fastTempo": "Plus Rapide",
   "saveText": "Sauvegarder le Texte",
   "voiceJournals": "Journaux",
-  "reviewDescription": "Vérifiez vos choix avant de générer l'audio",
+  "reviewDescription": "Vérifiez choix avant génération",
   "textLength": "{{count}} caractères",
   "tempo": "Tempo",
-  "noBackground": "Aucun fond",
+  "noBackground": "Aucune musique",
   "stepType": "Type",
   "stepText": "Texte",
   "stepVoice": "Sélection de la Voix",
@@ -353,7 +353,7 @@
   "notSet": "Non défini",
   "yearsOld": "ans",
   "loadingBackgrounds": "Chargement des arrière-plans...",
-  "noBackgroundsAvailable": "Aucun arrière-plan disponible",
+  "noBackgroundsAvailable": "Aucune musique disponible",
   "optional": "optionnel",
   "monthlyStatsReset": "Statistiques mensuelles remises à zéro le",
   "failedToLoadTTSInfo": "Impossible de charger les informations du niveau TTS",
@@ -516,6 +516,7 @@
   "failedToSaveEntry": "Impossible d'enregistrer l'entrée du journal",
   "confirmDeleteEntry": "Êtes-vous sûr de vouloir supprimer cette entrée du journal?",
   "failedToDeleteEntry": "Impossible de supprimer l'entrée du journal",
+  "confirmDeleteBackground": "Êtes-vous sûr de vouloir supprimer cette musique de fond ?",
   "insufficientTokensAudio": "Crédits insuffisants. Vous avez besoin de 1 crédit pour générer de l'audio.",
   "failedToGenerateAudio": "Impossible de générer l'audio",
   "needAudioToShare": "Vous devez générer de l'audio avant de partager",
@@ -751,5 +752,6 @@
   "checkFailed": "Vérification échouée, veuillez réessayer",
   "failedToUpdateContact": "Échec de la mise à jour du contact d'urgence",
   "failedToAddContact": "Échec de l'ajout du contact d'urgence",
-  "failedToDeleteContact": "Échec de la suppression du contact d'urgence"
+  "failedToDeleteContact": "Échec de la suppression du contact d'urgence",
+  "played": "Joué"
 }

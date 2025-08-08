@@ -264,7 +264,8 @@ router.get('/shared-meditations', async (req, res) => {
       ...meditation,
       likeCount: meditation.likes ? meditation.likes.length : 0,
       downloadCount: meditation.downloads ? meditation.downloads.length : 0,
-      ratingCount: meditation.ratings ? meditation.ratings.length : 0
+      ratingCount: meditation.ratings ? meditation.ratings.length : 0,
+      playCount: meditation.plays ? meditation.plays.length : 0
     }));
 
     const total = await SharedMeditation.countDocuments(query);
@@ -474,6 +475,33 @@ router.post('/meditation/:id/like', async (req, res) => {
   }
 });
 
+// Track meditation play
+router.post('/meditation/:id/play', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const meditation = await SharedMeditation.findById(req.params.id);
+
+    if (!meditation) {
+      return res.status(404).json({ success: false, error: 'Meditation not found' });
+    }
+
+    // Check if user has already played this meditation
+    const wasAlreadyPlayed = meditation.isPlayedBy(userId);
+    
+    // Add play record (only once per unique user)
+    await meditation.addPlay(userId);
+
+    res.json({
+      success: true,
+      playCount: meditation.playCount,
+      wasNewPlay: !wasAlreadyPlayed
+    });
+  } catch (error) {
+    console.error('Error tracking play:', error);
+    res.status(500).json({ success: false, error: 'Failed to track play' });
+  }
+});
+
 // Download meditation
 router.post('/meditation/:id/download', async (req, res) => {
   try {
@@ -654,7 +682,8 @@ router.get('/admin/meditations', async (req, res) => {
       ...meditation,
       likeCount: meditation.likes ? meditation.likes.length : 0,
       downloadCount: meditation.downloads ? meditation.downloads.length : 0,
-      ratingCount: meditation.ratings ? meditation.ratings.length : 0
+      ratingCount: meditation.ratings ? meditation.ratings.length : 0,
+      playCount: meditation.plays ? meditation.plays.length : 0
     }));
 
     res.json({

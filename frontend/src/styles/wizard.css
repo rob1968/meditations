@@ -23,10 +23,25 @@
 }
 
 .step-body {
-  min-height: 300px;
+  min-height: 400px;
+  max-height: 400px;
+  height: 400px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* Step Container - universal wrapper for all steps */
+.step-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
 }
 
 /* Step Indicator */
@@ -213,6 +228,11 @@
 /* Text Step */
 .text-step {
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .text-input-section {
@@ -221,7 +241,8 @@
 
 .meditation-text-input {
   width: 100%;
-  min-height: 200px;
+  min-height: 150px;
+  max-height: 200px;
   padding: 16px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
@@ -331,6 +352,11 @@
 /* Background Step */
 .background-step {
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .background-toggle {
@@ -355,7 +381,13 @@
 .review-step {
   width: 100%;
   max-width: 600px;
+  height: 100%;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  overflow-y: auto;
 }
 
 .review-header {

@@ -19,6 +19,71 @@ const { generateGoogleTTS } = require('../services/googleTTSService');
 // Directory for custom background uploads
 const CUSTOM_BACKGROUNDS_DIR = path.join(__dirname, '..', 'custom-backgrounds');
 
+// Helper function to consolidate individual metadata files into single metadata.json
+async function consolidateMetadataFiles(userId) {
+  const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userId);
+  
+  if (!fs.existsSync(userDir)) {
+    return;
+  }
+  
+  // Check if consolidated metadata.json already exists and is up to date
+  const metadataPath = path.join(userDir, 'metadata.json');
+  const files = await fsPromises.readdir(userDir);
+  const individualMetadataFiles = files.filter(f => f.startsWith('metadata-') && f.endsWith('.json'));
+  
+  // If no individual metadata files, nothing to consolidate
+  if (individualMetadataFiles.length === 0) {
+    return;
+  }
+  
+  console.log(`Consolidating ${individualMetadataFiles.length} metadata files for user ${userId}`);
+  
+  // Read all individual metadata files
+  const backgrounds = [];
+  for (const metadataFile of individualMetadataFiles) {
+    try {
+      const filePath = path.join(userDir, metadataFile);
+      const fileContent = await fsPromises.readFile(filePath, 'utf8');
+      const metadata = JSON.parse(fileContent);
+      
+      // Add isSystemBackground flag (custom backgrounds are not system backgrounds)
+      metadata.isSystemBackground = false;
+      metadata.savedBackground = true;
+      
+      backgrounds.push(metadata);
+    } catch (error) {
+      console.error(`Error reading metadata file ${metadataFile}:`, error);
+    }
+  }
+  
+  // Create consolidated metadata structure
+  const consolidatedMetadata = {
+    userId: userId,
+    backgrounds: backgrounds,
+    lastUpdated: new Date().toISOString()
+  };
+  
+  // Write consolidated metadata.json
+  try {
+    await fsPromises.writeFile(metadataPath, JSON.stringify(consolidatedMetadata, null, 2));
+    console.log(`Created consolidated metadata.json with ${backgrounds.length} backgrounds`);
+    
+    // Clean up individual metadata files after successful consolidation
+    for (const metadataFile of individualMetadataFiles) {
+      try {
+        const filePath = path.join(userDir, metadataFile);
+        await fsPromises.unlink(filePath);
+        console.log(`Removed individual metadata file: ${metadataFile}`);
+      } catch (error) {
+        console.error(`Error removing individual metadata file ${metadataFile}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error('Error writing consolidated metadata.json:', error);
+  }
+}
+
 // Helper function to get all backgrounds for a user (system + custom)
 async function getAllBackgroundsForUser(userId) {
   const backgrounds = [];
@@ -2821,6 +2886,85 @@ router.get('/custom-background-file/:userId/:filename', (req, res) => {
   } catch (error) {
     console.error('Error serving custom background file:', error);
     res.status(500).json({ error: 'Failed to serve file' });
+  }
+});
+
+// Test route for delete functionality
+router.get('/delete-test', (req, res) => {
+  console.log('Test route hit - delete functionality is reachable');
+  res.json({ message: 'Delete route is working', timestamp: new Date().toISOString() });
+});
+
+// Delete custom background (both routes for compatibility)
+router.delete('/custom-backgrounds/:backgroundId', async (req, res) => {
+  try {
+    const { backgroundId } = req.params;
+    
+    // Get userId from request headers or body
+    let userId = req.headers['x-user-id'] || req.body.userId;
+    
+    console.log('Delete background request:', { backgroundId, userId, headers: req.headers });
+    
+    if (!userId) {
+      console.log('No userId provided');
+      return res.status(401).json({ error: 'User ID required' });
+    }
+    
+    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userId);
+    
+    // Check if user directory exists
+    if (!fs.existsSync(userDir)) {
+      return res.status(404).json({ error: 'No custom backgrounds found for user' });
+    }
+    
+    // First, consolidate individual metadata files into single metadata.json
+    await consolidateMetadataFiles(userId);
+    
+    // Now work with the consolidated metadata.json
+    const metadataPath = path.join(userDir, 'metadata.json');
+    
+    if (!fs.existsSync(metadataPath)) {
+      return res.status(404).json({ error: 'No custom backgrounds found' });
+    }
+    
+    let metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    
+    // Find the background to delete
+    const backgroundIndex = metadata.backgrounds.findIndex(bg => bg.id === backgroundId);
+    
+    if (backgroundIndex === -1) {
+      return res.status(404).json({ error: 'Background not found' });
+    }
+    
+    const background = metadata.backgrounds[backgroundIndex];
+    
+    // Don't allow deletion of system backgrounds
+    if (background.isSystemBackground) {
+      return res.status(403).json({ error: 'Cannot delete system backgrounds' });
+    }
+    
+    // Delete the file
+    const filePath = path.join(CUSTOM_BACKGROUNDS_DIR, userId, background.filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    // Remove from metadata
+    metadata.backgrounds.splice(backgroundIndex, 1);
+    
+    // Save updated metadata
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    
+    res.json({ 
+      success: true, 
+      message: 'Background deleted successfully',
+      backgrounds: metadata.backgrounds
+    });
+    
+  } catch (error) {
+    console.error('Error deleting custom background:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: 'Failed to delete background', details: error.message });
   }
 });
 

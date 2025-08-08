@@ -19,6 +19,7 @@ import MeditationTypeSlider from './components/MeditationTypeSlider';
 import BackgroundSlider from './components/BackgroundSlider';
 import WizardContainer from './components/WizardContainer';
 import ReviewStep from './components/ReviewStep';
+import Alert from './components/Alert';
 import { getFullUrl, getAssetUrl, API_ENDPOINTS } from './config/api';
 import { isPiBrowser } from './utils/piDetection';
 import piAuthService from './services/piAuth';
@@ -28,7 +29,7 @@ const App = () => {
   const [meditationType, setMeditationType] = useState("sleep");
   const [background, setBackground] = useState("ocean");
   const [voiceId, setVoiceId] = useState("EXAVITQu4vr4xnSDxMaL");
-  const [useBackgroundMusic, setUseBackgroundMusic] = useState(false);
+  const [useBackgroundMusic, setUseBackgroundMusic] = useState(true);
   const [customBackgroundFile, setCustomBackgroundFile] = useState(null);
   const [customBackgroundName, setCustomBackgroundName] = useState('');
   const [customBackgroundDescription, setCustomBackgroundDescription] = useState('');
@@ -43,6 +44,18 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingText, setIsGeneratingText] = useState(false);
   const [error, setError] = useState("");
+  
+  // Alert state
+  const [alertState, setAlertState] = useState({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+
+  // Helper function to show alert
+  const showAlert = (message, type = 'error') => {
+    setAlertState({ show: true, message, type });
+  };
   
   // Dropdown states
   const [languageOpen, setLanguageOpen] = useState(false);
@@ -434,7 +447,7 @@ const App = () => {
                 className="meditation-text-input"
                 rows={10}
               />
-              <div className="text-validation">
+<div className="text-validation">
                 {(() => {
                   const validation = validateTextLength(wizardData.text);
                   const wordCount = countWords(wizardData.text);
@@ -452,7 +465,7 @@ const App = () => {
                   return (
                     <div className="word-count-info">
                       <span className={`word-count ${validation.valid ? 'valid' : 'invalid'}`}>
-                        {t('wordCount', '{{count}} woorden', { count: wordCount })}
+                        {wordCount} woorden
                       </span>
                       {!validation.valid && (
                         <span className="validation-error">
@@ -475,8 +488,6 @@ const App = () => {
             onVoiceSelect={(voiceId) => updateWizardData('voiceId', voiceId)}
             voiceProvider="elevenlabs"
             currentMeditationType={wizardData.meditationType}
-            speechTempo={wizardData.speechTempo}
-            onTempoChange={(tempo) => updateWizardData('speechTempo', tempo)}
             isGeneratingAudio={isLoading}
             genderFilter={wizardData.genderFilter}
             onGenderFilterChange={(filter) => updateWizardData('genderFilter', filter)}
@@ -486,31 +497,27 @@ const App = () => {
       case 4:
         return (
           <div className="background-step">
-            <div className="background-toggle">
-              <label className="toggle-label">
-                <input
-                  type="checkbox"
-                  checked={wizardData.useBackgroundMusic}
-                  onChange={(e) => updateWizardData('useBackgroundMusic', e.target.checked)}
-                />
-                <span>{t('useBackgroundMusic', 'Achtergrondmuziek gebruiken')}</span>
-              </label>
-            </div>
-            
-            {wizardData.useBackgroundMusic && (
-              <BackgroundSlider
+            <BackgroundSlider
                 ref={backgroundSliderRef}
                 selectedBackground={wizardData.background}
-                onBackgroundSelect={(bg) => updateWizardData('background', bg)}
+                onBackgroundSelect={(bg) => {
+                  if (bg === 'none') {
+                    updateWizardData('useBackgroundMusic', false);
+                    updateWizardData('background', '');
+                  } else {
+                    updateWizardData('useBackgroundMusic', true);
+                    updateWizardData('background', bg);
+                  }
+                }}
                 meditationType={wizardData.meditationType}
                 customBackground={customBackgroundFile}
                 customBackgroundFile={customBackgroundFile}
                 savedCustomBackgrounds={savedCustomBackgrounds}
                 backgroundsLoading={backgroundsLoading}
                 onCustomBackgroundUpload={handleCustomBackgroundUpload}
+                onCustomBackgroundDelete={handleCustomBackgroundDelete}
                 onStopAllAudio={stopAllBackgroundAudio}
               />
-            )}
           </div>
         );
       
@@ -1003,7 +1010,17 @@ const App = () => {
       setError("");
     } catch (error) {
       console.error("Error generating meditation:", error);
-      setError(t('errorGenerating') || "Failed to generate meditation. Please try again.");
+      
+      // Check for specific credit error
+      if (error.response && error.response.status === 400 && error.response.data) {
+        if (error.response.data.error && error.response.data.error.includes('Insufficient credits')) {
+          showAlert(t('insufficientTokensAudio', 'Onvoldoende tokens. Je hebt 1 token nodig om audio te genereren.'), 'error');
+        } else {
+          showAlert(error.response.data.error || t('errorGenerating', 'Failed to generate meditation. Please try again.'), 'error');
+        }
+      } else {
+        showAlert(t('errorGenerating', 'Failed to generate meditation. Please try again.'), 'error');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1024,6 +1041,45 @@ const App = () => {
     // Show voice selector instead of immediately generating audio
     setShowVoiceSelector(true);
     setShowBackgroundOptions(false); // Reset background options
+  };
+
+  const handleCustomBackgroundDelete = async (backgroundId) => {
+    try {
+      console.log('Delete request starting:', { backgroundId, userId: user?.id });
+      
+      if (!user?.id) {
+        console.log('No user ID found');
+        showAlert(t('loginRequired', 'Je moet ingelogd zijn om achtergronden te verwijderen'));
+        return;
+      }
+
+      const url = getFullUrl(`/api/custom-backgrounds/${backgroundId}`);
+      console.log('Making DELETE request to:', url);
+
+      const response = await axios.delete(url, {
+        headers: {
+          'x-user-id': user.id
+        }
+      });
+      
+      console.log('Delete response:', response.data);
+
+      if (response.data.success) {
+        // Update the saved backgrounds list
+        setSavedCustomBackgrounds(prev => 
+          prev.filter(bg => bg.id !== backgroundId)
+        );
+        
+        // If the deleted background was selected, reset to default
+        if (wizardData.background === `saved-${backgroundId}`) {
+          updateWizardData('background', 'ocean');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting background:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      showAlert(t('errorDeletingBackground', 'Fout bij het verwijderen van achtergrond') + ': ' + (error.response?.data?.error || error.message));
+    }
   };
 
   const handleCustomBackgroundUpload = async (data) => {
@@ -1485,6 +1541,15 @@ const App = () => {
         onTabChange={handleTabChange}
         user={user}
         onLogout={handleLogout}
+      />
+      
+      {/* Alert */}
+      <Alert
+        message={alertState.message}
+        type={alertState.type}
+        visible={alertState.show}
+        onClose={() => setAlertState({ show: false, message: '', type: 'success' })}
+        position="fixed"
       />
     </div>
   );

@@ -18,6 +18,18 @@ const StepNavigation = ({
 
   return (
     <div className="step-navigation">
+      {/* Generate button for final step only - Above navigation */}
+      {isLastStep && (
+        <button
+          className="generate-btn primary"
+          onClick={onGenerate}
+          disabled={!isCurrentStepValid || isGenerating}
+          style={{ marginBottom: '16px' }}
+        >
+          {isGenerating ? t('generating', 'Genereren...') : `🎵 ${t('generateAudio', 'Audio Genereren')}`}
+        </button>
+      )}
+
       {/* Previous Button - Left side */}
       <button
         className={`nav-btn prev-btn ${isFirstStep ? 'disabled' : ''}`}
@@ -27,17 +39,6 @@ const StepNavigation = ({
       >
         ← {t('previous', 'Vorige')}
       </button>
-
-      {/* Generate button for final step only */}
-      {isLastStep && (
-        <button
-          className="generate-btn primary"
-          onClick={onGenerate}
-          disabled={!isCurrentStepValid || isGenerating}
-        >
-          {isGenerating ? t('generating', 'Genereren...') : `🎵 ${t('generateAudio', 'Audio Genereren')}`}
-        </button>
-      )}
 
       {/* Next Button - Right side */}
       <button

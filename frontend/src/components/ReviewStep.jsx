@@ -42,7 +42,7 @@ const ReviewStep = ({ wizardData, voices, savedCustomBackgrounds }) => {
     
     return {
       icon: '🚫',
-      name: t('noBackground', 'Geen achtergrond')
+      name: t('noBackground', 'Geen muziek')
     };
   };
 
@@ -59,108 +59,150 @@ const ReviewStep = ({ wizardData, voices, savedCustomBackgrounds }) => {
     morning: t('morningMeditation', 'Morning')
   };
 
+  const meditationTypeEmojis = {
+    sleep: '😴',
+    stress: '😤',
+    focus: '🎯',
+    anxiety: '😰',
+    energy: '⚡',
+    mindfulness: '🧠',
+    compassion: '💝',
+    walking: '🚶',
+    breathing: '🌬️',
+    morning: '🌅'
+  };
+
+  const languageFlags = {
+    'en': '🇬🇧',
+    'nl': '🇳🇱',
+    'de': '🇩🇪',
+    'es': '🇪🇸',
+    'fr': '🇫🇷',
+    'it': '🇮🇹',
+    'pt': '🇵🇹',
+    'ru': '🇷🇺',
+    'ja': '🇯🇵',
+    'ko': '🇰🇷',
+    'zh': '🇨🇳',
+    'ar': '🇸🇦',
+    'hi': '🇮🇳'
+  };
+
   return (
     <div className="review-step">
       <div className="review-header">
         <p className="review-subtitle">
-          {t('reviewDescription', 'Controleer je keuzes voordat je de audio genereert')}
+          {t('reviewDescription', 'Controleer keuzes voor genereren')}
         </p>
       </div>
 
-      <div className="review-sections">
-        {/* Meditation Type */}
-        <div className="review-section">
-          <div className="review-section-header">
-            <div className="review-icon">🧘</div>
-            <h3>{t('meditationType', 'Meditatie Type')}</h3>
+      {/* Compact summary card */}
+      <div className="review-summary-card" style={{
+        background: 'rgba(255, 255, 255, 0.05)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '12px',
+        padding: '12px',
+        marginBottom: '16px'
+      }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr 1fr',
+          gap: '12px',
+          alignItems: 'center'
+        }}>
+          {/* Meditation Type */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5em', marginBottom: '2px' }}>
+              {meditationTypeEmojis[wizardData.meditationType] || '🧘'}
+            </div>
+            <div style={{ fontSize: '0.75em', opacity: '0.8', lineHeight: '1.2' }}>
+              {meditationTypes[wizardData.meditationType]}
+            </div>
           </div>
-          <div className="review-content">
-            <span className="review-value">
-              {meditationTypes[wizardData.meditationType] || wizardData.meditationType}
-            </span>
-          </div>
-        </div>
 
-        {/* Language */}
-        <div className="review-section">
-          <div className="review-section-header">
-            <div className="review-icon">🌍</div>
-            <h3>{t('languageLabel', 'Language')}</h3>
-          </div>
-          <div className="review-content">
-            <span className="review-value">
+          {/* Language */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5em', marginBottom: '2px' }}>
+              {languageFlags[i18n.language] || '🌍'}
+            </div>
+            <div style={{ fontSize: '0.75em', opacity: '0.8', lineHeight: '1.2' }}>
               {(() => {
                 const languageMap = {
-                  'en': 'English',
-                  'nl': 'Nederlands',
-                  'de': 'Deutsch',
-                  'es': 'Español',
-                  'fr': 'Français',
-                  'it': 'Italiano',
-                  'pt': 'Português',
-                  'ru': 'Русский',
-                  'ja': '日本語',
-                  'ko': '한국어',
-                  'zh': '中文',
-                  'ar': 'العربية',
-                  'hi': 'हिन्दी'
+                  'en': 'EN',
+                  'nl': 'NL', 
+                  'de': 'DE',
+                  'es': 'ES',
+                  'fr': 'FR',
+                  'it': 'IT',
+                  'pt': 'PT',
+                  'ru': 'RU',
+                  'ja': 'JA',
+                  'ko': 'KO',
+                  'zh': 'ZH',
+                  'ar': 'AR',
+                  'hi': 'HI'
                 };
-                return languageMap[i18n.language] || i18n.language;
+                return languageMap[i18n.language] || i18n.language.toUpperCase();
               })()}
-            </span>
-          </div>
-        </div>
-
-        {/* Text */}
-        <div className="review-section">
-          <div className="review-section-header">
-            <div className="review-icon">📝</div>
-            <h3>{t('textLabel', 'Meditatie Tekst')}</h3>
-          </div>
-          <div className="review-content">
-            <div className="text-preview text-preview-scrollable">
-              {wizardData.text}
-            </div>
-            <div className="text-stats">
-              {t('textLength', '{{count}} karakters', { count: wizardData.text.length })}
             </div>
           </div>
-        </div>
 
-        {/* Voice */}
-        <div className="review-section">
-          <div className="review-section-header">
-            <div className="review-icon">🎤</div>
-            <h3>{t('voiceLabel', 'Voice')}</h3>
+          {/* Voice */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5em', marginBottom: '2px' }}>🎤</div>
+            <div style={{ fontSize: '0.75em', opacity: '0.8', lineHeight: '1.2' }}>
+              {getVoiceName(wizardData.voiceId).split(' ')[0]}
+            </div>
           </div>
-          <div className="review-content">
-            <div className="voice-info">
-              <span className="review-value">{getVoiceName(wizardData.voiceId)}</span>
-              <span className="voice-tempo">
-                {t('tempo', 'Tempo')}: {wizardData.speechTempo}x
-              </span>
+
+          {/* Background */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.5em', marginBottom: '2px' }}>
+              {getBackgroundInfo(wizardData.background).icon}
+            </div>
+            <div style={{ fontSize: '0.75em', opacity: '0.8', lineHeight: '1.2' }}>
+              {getBackgroundInfo(wizardData.background).name.length > 8 
+                ? getBackgroundInfo(wizardData.background).name.substring(0, 8) + '...'
+                : getBackgroundInfo(wizardData.background).name
+              }
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Background */}
-        <div className="review-section">
-          <div className="review-section-header">
-            <div className="review-icon">🎵</div>
-            <h3>{t('backgroundMusicLabel', 'Background Music')}</h3>
+      {/* Text Preview */}
+      <div className="review-section" style={{
+        background: 'rgba(255, 255, 255, 0.03)',
+        backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderRadius: '10px',
+        padding: '10px'
+      }}>
+        <div className="review-section-header" style={{ 
+          marginBottom: '8px' 
+        }}>
+          <h3 style={{ fontSize: '1em', margin: '0' }}>{t('textLabel', 'Meditatie Tekst')}</h3>
+        </div>
+        <div className="review-content">
+          <div className="text-preview text-preview-scrollable" style={{
+            maxHeight: '70px',
+            overflow: 'auto',
+            padding: '6px',
+            background: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '6px',
+            fontSize: '0.8em',
+            lineHeight: '1.3',
+            marginBottom: '4px'
+          }}>
+            {wizardData.text}
           </div>
-          <div className="review-content">
-            <span className="review-value">
-              {(() => {
-                const bgInfo = getBackgroundInfo(wizardData.background);
-                return (
-                  <>
-                    <span style={{ marginRight: '8px' }}>{bgInfo.icon}</span>
-                    {bgInfo.name}
-                  </>
-                );
-              })()}
-            </span>
+          <div className="text-stats" style={{ 
+            fontSize: '0.75em', 
+            opacity: '0.6', 
+            textAlign: 'center' 
+          }}>
+            {t('textLength', '{{count}} karakters', { count: wizardData.text.length })}
           </div>
         </div>
       </div>

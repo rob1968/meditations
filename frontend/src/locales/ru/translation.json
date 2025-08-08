@@ -227,10 +227,10 @@
   "saveText": "Сохранить Текст",
   "voiceJournals": "Дневники",
   "meditations": "Медитации",
-  "reviewDescription": "Проверьте ваш выбор перед генерацией аудио",
+  "reviewDescription": "Проверить выбор перед генерацией",
   "textLength": "{{count}} символов",
   "tempo": "Темп",
-  "noBackground": "Без фона",
+  "noBackground": "Без музыки",
   "stepType": "Тип",
   "stepText": "Текст",
   "stepVoice": "Голос",
@@ -271,7 +271,7 @@
   "notSet": "Не установлено",
   "yearsOld": "лет",
   "loadingBackgrounds": "Загрузка фонов...",
-  "noBackgroundsAvailable": "Фоны недоступны",
+  "noBackgroundsAvailable": "Музыка недоступна",
   "optional": "необязательно",
   "monthlyStatsReset": "Месячная статистика сбрасывается",
   "failedToLoadTTSInfo": "Не удалось загрузить информацию о уровне TTS",
@@ -494,6 +494,7 @@
   "failedToSaveEntry": "Не удалось сохранить запись дневника",
   "confirmDeleteEntry": "Вы уверены, что хотите удалить эту запись дневника?",
   "failedToDeleteEntry": "Не удалось удалить запись дневника",
+  "confirmDeleteBackground": "Вы уверены, что хотите удалить эту фоновую музыку?",
   "insufficientTokensAudio": "Недостаточно кредитов. Вам нужен 1 кредит для создания аудио.",
   "failedToGenerateAudio": "Не удалось сгенерировать аудио",
   "needAudioToShare": "Вам нужно сгенерировать аудио перед публикацией",
@@ -728,5 +729,6 @@
   "checkFailed": "Проверка не удалась, попробуйте снова",
   "failedToUpdateContact": "Ошибка обновления экстренного контакта",
   "failedToAddContact": "Ошибка добавления экстренного контакта",
-  "failedToDeleteContact": "Ошибка удаления экстренного контакта"
+  "failedToDeleteContact": "Ошибка удаления экстренного контакта",
+  "played": "Воспроизведено"
 }

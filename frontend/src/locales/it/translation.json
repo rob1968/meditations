@@ -263,6 +263,7 @@
   "failedToSaveEntry": "Impossibile salvare la voce del diario",
   "confirmDeleteEntry": "Sei sicuro di voler eliminare questa voce del diario?",
   "failedToDeleteEntry": "Impossibile eliminare la voce del diario",
+  "confirmDeleteBackground": "Sei sicuro di voler eliminare questa musica di sottofondo?",
   "insufficientTokensAudio": "Tokeni insufficienti. Hai bisogno di 1 tokeno per generare audio.",
   "failedToGenerateAudio": "Impossibile generare l'audio",
   "needAudioToShare": "Devi generare l'audio prima di condividere",
@@ -347,10 +348,10 @@
   "sharedJournals": "Diari Condivisi",
   "voiceJournal": "Diario Vocale",
   "voiceJournalSubtitle": "Scopri e ascolta i diari vocali degli altri",
-  "reviewDescription": "Rivedi le tue scelte prima di generare l'audio",
+  "reviewDescription": "Rivedi scelte prima di generare",
   "textLength": "{{count}} caratteri",
   "tempo": "Tempo",
-  "noBackground": "Nessuno sfondo",
+  "noBackground": "Nessuna musica",
   "stepType": "Tipo",
   "stepText": "Testo",
   "stepVoice": "Voce",
@@ -391,7 +392,7 @@
   "notSet": "Non impostato",
   "yearsOld": "anni",
   "loadingBackgrounds": "Caricamento sfondi...",
-  "noBackgroundsAvailable": "Nessuno sfondo disponibile",
+  "noBackgroundsAvailable": "Nessuna musica disponibile",
   "optional": "opzionale",
   "monthlyStatsReset": "Statistiche mensili reimpostate il",
   "failedToLoadTTSInfo": "Impossibile caricare le informazioni del livello TTS",
@@ -730,5 +731,6 @@
   "checkFailed": "Controllo fallito, riprova",
   "failedToUpdateContact": "Impossibile aggiornare il contatto di emergenza",
   "failedToAddContact": "Impossibile aggiungere il contatto di emergenza",
-  "failedToDeleteContact": "Impossibile eliminare il contatto di emergenza"
+  "failedToDeleteContact": "Impossibile eliminare il contatto di emergenza",
+  "played": "Riprodotto"
 }

@@ -251,10 +251,10 @@
   "saveText": "テキストを保存",
   "voiceJournals": "ジャーナル",
   "meditations": "瞑想",
-  "reviewDescription": "オーディオを生成する前に選択内容を確認してください",
+  "reviewDescription": "生成前に選択を確認",
   "textLength": "{{count}} 文字",
   "tempo": "テンポ",
-  "noBackground": "背景なし",
+  "noBackground": "音楽なし",
   "stepType": "タイプ",
   "stepText": "テキスト",
   "stepVoice": "音声",
@@ -295,7 +295,7 @@
   "notSet": "未設定",
   "yearsOld": "歳",
   "loadingBackgrounds": "背景を読み込み中...",
-  "noBackgroundsAvailable": "利用可能な背景がありません",
+  "noBackgroundsAvailable": "利用可能な音楽がありません",
   "optional": "任意",
   "monthlyStatsReset": "月次統計のリセット日",
   "failedToLoadTTSInfo": "TTSティア情報の読み込みに失敗しました",
@@ -474,6 +474,7 @@
   "failedToSaveEntry": "日記エントリの保存に失敗しました",
   "confirmDeleteEntry": "この日記エントリを削除してもよろしいですか？",
   "failedToDeleteEntry": "日記エントリの削除に失敗しました",
+  "confirmDeleteBackground": "このバックグラウンド音楽を削除してもよろしいですか？",
   "insufficientTokensAudio": "クレジットが不足しています。音声生成には1クレジットが必要です。",
   "failedToGenerateAudio": "音声の生成に失敗しました",
   "needAudioToShare": "共有する前に音声を生成する必要があります",
@@ -728,5 +729,6 @@
   "checkFailed": "チェックに失敗しました。もう一度お試しください",
   "failedToUpdateContact": "緊急連絡先の更新に失敗しました",
   "failedToAddContact": "緊急連絡先の追加に失敗しました",
-  "failedToDeleteContact": "緊急連絡先の削除に失敗しました"
+  "failedToDeleteContact": "緊急連絡先の削除に失敗しました",
+  "played": "再生済み"
 }

@@ -17,6 +17,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
   const [showShareDialog, setShowShareDialog] = useState(null);
   const [isSharing, setIsSharing] = useState(false);
   const [filterType, setFilterType] = useState('all');
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [alertState, setAlertState] = useState({ show: false, message: '', type: 'success' });
   const [confirmState, setConfirmState] = useState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' });
   const { t } = useTranslation();
@@ -46,6 +47,11 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
       fetchUserMeditations();
     }
   }, [user]);
+
+  // Reset slider when filter changes
+  useEffect(() => {
+    setCurrentSlideIndex(0);
+  }, [filterType]);
 
   // Refresh only when generation completes (goes from true to false)
   useEffect(() => {
@@ -358,7 +364,6 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
       <PageHeader 
         user={user}
         onProfileClick={onProfileClick}
-        title={t('myMeditation', 'My Meditations')}
         unreadCount={unreadCount}
         onInboxClick={onInboxClick}
         onCreateClick={onCreateClick}
@@ -437,117 +442,185 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
       ) : filteredMeditations.length > 0 && (
         <div className="meditations-list">
           {filteredMeditations.map((meditation) => (
-            <div key={meditation.id} className="meditation-card">
-              <div className="meditation-thumbnail">
-                <img 
-                  src={getImageUrl(meditation)}
-                  alt={meditationTypeLabels[meditation.meditationType] || meditation.meditationType}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
+            <div 
+              key={meditation.id} 
+              className={`meditation-card-with-player ${playingMeditationId === meditation.id ? 'playing' : ''}`}
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                padding: '16px',
+                transition: 'all 0.3s ease',
+                marginBottom: '12px'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              {/* Top Row - Image and Info */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+                {/* Album Art */}
+                <div 
+                  className="meditation-thumbnail"
+                  style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    background: 'rgba(255, 255, 255, 0.1)'
                   }}
-                />
-                <div className="thumbnail-controls">
-                  <button 
-                    className="thumbnail-play-button"
-                    onClick={() => {
-                      console.log('Play button clicked for meditation:', meditation.id);
-                      console.log('Audio files:', meditation.audioFiles);
-                      if (meditation.audioFiles && meditation.audioFiles.length > 0) {
-                        const audio = document.querySelector(`#audio-${meditation.id}`);
-                        console.log('Found audio element:', audio);
-                        if (audio) {
-                          if (audio.paused) {
-                            // Pause all other audios first
-                            document.querySelectorAll('audio').forEach(a => {
-                              if (a.id !== `audio-${meditation.id}`) a.pause();
-                            });
-                            audio.play()
-                              .then(() => {
-                                setPlayingMeditationId(meditation.id);
-                              })
-                              .catch(err => {
-                                console.error('Error playing audio:', err);
-                              });
-                          } else {
-                            audio.pause();
-                            setPlayingMeditationId(null);
-                          }
-                        }
-                      }
+                >
+                  <img 
+                    src={getImageUrl(meditation)}
+                    alt={meditationTypeLabels[meditation.meditationType] || meditation.meditationType}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
                     }}
-                    disabled={!meditation.audioFiles || meditation.audioFiles.length === 0}
-                  >
-                    {playingMeditationId === meditation.id ? '⏸' : '▶'}
-                  </button>
-                  <span className="thumbnail-duration">
-                    {meditation.audioFiles && meditation.audioFiles.length > 0 && meditation.audioFiles[0].duration 
-                      ? formatAudioDuration(meditation.audioFiles[0].duration) 
-                      : '0:00'}
-                  </span>
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
                 </div>
-              </div>
 
-              <div className="meditation-details">
-                <div className="meditation-header">
-                  <div className="meditation-type">
+                {/* Track Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: 'white',
+                    marginBottom: '4px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
                     {meditationTypeLabels[meditation.meditationType] || meditation.meditationType}
                   </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    marginBottom: '4px'
+                  }}>
+                    🗣️ {(() => {
+                      const fullLanguageNames = {
+                        'en': 'English',
+                        'nl': 'Nederlands', 
+                        'de': 'Deutsch',
+                        'es': 'Español',
+                        'fr': 'Français',
+                        'it': 'Italiano',
+                        'pt': 'Português',
+                        'ru': 'Русский',
+                        'ja': '日本語',
+                        'ko': '한국어',
+                        'zh': '中文',
+                        'ar': 'العربية',
+                        'hi': 'हिन्दी'
+                      };
+                      return fullLanguageNames[meditation.language] || meditation.language;
+                    })()}
+                  </div>
                 </div>
-                
-                <div className="meditation-info">
-                  <span className="meditation-language">
-                    🗣️ {meditation.language}
-                  </span>
-                </div>
-              </div>
 
-              <div className="meditation-controls">
+                {/* Share Button */}
                 {meditation.audioFiles && meditation.audioFiles.length > 0 && (
                   <button 
-                    className="share-button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (userCredits && userCredits.credits < 1) {
                         setError(t('insufficientTokensShare', 'Insufficient tokens. You need 1 token to share a meditation.'));
                         return;
                       }
                       setShowShareDialog(meditation.id);
                     }}
-                    title={t('shareMeditation', 'Share Meditation')}
                     disabled={userCredits && userCredits.credits < 1}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: meditation.isShared ? '#1DB954' : 'rgba(255, 255, 255, 0.6)',
+                      fontSize: '18px',
+                      cursor: 'pointer',
+                      padding: '8px',
+                      borderRadius: '50%',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                    onMouseOver={(e) => {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                      e.target.style.transform = 'scale(1.1)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.target.style.background = 'none';
+                      e.target.style.transform = 'scale(1)';
+                    }}
+                    title={t('shareMeditation', 'Share Meditation')}
                   >
-                    <span className="share-icon">
-                      {meditation.isShared ? '🌟' : '📤'}
-                    </span>
+                    {meditation.isShared ? '🌟' : '📤'}
                   </button>
                 )}
               </div>
 
-
+              {/* Full Width Audio Player */}
               {meditation.audioFiles && meditation.audioFiles.length > 0 && (
-                <div className="audio-files-hidden">
-                  {meditation.audioFiles.map((audioFile, index) => (
-                    <audio 
-                      key={index} 
-                      id={index === 0 ? `audio-${meditation.id}` : `audio-${meditation.id}-${index}`}
-                      preload="none"
-                      onEnded={() => setPlayingMeditationId(null)}
-                      onPause={() => {
-                        if (playingMeditationId === meditation.id) {
-                          setPlayingMeditationId(null);
-                        }
-                      }}
-                    >
-                      <source 
-                        src={getAssetUrl(API_ENDPOINTS.MEDITATION_AUDIO(audioFile.filename))} 
-                        type="audio/mpeg" 
-                      />
-                      {t('audioNotSupported', 'Your browser does not support the audio element.')}
-                    </audio>
-                  ))}
-                  <div className="audio-info-minimal">
-                    <span className="audio-count">{meditation.audioFiles.length} {t('audioFiles', 'audio files')}</span>
-                  </div>
-                </div>
+                <audio 
+                  id={`audio-${meditation.id}`}
+                  controls
+                  controlsList="nodownload"
+                  preload="metadata"
+                  style={{
+                    width: '100%',
+                    height: '40px',
+                    borderRadius: '6px',
+                    outline: 'none'
+                  }}
+                  onLoadedMetadata={(e) => {
+                    console.log('Audio loaded for meditation:', meditation.id, 'URL:', e.target.src);
+                  }}
+                  onPlay={(e) => {
+                    console.log('Audio started playing:', meditation.id);
+                    // Pause all other my-audio audios first
+                    document.querySelectorAll('audio[id^="audio-"]').forEach(a => {
+                      if (a.id !== `audio-${meditation.id}`) {
+                        a.pause();
+                      }
+                    });
+                    setPlayingMeditationId(meditation.id);
+                  }}
+                  onPause={(e) => {
+                    console.log('Audio paused:', meditation.id);
+                    setPlayingMeditationId(null);
+                  }}
+                  onEnded={(e) => {
+                    console.log('Audio ended:', meditation.id);
+                    setPlayingMeditationId(null);
+                  }}
+                  onError={(e) => {
+                    console.error('Audio error for meditation:', meditation.id, 'Error:', e.target.error, 'URL:', e.target.src);
+                    console.error('Audio files:', meditation.audioFiles);
+                  }}
+                  onCanPlay={(e) => {
+                    console.log('Audio can play:', meditation.id);
+                  }}
+                >
+                  <source 
+                    src={getAssetUrl(API_ENDPOINTS.MEDITATION_AUDIO(meditation.audioFiles[0].filename))} 
+                    type="audio/mpeg" 
+                  />
+                  {t('audioNotSupported', 'Your browser does not support the audio element.')}
+                </audio>
               )}
             </div>
           ))}

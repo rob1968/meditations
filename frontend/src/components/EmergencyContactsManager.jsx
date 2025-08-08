@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { getFullUrl } from '../config/api';
+import ConfirmDialog from './ConfirmDialog';
 
 const EmergencyContactsManager = ({ user, isVisible, onClose }) => {
   const { t } = useTranslation();
@@ -17,6 +18,26 @@ const EmergencyContactsManager = ({ user, isVisible, onClose }) => {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  
+  // Confirmation dialog state
+  const [confirmState, setConfirmState] = useState({
+    show: false,
+    message: '',
+    onConfirm: null,
+    confirmText: '',
+    cancelText: ''
+  });
+
+  // Helper function to show confirmation dialog
+  const showConfirmDialog = (message, onConfirm, confirmText = t('confirm', 'Bevestigen'), cancelText = t('cancel', 'Annuleren')) => {
+    setConfirmState({
+      show: true,
+      message,
+      onConfirm,
+      confirmText,
+      cancelText
+    });
+  };
 
   useEffect(() => {
     if (isVisible && user) {
@@ -76,20 +97,23 @@ const EmergencyContactsManager = ({ user, isVisible, onClose }) => {
   };
 
   const handleDelete = async (contactId) => {
-    if (!window.confirm(t('confirmDeleteContact'))) return;
+    showConfirmDialog(
+      t('confirmDeleteContact', 'Weet je zeker dat je dit noodcontact wilt verwijderen?'),
+      async () => {
+        try {
+          const response = await axios.delete(
+            getFullUrl(`/api/emergency-contacts/${user.id}/${contactId}`)
+          );
 
-    try {
-      const response = await axios.delete(
-        getFullUrl(`/api/emergency-contacts/${user.id}/${contactId}`)
-      );
-
-      if (response.data.success) {
-        setContacts(response.data.contacts);
+          if (response.data.success) {
+            setContacts(response.data.contacts);
+          }
+        } catch (error) {
+          console.error('Error deleting emergency contact:', error);
+          setError(t('failedToDeleteContact'));
+        }
       }
-    } catch (error) {
-      console.error('Error deleting emergency contact:', error);
-      setError(t('failedToDeleteContact'));
-    }
+    );
   };
 
   const handleEdit = (contact) => {
@@ -299,6 +323,21 @@ const EmergencyContactsManager = ({ user, isVisible, onClose }) => {
           )}
         </div>
       </div>
+      
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        message={confirmState.message}
+        visible={confirmState.show}
+        onConfirm={() => {
+          if (confirmState.onConfirm) {
+            confirmState.onConfirm();
+          }
+          setConfirmState({ ...confirmState, show: false });
+        }}
+        onCancel={() => setConfirmState({ ...confirmState, show: false })}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+      />
     </div>
   );
 };

@@ -110,6 +110,16 @@ const sharedMeditationSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  plays: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    playedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   ratings: [{
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -173,6 +183,11 @@ sharedMeditationSchema.virtual('ratingCount').get(function() {
   return this.ratings ? this.ratings.length : 0;
 });
 
+// Virtual for play count
+sharedMeditationSchema.virtual('playCount').get(function() {
+  return this.plays ? this.plays.length : 0;
+});
+
 // Method to check if user has liked the meditation
 sharedMeditationSchema.methods.isLikedBy = function(userId) {
   return this.likes.some(like => like.userId.toString() === userId.toString());
@@ -202,6 +217,20 @@ sharedMeditationSchema.methods.removeLike = function(userId) {
 sharedMeditationSchema.methods.addDownload = function(userId) {
   if (!this.isDownloadedBy(userId)) {
     this.downloads.push({ userId });
+    return this.save();
+  }
+  return Promise.resolve(this);
+};
+
+// Method to check if user has played the meditation
+sharedMeditationSchema.methods.isPlayedBy = function(userId) {
+  return this.plays.some(play => play.userId.toString() === userId.toString());
+};
+
+// Method to add a play (only once per unique user)
+sharedMeditationSchema.methods.addPlay = function(userId) {
+  if (!this.isPlayedBy(userId)) {
+    this.plays.push({ userId });
     return this.save();
   }
   return Promise.resolve(this);

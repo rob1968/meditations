@@ -300,10 +300,10 @@
   "fastTempo": "Más Rápido",
   "saveText": "Guardar Texto",
   "voiceJournals": "Diarios",
-  "reviewDescription": "Revisa tus opciones antes de generar el audio",
+  "reviewDescription": "Revisar opciones antes de generar",
   "textLength": "{{count}} caracteres",
   "tempo": "Tempo",
-  "noBackground": "Sin fondo",
+  "noBackground": "Sin música",
   "stepType": "Tipo",
   "stepText": "Texto",
   "stepVoice": "Voz",
@@ -343,7 +343,7 @@
   "notSet": "Sin configurar",
   "yearsOld": "años",
   "loadingBackgrounds": "Cargando fondos...",
-  "noBackgroundsAvailable": "No hay fondos disponibles",
+  "noBackgroundsAvailable": "No hay música disponible",
   "optional": "opcional",
   "monthlyStatsReset": "Estadísticas mensuales se reinician el",
   "failedToLoadTTSInfo": "Error al cargar información de TTS",
@@ -506,6 +506,7 @@
   "failedToSaveEntry": "No se pudo guardar la entrada del diario",
   "confirmDeleteEntry": "¿Estás seguro de que quieres eliminar esta entrada del diario?",
   "failedToDeleteEntry": "No se pudo eliminar la entrada del diario",
+  "confirmDeleteBackground": "¿Estás seguro de que quieres eliminar esta música de fondo?",
   "insufficientTokensAudio": "Créditos insuficientes. Necesitas 1 crédito para generar audio.",
   "failedToGenerateAudio": "No se pudo generar el audio",
   "needAudioToShare": "Necesitas generar audio antes de compartir",
@@ -741,5 +742,6 @@
   "checkFailed": "Verificación fallida, inténtelo de nuevo",
   "failedToUpdateContact": "Error al actualizar contacto de emergencia",
   "failedToAddContact": "Error al añadir contacto de emergencia",
-  "failedToDeleteContact": "Error al eliminar contacto de emergencia"
+  "failedToDeleteContact": "Error al eliminar contacto de emergencia",
+  "played": "Reproducido"
 }

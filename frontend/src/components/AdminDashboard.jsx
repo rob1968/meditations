@@ -275,8 +275,6 @@ const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxCl
       <PageHeader 
         user={user}
         onProfileClick={onProfileClick}
-        title={t('adminDashboard', 'Admin Dashboard')}
-        subtitle={t('meditationModerationCenter', 'Meditation Moderation Center')}
         unreadCount={unreadCount}
         onInboxClick={onInboxClick}
         onCreateClick={onCreateClick}

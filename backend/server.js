@@ -34,7 +34,7 @@ const corsOptions = {
   origin: ['https://meditations.pihappy.me', 'http://localhost:3002', 'http://127.0.0.1:3002'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-user-id'],
   exposedHeaders: ['Content-Length', 'X-JSON-Parse-Time'],
   maxAge: 86400 // 24 hours
 };
@@ -63,6 +63,7 @@ app.use('/assets/images/shared', express.static(path.join(__dirname, '../assets/
 // Serve static files for journal audio
 app.use('/assets/audio/journals', express.static(path.join(__dirname, '../assets/audio/journals')));
 app.use('/api/meditation', meditationRoute);
+app.use('/api', meditationRoute); // Also mount on /api for direct access to custom-backgrounds routes
 app.use('/api/auth', authRoute);
 app.use('/api/user-meditations', userMeditationsRoute);
 app.use('/api/community', communityRoute);

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { getFullUrl, API_ENDPOINTS } from '../config/api';
 
-const VoiceSlider = ({ voices, selectedVoiceId, onVoiceSelect, voiceProvider, currentMeditationType, speechTempo, onTempoChange, isGeneratingAudio, genderFilter, onGenderFilterChange }) => {
+const VoiceSlider = ({ voices, selectedVoiceId, onVoiceSelect, voiceProvider, currentMeditationType, isGeneratingAudio, genderFilter, onGenderFilterChange }) => {
   const { t, i18n } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -18,30 +18,6 @@ const VoiceSlider = ({ voices, selectedVoiceId, onVoiceSelect, voiceProvider, cu
   const [swipeDirection, setSwipeDirection] = useState(null);
   const cardRef = useRef(null);
 
-  // Tempo values and functions
-  const tempoValues = [0.75, 0.80, 0.85, 0.90, 0.95, 1.00, 1.05, 1.10];
-  
-  const getTempoDescription = (value) => {
-    if (value <= 0.80) return t('verySlowTempo', 'Zeer langzaam');
-    if (value <= 0.90) return t('slowTempo', 'Langzaam');
-    if (value <= 1.00) return t('normalTempo', 'Normaal');
-    return t('fastTempo', 'Sneller');
-  };
-
-  const getTempoEmoji = (value) => {
-    if (value <= 0.80) return '🐌';
-    if (value <= 0.90) return '🚶';
-    if (value <= 1.00) return '⚡';
-    return '🏃';
-  };
-
-  const handleSliderChange = (e) => {
-    const index = parseInt(e.target.value);
-    const value = tempoValues[index];
-    onTempoChange(value);
-  };
-
-  const currentTempoIndex = tempoValues.findIndex(val => val === speechTempo);
 
   // Filter voices based on gender filter
   const filteredVoices = voices.filter(voice => 
@@ -186,7 +162,7 @@ const VoiceSlider = ({ voices, selectedVoiceId, onVoiceSelect, voiceProvider, cu
   // These are now handled by useEffect with proper event listeners
 
   const generatePreview = async (voiceId, language) => {
-    const cacheKey = `${voiceId}-${language}-${speechTempo}`;
+    const cacheKey = `${voiceId}-${language}`;
     
     // Check cache first
     if (previewCache.has(cacheKey)) {
@@ -205,8 +181,7 @@ const VoiceSlider = ({ voices, selectedVoiceId, onVoiceSelect, voiceProvider, cu
         getFullUrl(endpoint),
         {
           voiceId,
-          language,
-          speechTempo
+          language
         },
         {
           responseType: 'blob'
@@ -310,7 +285,8 @@ const VoiceSlider = ({ voices, selectedVoiceId, onVoiceSelect, voiceProvider, cu
   if (!currentVoice) return null;
 
   return (
-    <div className="voice-slider" onKeyDown={handleKeyDown} tabIndex="0">
+    <div className="step-container voice-step">
+      <div className="voice-slider" onKeyDown={handleKeyDown} tabIndex="0">
       <div className="voice-slider-header">
         <h2 className="section-title">🎤 {t('voiceLabel', 'Voice')}</h2>
         <div className="voice-counter">
@@ -391,24 +367,7 @@ const VoiceSlider = ({ voices, selectedVoiceId, onVoiceSelect, voiceProvider, cu
           </button>
         </div>
       </div>
-
-      {/* Tempo Filter - Moved after voice card */}
-      <div className="voice-tempo-filter">
-        <div className="tempo-filter-label">{t('voiceSpeed', 'Voice speed')}</div>
-        <div className="tempo-filter-options">
-          {tempoValues.map((tempo) => (
-            <button
-              key={tempo}
-              className={`tempo-filter-btn ${speechTempo === tempo ? 'active' : ''}`}
-              onClick={() => onTempoChange(tempo)}
-              disabled={isGeneratingAudio || isPlaying || isGeneratingPreview}
-            >
-              {tempo}x
-            </button>
-          ))}
-        </div>
       </div>
-      
     </div>
   );
 };

@@ -5,6 +5,45 @@ import axios from 'axios';
 import { getFullUrl } from '../config/api';
 
 const JournalHub = ({ user }) => {
+  // CSS for custom scrollbar - added as style tag
+  const customScrollbarCSS = `
+    .mood-slider-container::-webkit-scrollbar {
+      height: 6px;
+    }
+    .mood-slider-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .mood-slider-container::-webkit-scrollbar-thumb {
+      background: #CBD5E0;
+      border-radius: 3px;
+    }
+    .mood-slider-container::-webkit-scrollbar-thumb:hover {
+      background: #A0AEC0;
+    }
+    .mood-button {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+  `;
+
+  // Add the CSS to the document head if not already present
+  React.useEffect(() => {
+    const styleId = 'mood-slider-styles';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = customScrollbarCSS;
+      document.head.appendChild(style);
+    }
+    
+    // Cleanup function
+    return () => {
+      const existingStyle = document.getElementById(styleId);
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    };
+  }, []);
   const [sharedEntries, setSharedEntries] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -16,21 +55,21 @@ const JournalHub = ({ user }) => {
   const { t } = useTranslation();
 
   const moods = [
-    { value: 'happy', emoji: '😊', label: t('happy', 'Happy') },
-    { value: 'calm', emoji: '😌', label: t('calm', 'Calm') },
-    { value: 'peaceful', emoji: '😇', label: t('peaceful', 'Peaceful') },
-    { value: 'grateful', emoji: '🥰', label: t('grateful', 'Grateful') },
-    { value: 'reflective', emoji: '🤔', label: t('reflective', 'Reflective') },
-    { value: 'energetic', emoji: '😄', label: t('energetic', 'Energetic') },
-    { value: 'stressed', emoji: '😫', label: t('stressed', 'Stressed') },
-    { value: 'anxious', emoji: '😰', label: t('anxious', 'Anxious') },
-    { value: 'sad', emoji: '😢', label: t('sad', 'Sad') },
-    { value: 'angry', emoji: '😠', label: t('angry', 'Angry') },
-    { value: 'frustrated', emoji: '😤', label: t('frustrated', 'Frustrated') },
-    { value: 'confused', emoji: '😕', label: t('confused', 'Confused') },
-    { value: 'lonely', emoji: '😔', label: t('lonely', 'Lonely') },
-    { value: 'mixed', emoji: '😐', label: t('mixed', 'Mixed') },
-    { value: 'neutral', emoji: '😶', label: t('neutral', 'Neutral') }
+    { value: 'happy', emoji: '😊', label: t('happy', 'Happy'), color: '#FFD700' }, // Gold
+    { value: 'calm', emoji: '😌', label: t('calm', 'Calm'), color: '#87CEEB' }, // Sky Blue
+    { value: 'peaceful', emoji: '😇', label: t('peaceful', 'Peaceful'), color: '#98FB98' }, // Pale Green
+    { value: 'grateful', emoji: '🥰', label: t('grateful', 'Grateful'), color: '#FFB6C1' }, // Light Pink
+    { value: 'reflective', emoji: '🤔', label: t('reflective', 'Reflective'), color: '#DDA0DD' }, // Plum
+    { value: 'energetic', emoji: '😄', label: t('energetic', 'Energetic'), color: '#FF6347' }, // Tomato
+    { value: 'stressed', emoji: '😫', label: t('stressed', 'Stressed'), color: '#FFA500' }, // Orange
+    { value: 'anxious', emoji: '😰', label: t('anxious', 'Anxious'), color: '#FFE4B5' }, // Moccasin
+    { value: 'sad', emoji: '😢', label: t('sad', 'Sad'), color: '#6495ED' }, // Cornflower Blue
+    { value: 'angry', emoji: '😠', label: t('angry', 'Angry'), color: '#DC143C' }, // Crimson
+    { value: 'frustrated', emoji: '😤', label: t('frustrated', 'Frustrated'), color: '#CD5C5C' }, // Indian Red
+    { value: 'confused', emoji: '😕', label: t('confused', 'Confused'), color: '#D2B48C' }, // Tan
+    { value: 'lonely', emoji: '😔', label: t('lonely', 'Lonely'), color: '#778899' }, // Light Slate Gray
+    { value: 'mixed', emoji: '😐', label: t('mixed', 'Mixed'), color: '#BC8F8F' }, // Rosy Brown
+    { value: 'neutral', emoji: '😶', label: t('neutral', 'Neutral'), color: '#C0C0C0' } // Silver
   ];
 
   const languages = [
@@ -253,14 +292,103 @@ const JournalHub = ({ user }) => {
       <div className="journal-hub-filters">
         <div className="filter-group">
           <label>{t('mood', 'Stemming')}:</label>
-          <select value={filterMood} onChange={(e) => setFilterMood(e.target.value)}>
-            <option value="all">{t('allMoods', 'Alle stemmingen')}</option>
+          
+          {/* Mood Slider */}
+          <div 
+            className="mood-slider-container"
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '4px',
+              padding: '8px 0',
+              maxWidth: '100%',
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#CBD5E0 transparent'
+            }}
+          >
+            {/* All Moods Button */}
+            <button
+              className={`mood-button ${filterMood === 'all' ? 'active' : ''}`}
+              onClick={() => setFilterMood('all')}
+              style={{
+                backgroundColor: filterMood === 'all' ? '#4F46E5' : '#F3F4F6',
+                color: filterMood === 'all' ? 'white' : '#374151',
+                border: '2px solid transparent',
+                borderRadius: '12px',
+                padding: '8px 16px',
+                margin: '4px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontSize: '14px',
+                fontWeight: '500',
+                minWidth: '60px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+              onMouseOver={(e) => {
+                if (filterMood !== 'all') {
+                  e.target.style.backgroundColor = '#E5E7EB';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (filterMood !== 'all') {
+                  e.target.style.backgroundColor = '#F3F4F6';
+                }
+              }}
+            >
+              🌈 {t('allMoods', 'Alle')}
+            </button>
+
+            {/* Individual Mood Buttons */}
             {moods.map(mood => (
-              <option key={mood.value} value={mood.value}>
-                {mood.emoji} {mood.label}
-              </option>
+              <button
+                key={mood.value}
+                className={`mood-button ${filterMood === mood.value ? 'active' : ''}`}
+                onClick={() => setFilterMood(mood.value)}
+                style={{
+                  backgroundColor: filterMood === mood.value ? mood.color : `${mood.color}40`,
+                  color: filterMood === mood.value ? (mood.value === 'happy' || mood.value === 'anxious' ? '#333' : 'white') : '#333',
+                  border: `2px solid ${filterMood === mood.value ? mood.color : 'transparent'}`,
+                  borderRadius: '12px',
+                  padding: '8px 12px',
+                  margin: '4px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontSize: '14px',
+                  fontWeight: filterMood === mood.value ? '600' : '500',
+                  minWidth: '60px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: filterMood === mood.value ? `0 4px 12px ${mood.color}40` : 'none',
+                  transform: filterMood === mood.value ? 'translateY(-1px)' : 'none'
+                }}
+                onMouseOver={(e) => {
+                  if (filterMood !== mood.value) {
+                    e.target.style.backgroundColor = `${mood.color}60`;
+                    e.target.style.transform = 'translateY(-1px)';
+                    e.target.style.boxShadow = `0 2px 8px ${mood.color}30`;
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (filterMood !== mood.value) {
+                    e.target.style.backgroundColor = `${mood.color}40`;
+                    e.target.style.transform = 'none';
+                    e.target.style.boxShadow = 'none';
+                  }
+                }}
+                title={mood.label}
+              >
+                <span style={{ fontSize: '16px' }}>{mood.emoji}</span>
+                <span style={{ fontSize: '12px' }}>{mood.label}</span>
+              </button>
             ))}
-          </select>
+          </div>
         </div>
         <div className="filter-group">
           <label>{t('language', 'Taal')}:</label>

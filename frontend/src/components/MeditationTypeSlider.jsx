@@ -185,7 +185,8 @@ const MeditationTypeSlider = ({ selectedType, onTypeSelect }) => {
   if (!currentType) return null;
 
   return (
-    <div className="meditation-type-slider" onKeyDown={handleKeyDown} tabIndex="0">
+    <div className="step-container meditation-type-step">
+      <div className="meditation-type-slider" onKeyDown={handleKeyDown} tabIndex="0">
       <div className="meditation-type-slider-header">
         <h2 className="section-title">🧘‍♀️ {t('meditationType', 'Meditation Type')}</h2>
         <div className="meditation-type-counter">
@@ -228,6 +229,7 @@ const MeditationTypeSlider = ({ selectedType, onTypeSelect }) => {
             ▶
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

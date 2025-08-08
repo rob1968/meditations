@@ -244,10 +244,10 @@
   "fastTempo": "तेज़",
   "saveText": "टेक्स्ट सेव करें",
   "voiceJournals": "पत्रिकाएं",
-  "reviewDescription": "ऑडियो जनरेट करने से पहले अपनी पसंद की समीक्षा करें",
+  "reviewDescription": "जनरेट करने से पहले समीक्षा",
   "textLength": "{{count}} अक्षर",
   "tempo": "गति",
-  "noBackground": "कोई पृष्ठभूमि नहीं",
+  "noBackground": "कोई संगीत नहीं",
   "stepType": "प्रकार",
   "stepText": "पाठ",
   "stepVoice": "आवाज़",
@@ -288,7 +288,7 @@
   "notSet": "सेट नहीं किया गया",
   "yearsOld": "वर्ष की आयु",
   "loadingBackgrounds": "बैकग्राउंड लोड हो रहा है...",
-  "noBackgroundsAvailable": "कोई बैकग्राउंड उपलब्ध नहीं",
+  "noBackgroundsAvailable": "कोई संगीत उपलब्ध नहीं",
   "optional": "（वैकल्पिक）",
   "starterTier": "शुरुआती",
   "popularTier": "लोकप्रिय",
@@ -369,6 +369,7 @@
   "failedShareMeditation": "ध्यान साझा करने में असफल। कृपया पुनः प्रयास करें।",
   "failedToApproveMeditation": "ध्यान अनुमोदित करने में असफल",
   "failedToDeleteEntry": "डायरी प्रविष्टि हटाने में विफल",
+  "confirmDeleteBackground": "क्या आप वाकई इस पृष्ठभूमि संगीत को हटाना चाहते हैं?",
   "failedToGenerateAudio": "ऑडियो जनरेट करने में विफल",
   "failedToLikeEntry": "दिनचर्या प्रविष्टि को पसंद करने में असफल",
   "failedToLikeMeditation": "ध्यान को पसंद करने में असफल",
@@ -727,5 +728,6 @@
   "checkFailed": "जाँच विफल, पुनः प्रयास करें",
   "failedToUpdateContact": "आपातकालीन संपर्क अपडेट करने में विफल",
   "failedToAddContact": "आपातकालीन संपर्क जोड़ने में विफल",
-  "failedToDeleteContact": "आपातकालीन संपर्क हटाने में विफल"
+  "failedToDeleteContact": "आपातकालीन संपर्क हटाने में विफल",
+  "played": "चलाया गया"
 }

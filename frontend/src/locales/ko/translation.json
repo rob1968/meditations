@@ -227,10 +227,10 @@
   "saveText": "텍스트 저장",
   "voiceJournals": "저널",
   "meditations": "명상",
-  "reviewDescription": "오디오를 생성하기 전에 선택 사항을 검토하세요",
+  "reviewDescription": "생성 전 선택 검토",
   "textLength": "{{count}} 글자",
   "tempo": "템포",
-  "noBackground": "배경 없음",
+  "noBackground": "음악 없음",
   "stepType": "유형",
   "stepText": "텍스트",
   "stepVoice": "음성",
@@ -271,7 +271,7 @@
   "notSet": "설정되지 않음",
   "yearsOld": "세",
   "loadingBackgrounds": "배경 로드 중...",
-  "noBackgroundsAvailable": "사용 가능한 배경이 없습니다",
+  "noBackgroundsAvailable": "사용 가능한 음악이 없습니다",
   "optional": "（선택사항）",
   "monthlyStatsReset": "월간 통계 재설정 날짜",
   "failedToLoadTTSInfo": "TTS 티어 정보 로드 실패",
@@ -483,6 +483,7 @@
   "failedToSaveEntry": "일기 항목 저장 실패",
   "confirmDeleteEntry": "이 일기 항목을 삭제하시겠습니까?",
   "failedToDeleteEntry": "일기 항목 삭제 실패",
+  "confirmDeleteBackground": "이 배경 음악을 삭제하시겠습니까?",
   "insufficientTokensAudio": "크레딧이 부족합니다. 오디오 생성에는 1크레딧이 필요합니다.",
   "failedToGenerateAudio": "오디오 생성 실패",
   "needAudioToShare": "공유하기 전에 오디오를 생성해야 합니다",
@@ -727,5 +728,6 @@
   "checkFailed": "확인에 실패했습니다. 다시 시도해 주세요",
   "failedToUpdateContact": "비상 연락처 업데이트에 실패했습니다",
   "failedToAddContact": "비상 연락처 추가에 실패했습니다",
-  "failedToDeleteContact": "비상 연락처 삭제에 실패했습니다"
+  "failedToDeleteContact": "비상 연락처 삭제에 실패했습니다",
+  "played": "재생됨"
 }

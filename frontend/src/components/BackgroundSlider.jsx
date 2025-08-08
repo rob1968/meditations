@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getAssetUrl } from '../config/api';
+import ConfirmDialog from './ConfirmDialog';
+import Alert from './Alert';
 
 const BackgroundSlider = forwardRef(({ 
   selectedBackground, 
@@ -11,6 +13,7 @@ const BackgroundSlider = forwardRef(({
   savedCustomBackgrounds,
   backgroundsLoading,
   onCustomBackgroundUpload,
+  onCustomBackgroundDelete,
   showUploadFirst = true, // New prop to show upload card first by default
   onStopAllAudio
 }, ref) => {
@@ -36,6 +39,38 @@ const BackgroundSlider = forwardRef(({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [pendingNavigateToUpload, setPendingNavigateToUpload] = useState(null);
+
+  // Confirmation dialog state
+  const [confirmState, setConfirmState] = useState({
+    show: false,
+    message: '',
+    onConfirm: null,
+    confirmText: '',
+    cancelText: ''
+  });
+
+  // Helper function to show confirmation dialog
+  const showConfirmDialog = (message, onConfirm, confirmText = t('confirm', 'Bevestigen'), cancelText = t('cancel', 'Annuleren')) => {
+    setConfirmState({
+      show: true,
+      message,
+      onConfirm,
+      confirmText,
+      cancelText
+    });
+  };
+
+  // Alert state
+  const [alertState, setAlertState] = useState({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+
+  // Helper function to show alert
+  const showAlert = (message, type = 'error') => {
+    setAlertState({ show: true, message, type });
+  };
 
   // Remove upload card from slider options
 
@@ -85,7 +120,16 @@ const BackgroundSlider = forwardRef(({
     return [];
   }, [customBackground, customBackgroundFile, t]);
 
-  // Create upload card as first option
+  // Create no music option as first
+  const noMusicCard = {
+    value: 'none',
+    icon: '🔇',
+    label: t('noMusic', 'Geen muziek'),
+    description: t('noMusicDesc', 'Meditatie zonder achtergrondmuziek'),
+    color: '#64748b'
+  };
+
+  // Create upload card as second option
   const uploadCard = {
     value: 'upload',
     icon: '📁',
@@ -94,9 +138,10 @@ const BackgroundSlider = forwardRef(({
     color: '#3b82f6'
   };
 
-  // Combine all background options: upload card first, then current custom + all metadata-based backgrounds
+  // Combine all background options: no music first, then upload card, then current custom + all metadata-based backgrounds
   const backgroundOptions = useMemo(() => {
     const options = [
+      noMusicCard,
       uploadCard,
       ...currentCustomOptions,
       ...allBackgroundOptions
@@ -216,7 +261,10 @@ const BackgroundSlider = forwardRef(({
     
     if (backgroundOptions[newIndex]) {
       setCurrentIndex(newIndex);
-      handleBackgroundSelection(backgroundOptions[newIndex]);
+      // Only call handleBackgroundSelection if it's not the upload card
+      if (backgroundOptions[newIndex].value !== 'upload') {
+        handleBackgroundSelection(backgroundOptions[newIndex]);
+      }
     }
     
     setTimeout(() => {
@@ -238,13 +286,48 @@ const BackgroundSlider = forwardRef(({
     
     if (backgroundOptions[newIndex]) {
       setCurrentIndex(newIndex);
-      handleBackgroundSelection(backgroundOptions[newIndex]);
+      // Only call handleBackgroundSelection if it's not the upload card
+      if (backgroundOptions[newIndex].value !== 'upload') {
+        handleBackgroundSelection(backgroundOptions[newIndex]);
+      }
     }
     
     setTimeout(() => {
       setIsTransitioning(false);
       setIsManualSwipe(false);
     }, 300);
+  };
+
+  const handleDeleteBackground = async (backgroundOption) => {
+    if (!backgroundOption.savedBackground || backgroundOption.isSystemBackground) {
+      return;
+    }
+
+    showConfirmDialog(
+      t('confirmDeleteBackground', 'Weet je zeker dat je deze achtergrondmuziek wilt verwijderen?'),
+      async () => {
+        try {
+          // Stop playing if this background is currently playing
+          if (isPlaying) {
+            stopBackgroundSound();
+          }
+
+          // Call the parent component's delete handler
+          if (onCustomBackgroundDelete) {
+            await onCustomBackgroundDelete(backgroundOption.savedBackground.id);
+          }
+
+          // Move to the next or previous card after deletion
+          if (backgroundOptions.length > 1) {
+            const nextIndex = currentIndex > 0 ? currentIndex - 1 : 0;
+            setCurrentIndex(nextIndex);
+          }
+        } catch (error) {
+          console.error('Error deleting background:', error);
+          showAlert(t('errorDeletingBackground', 'Fout bij het verwijderen van achtergrond'));
+        }
+      }
+    );
   };
 
   const handleBackgroundSelection = useCallback((backgroundOption) => {
@@ -259,6 +342,14 @@ const BackgroundSlider = forwardRef(({
       isSystem: backgroundOption.savedBackground?.isSystemBackground,
       hasMetadata: !!backgroundOption.savedBackground
     });
+    
+    // Handle "no music" option
+    if (backgroundOption.value === 'none') {
+      if (onBackgroundSelect) {
+        onBackgroundSelect('none');
+      }
+      return;
+    }
     
     // All backgrounds now have savedBackground metadata
     if (backgroundOption.savedBackground) {
@@ -457,8 +548,8 @@ const BackgroundSlider = forwardRef(({
   };
 
   const playBackgroundSound = () => {
-    // Don't play sound for upload card
-    if (currentBackground.value === 'upload') {
+    // Don't play sound for upload card or no music option
+    if (currentBackground.value === 'upload' || currentBackground.value === 'none') {
       return;
     }
     
@@ -656,16 +747,57 @@ const BackgroundSlider = forwardRef(({
             ◀
           </button>
           
-          <div className="background-info">
+          <div className="background-info" style={{ position: 'relative' }}>
             <div className="background-header">
               <div className="background-icon" style={{ color: currentBackground.color }}>
                 {currentBackground.icon}
               </div>
               <div className="background-name">{currentBackground.label}</div>
+              {/* Delete button for custom backgrounds */}
+              {currentBackground.savedBackground && !currentBackground.isSystemBackground && (
+                <button
+                  className="background-delete-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteBackground(currentBackground);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    background: 'rgba(239, 68, 68, 0.9)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '28px',
+                    height: '28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    zIndex: 10,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(220, 38, 38, 1)';
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.9)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                  aria-label={t('deleteBackground', 'Delete background')}
+                  title={t('deleteBackground', 'Delete background')}
+                >
+                  ×
+                </button>
+              )}
             </div>
             
             
-            {/* Upload Button for upload card, Play Button for others */}
+            {/* Upload Button for upload card, Select Button for none, Play Button for others */}
             <div className="background-preview">
               {currentBackground.value === 'upload' ? (
                 <button 
@@ -687,6 +819,8 @@ const BackgroundSlider = forwardRef(({
                 >
                   ⬆️ {t('upload', 'Upload')}
                 </button>
+              ) : currentBackground.value === 'none' ? (
+                null
               ) : (
                 <button 
                   className="background-play-button"
@@ -1020,6 +1154,30 @@ const BackgroundSlider = forwardRef(({
           </div>
         </div>
       )}
+      
+      {/* Alert */}
+      <Alert
+        message={alertState.message}
+        type={alertState.type}
+        visible={alertState.show}
+        onClose={() => setAlertState({ show: false, message: '', type: 'success' })}
+        position="fixed"
+      />
+      
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        message={confirmState.message}
+        visible={confirmState.show}
+        onConfirm={() => {
+          if (confirmState.onConfirm) {
+            confirmState.onConfirm();
+          }
+          setConfirmState({ ...confirmState, show: false });
+        }}
+        onCancel={() => setConfirmState({ ...confirmState, show: false })}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+      />
       </div>
     </>
   );

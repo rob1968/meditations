@@ -172,7 +172,6 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
       <PageHeader 
         user={user}
         onProfileClick={onProfileClick}
-        title={t('inbox', 'Inbox')}
         unreadCount={headerUnreadCount}
         onInboxClick={onInboxClick}
         onCreateClick={onCreateClick}

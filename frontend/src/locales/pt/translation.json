@@ -262,6 +262,7 @@
   "failedToSaveEntry": "Falha ao salvar entrada do diário",
   "confirmDeleteEntry": "Tem certeza de que deseja excluir esta entrada do diário?",
   "failedToDeleteEntry": "Falha ao excluir entrada do diário",
+  "confirmDeleteBackground": "Tem certeza de que deseja excluir esta música de fundo?",
   "failedToGenerateAudio": "Falha ao gerar áudio",
   "needAudioToShare": "Você precisa gerar áudio antes de compartilhar",
   "entrySharedSuccess": "Entrada do diário compartilhada com sucesso!",
@@ -340,10 +341,10 @@
   "fastTempo": "Mais Rápido",
   "saveText": "Salvar Texto",
   "voiceJournals": "Diários",
-  "reviewDescription": "Revise suas escolhas antes de gerar o áudio",
+  "reviewDescription": "Revisar escolhas antes de gerar",
   "textLength": "{{count}} caracteres",
   "tempo": "Tempo",
-  "noBackground": "Sem fundo",
+  "noBackground": "Sem música",
   "stepType": "Tipo",
   "stepText": "Texto",
   "stepVoice": "Voz",
@@ -384,7 +385,7 @@
   "notSet": "Não definido",
   "yearsOld": "anos",
   "loadingBackgrounds": "Carregando fundos...",
-  "noBackgroundsAvailable": "Nenhum fundo disponível",
+  "noBackgroundsAvailable": "Nenhuma música disponível",
   "optional": "opcional",
   "monthlyStatsReset": "Estatísticas mensais redefinidas em",
   "failedToLoadTTSInfo": "Falha ao carregar informações do nível TTS",
@@ -728,5 +729,6 @@
   "checkFailed": "Verificação falhou, tente novamente",
   "failedToUpdateContact": "Falha ao atualizar contato de emergência",
   "failedToAddContact": "Falha ao adicionar contato de emergência",
-  "failedToDeleteContact": "Falha ao excluir contato de emergência"
+  "failedToDeleteContact": "Falha ao excluir contato de emergência",
+  "played": "Reproduzido"
 }

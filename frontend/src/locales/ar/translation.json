@@ -244,10 +244,10 @@
   "fastTempo": "أسرع",
   "saveText": "احفظ النص",
   "voiceJournals": "اليوميات",
-  "reviewDescription": "راجع اختياراتك قبل إنشاء الصوت",
+  "reviewDescription": "راجع الاختيارات قبل التوليد",
   "textLength": "{{count}} حرف",
   "tempo": "الإيقاع",
-  "noBackground": "بدون خلفية",
+  "noBackground": "بدون موسيقى",
   "stepType": "النوع",
   "stepText": "النص",
   "stepVoice": "الصوت",
@@ -288,7 +288,7 @@
   "notSet": "غير محدد",
   "yearsOld": "سنة",
   "loadingBackgrounds": "جاري تحميل الخلفيات...",
-  "noBackgroundsAvailable": "لا توجد خلفيات متاحة",
+  "noBackgroundsAvailable": "لا توجد موسيقى متاحة",
   "optional": "（اختياري）",
   "starterTier": "المبتدئ",
   "popularTier": "الشائع",
@@ -396,6 +396,7 @@
   "failedToSaveEntry": "فشل حفظ مدخل اليوميات",
   "confirmDeleteEntry": "هل أنت متأكد من أنك تريد حذف هذا المدخل؟",
   "failedToDeleteEntry": "فشل حذف مدخل اليوميات",
+  "confirmDeleteBackground": "هل أنت متأكد أنك تريد حذف موسيقى الخلفية هذه؟",
   "insufficientTokensAudio": "رصيد غير كافٍ. تحتاج إلى رصيد واحد لتوليد الصوت.",
   "failedToGenerateAudio": "فشل توليد الصوت",
   "needAudioToShare": "تحتاج إلى توليد الصوت قبل المشاركة",
@@ -737,5 +738,6 @@
   "checkFailed": "فشل الفحص، حاول مرة أخرى",
   "failedToUpdateContact": "فشل في تحديث جهة الاتصال الطارئة",
   "failedToAddContact": "فشل في إضافة جهة الاتصال الطارئة",
-  "failedToDeleteContact": "فشل في حذف جهة الاتصال الطارئة"
+  "failedToDeleteContact": "فشل في حذف جهة الاتصال الطارئة",
+  "played": "تم التشغيل"
 }

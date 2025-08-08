@@ -2071,7 +2071,6 @@ const handleSaveEntry = async () => {
       <PageHeader 
         user={user}
         onProfileClick={onProfileClick}
-        title={t('dagboek', 'Dagboek')}
         unreadCount={unreadCount}
         onInboxClick={onInboxClick}
         onCreateClick={onCreateClick}

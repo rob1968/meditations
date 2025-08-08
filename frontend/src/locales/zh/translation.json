@@ -308,10 +308,10 @@
   "saveText": "保存文本",
   "voiceJournals": "日记",
   "meditations": "円想",
-  "reviewDescription": "在生成音频之前查看您的选择",
+  "reviewDescription": "生成前查看选择",
   "textLength": "{{count}} 个字符",
   "tempo": "节奏",
-  "noBackground": "无背景",
+  "noBackground": "无音乐",
   "stepType": "类型",
   "stepText": "文本",
   "stepVoice": "声音",
@@ -352,7 +352,7 @@
   "notSet": "未设置",
   "yearsOld": "岁",
   "loadingBackgrounds": "正在加载背景...",
-  "noBackgroundsAvailable": "无可用背景",
+  "noBackgroundsAvailable": "无可用音乐",
   "optional": "（可选）",
   "monthlyStatsReset": "月度统计重置日期",
   "failedToLoadTTSInfo": "加载TTS层级信息失败",
@@ -490,6 +490,7 @@
   "failedToSaveEntry": "无法保存日记条目",
   "confirmDeleteEntry": "您确定要删除此日记条目吗？",
   "failedToDeleteEntry": "无法删除日记条目",
+  "confirmDeleteBackground": "您确定要删除这个背景音乐吗？",
   "insufficientTokensAudio": "积分不足。您需要1个积分来生成音频。",
   "failedToGenerateAudio": "无法生成音频",
   "needAudioToShare": "您需要先生成音频才能分享",
@@ -736,5 +737,6 @@
   "checkFailed": "检查失败，请重试",
   "failedToUpdateContact": "更新紧急联系人失败",
   "failedToAddContact": "添加紧急联系人失败",
-  "failedToDeleteContact": "删除紧急联系人失败"
+  "failedToDeleteContact": "删除紧急联系人失败",
+  "played": "已播放"
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { getFullUrl } from '../config/api';
+import Alert from './Alert';
 
 const EmergencyModal = ({ 
   user, 
@@ -17,6 +18,18 @@ const EmergencyModal = ({
   const [emergencyResponse, setEmergencyResponse] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [showResources, setShowResources] = useState(false);
+  
+  // Alert state
+  const [alertState, setAlertState] = useState({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+
+  // Helper function to show alert
+  const showAlert = (message, type = 'info') => {
+    setAlertState({ show: true, message, type });
+  };
 
   useEffect(() => {
     if (isVisible) {
@@ -87,13 +100,13 @@ const EmergencyModal = ({
       window.location.href = `tel:${contact.replace(/[^0-9]/g, '')}`;
     } else if (contact.includes('741741')) {
       // For text services, show instructions
-      alert(t('textInstructions', 'Send a text message with "HOME" to 741741'));
+      showAlert(t('textInstructions', 'Send a text message with "HOME" to 741741'));
     } else {
       // Copy contact info to clipboard
       navigator.clipboard.writeText(contact).then(() => {
-        alert(t('contactCopied', 'Contact information copied to clipboard'));
+        showAlert(t('contactCopied', 'Contact information copied to clipboard'), 'success');
       }).catch(() => {
-        alert(`${t('contact', 'Contact')}: ${contact}`);
+        showAlert(`${t('contact', 'Contact')}: ${contact}`);
       });
     }
   };
@@ -295,6 +308,15 @@ const EmergencyModal = ({
           </div>
         </div>
       </div>
+      
+      {/* Alert */}
+      <Alert
+        message={alertState.message}
+        type={alertState.type}
+        visible={alertState.show}
+        onClose={() => setAlertState({ show: false, message: '', type: 'success' })}
+        position="fixed"
+      />
     </div>
   );
 };
