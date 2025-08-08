@@ -236,7 +236,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
                       position: 'absolute', top: '-8px', right: '16px',
                       backgroundColor: '#6B46C1', color: 'white', padding: '4px 12px',
                       borderRadius: '12px', fontSize: '12px', fontWeight: 'bold'
-                    }}>POPULAR</div>
+                    }}>{t('popularTier', 'POPULAR')}</div>
                   )}
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -268,7 +268,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
               borderTop: '4px solid #6B46C1', borderRadius: '50%',
               animation: 'spin 1s linear infinite', margin: '0 auto 16px'
             }}></div>
-            <p>Processing payment...</p>
+            <p>{t('processingPayment', 'Processing payment...')}</p>
           </div>
         )}
 

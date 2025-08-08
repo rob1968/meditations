@@ -37,6 +37,17 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
     setAlertState({ show: true, message, type });
   };
   
+  // Auto-hide alert messages after 5 seconds
+  useEffect(() => {
+    if (alertState.show) {
+      const timer = setTimeout(() => {
+        setAlertState({ show: false, message: '', type: 'success' });
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [alertState.show]);
+  
   // Handle Pi payment completion
   const handlePaymentComplete = (newCreditBalance) => {
     // Update credits in state

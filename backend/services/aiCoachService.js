@@ -741,39 +741,63 @@ class AICoachService {
       }
       
       const prompt = `
-        You are an expert mood analyzer. Analyze the following journal entry text and determine the user's emotional state and mood.
+        You are an expert emotional intelligence analyst specializing in nuanced mood detection from journal entries.
+        Analyze the following text with deep understanding of human emotions, cultural context, and linguistic patterns.
+        
         ${userContextInfo}
-        Text: "${text}"
+        
+        Journal Entry: "${text}"
+        
+        Analyze this text considering:
+        1. EMOTIONAL DEPTH: Look beyond surface words to understand underlying feelings
+        2. LINGUISTIC PATTERNS: 
+           - Sentence structure (short = stress/anger, long = reflection)
+           - Punctuation usage (exclamations = excitement/anger, ellipses = uncertainty)
+           - Word repetition (emphasis on certain emotions)
+        3. CONTEXTUAL CLUES:
+           - Time references (morning energy vs evening exhaustion)
+           - Social context (alone vs with others)
+           - Activity mentions (work stress, family joy, etc.)
+        4. CULTURAL EXPRESSIONS:
+           - Consider that emotions may be expressed differently in different languages
+           - Dutch/European emotional expressions may be more reserved
+           - Look for indirect emotional indicators
+        5. MIXED EMOTIONS:
+           - People often feel multiple emotions simultaneously
+           - Detect transitions between emotional states
+           - Identify dominant vs background emotions
         
         Provide your analysis in this exact JSON format:
         {
-          "primaryMood": "happy|peaceful|grateful|reflective|energetic|stressed|anxious|sad|angry|frustrated|confused|lonely",
-          "moodScore": number_between_1_and_10,
-          "confidence": number_between_0_and_1,
-          "emotionalIndicators": ["indicator1", "indicator2", "indicator3"],
+          "primaryMood": "happy|calm|peaceful|grateful|reflective|energetic|stressed|anxious|sad|angry|frustrated|confused|lonely|mixed|neutral",
+          "moodScore": number_between_1_and_10 (1=very mild, 10=very intense),
+          "confidence": number_between_0_and_1 (your confidence in this assessment),
+          "emotionalIndicators": ["specific phrases or words that indicate emotion", "max 5 indicators"],
           "overallSentiment": "positive|neutral|negative|mixed",
-          "moodDescription": "brief description of the detected mood(s)",
+          "emotionalIntensity": number_between_1_and_5 (1=very mild, 5=very intense),
+          "moodDescription": "A compassionate, nuanced description of the emotional state",
           "detectedMoods": [
             {
-              "mood": "mood_name",
+              "mood": "mood_name from the valid list",
               "score": number_between_1_and_10,
               "strength": number_between_0_and_5,
-              "keywords": ["keyword1", "keyword2"]
+              "keywords": ["actual words from text that indicate this mood", "max 3"]
             }
           ],
-          "moodCount": number_of_detected_moods
+          "moodCount": number_of_detected_moods,
+          "emotionalTransition": "stable|improving|declining|fluctuating",
+          "suggestedFocus": "brief suggestion for emotional wellbeing based on detected mood"
         }
         
-        IMPORTANT: Return a maximum of 5 moods in the detectedMoods array, ordered by strength/confidence from highest to lowest.
+        IMPORTANT RULES:
+        - Valid moods: happy, calm, peaceful, grateful, reflective, energetic, stressed, anxious, sad, angry, frustrated, confused, lonely, mixed, neutral
+        - Return maximum 5 moods in detectedMoods array, ordered by strength
+        - If text seems nonsensical or too short, default to "reflective" with low confidence
+        - For mixed emotions, identify all components but choose the strongest as primary
+        - Be especially sensitive to subtle expressions of distress or joy
+        - Consider that "fine" or "okay" often mask other emotions
         
-        Consider:
-        - Word choice and emotional language
-        - Context and content themes
-        - Emotional indicators and sentiment
-        - Energy levels expressed
-        - Gratitude or complaint patterns
-        
-        Be accurate and empathetic in your analysis.
+        Be accurate, empathetic, and culturally aware in your analysis.
       `;
       
       const result = await this.model.generateContent(prompt);
@@ -803,30 +827,146 @@ class AICoachService {
           throw new Error('Invalid mood analysis response');
         }
         
-        // Mood mapping to fix Gemini's mood names to our valid enum values
+        // Enhanced mood mapping to fix various mood names to our valid enum values
         const moodMapping = {
-          'sadness': 'sad',
-          'fear': 'anxious',
-          'worried': 'anxious',
-          'excitement': 'energetic',
+          // Happy variations
+          'happiness': 'happy',
           'joy': 'happy',
-          'contentment': 'peaceful',
-          'serenity': 'calm',
-          'anger': 'angry',
-          'rage': 'angry',
-          'frustration': 'frustrated',
-          'confusion': 'confused',
-          'loneliness': 'lonely',
-          'gratefulness': 'grateful',
-          'thankfulness': 'grateful',
-          'reflection': 'reflective',
-          'contemplation': 'reflective',
-          'stress': 'stressed',
-          'tension': 'stressed',
+          'joyful': 'happy',
+          'cheerful': 'happy',
+          'delighted': 'happy',
+          'pleased': 'happy',
+          'content': 'happy',
+          'satisfied': 'happy',
+          'blissful': 'happy',
+          'elated': 'happy',
+          'upbeat': 'happy',
+          
+          // Calm variations
+          'calm': 'calm',
+          'relaxed': 'calm',
+          'serene': 'calm',
+          'tranquil': 'calm',
+          'composed': 'calm',
+          'centered': 'calm',
+          'balanced': 'calm',
+          
+          // Peaceful variations
           'peace': 'peaceful',
+          'peaceful': 'peaceful',
           'tranquility': 'peaceful',
+          'contentment': 'peaceful',
+          'harmony': 'peaceful',
+          'serenity': 'peaceful',
+          
+          // Grateful variations
+          'gratefulness': 'grateful',
+          'gratitude': 'grateful',
+          'thankful': 'grateful',
+          'thankfulness': 'grateful',
+          'appreciative': 'grateful',
+          'blessed': 'grateful',
+          
+          // Reflective variations
+          'reflection': 'reflective',
+          'reflective': 'reflective',
+          'contemplative': 'reflective',
+          'contemplation': 'reflective',
+          'thoughtful': 'reflective',
+          'pensive': 'reflective',
+          'introspective': 'reflective',
+          
+          // Energetic variations
           'energy': 'energetic',
-          'vitality': 'energetic'
+          'energetic': 'energetic',
+          'excitement': 'energetic',
+          'excited': 'energetic',
+          'enthusiastic': 'energetic',
+          'vitality': 'energetic',
+          'dynamic': 'energetic',
+          'motivated': 'energetic',
+          'inspired': 'energetic',
+          
+          // Stressed variations
+          'stress': 'stressed',
+          'stressed': 'stressed',
+          'tension': 'stressed',
+          'tense': 'stressed',
+          'pressure': 'stressed',
+          'overwhelmed': 'stressed',
+          'strained': 'stressed',
+          'burden': 'stressed',
+          
+          // Anxious variations
+          'anxiety': 'anxious',
+          'anxious': 'anxious',
+          'worried': 'anxious',
+          'worry': 'anxious',
+          'fear': 'anxious',
+          'fearful': 'anxious',
+          'nervous': 'anxious',
+          'uneasy': 'anxious',
+          'apprehensive': 'anxious',
+          'restless': 'anxious',
+          
+          // Sad variations
+          'sadness': 'sad',
+          'sad': 'sad',
+          'sorrow': 'sad',
+          'melancholy': 'sad',
+          'depressed': 'sad',
+          'depression': 'sad',
+          'down': 'sad',
+          'unhappy': 'sad',
+          'miserable': 'sad',
+          'gloomy': 'sad',
+          'dejected': 'sad',
+          
+          // Angry variations
+          'anger': 'angry',
+          'angry': 'angry',
+          'rage': 'angry',
+          'furious': 'angry',
+          'irritated': 'angry',
+          'annoyed': 'angry',
+          'mad': 'angry',
+          'hostile': 'angry',
+          'resentful': 'angry',
+          
+          // Frustrated variations
+          'frustration': 'frustrated',
+          'frustrated': 'frustrated',
+          'irritation': 'frustrated',
+          'exasperated': 'frustrated',
+          'annoyed': 'frustrated',
+          'impatient': 'frustrated',
+          
+          // Confused variations
+          'confusion': 'confused',
+          'confused': 'confused',
+          'uncertain': 'confused',
+          'unclear': 'confused',
+          'puzzled': 'confused',
+          'perplexed': 'confused',
+          'bewildered': 'confused',
+          'lost': 'confused',
+          
+          // Lonely variations
+          'loneliness': 'lonely',
+          'lonely': 'lonely',
+          'alone': 'lonely',
+          'isolated': 'lonely',
+          'solitary': 'lonely',
+          'disconnected': 'lonely',
+          'abandoned': 'lonely',
+          
+          // Mixed/Neutral variations
+          'mixed': 'mixed',
+          'neutral': 'neutral',
+          'indifferent': 'neutral',
+          'ambivalent': 'mixed',
+          'conflicted': 'mixed',
+          'uncertain': 'mixed'
         };
 
         // Function to normalize mood names
@@ -864,6 +1004,41 @@ class AICoachService {
         // Ensure mood score is between 1-10
         moodAnalysis.moodScore = Math.max(1, Math.min(10, moodAnalysis.moodScore));
         
+        // Add emotional intensity if missing (for backward compatibility)
+        if (!moodAnalysis.emotionalIntensity) {
+          // Calculate from mood score (1-10 -> 1-5 scale)
+          moodAnalysis.emotionalIntensity = Math.ceil(moodAnalysis.moodScore / 2);
+        }
+        
+        // Add emotional transition if missing
+        if (!moodAnalysis.emotionalTransition) {
+          moodAnalysis.emotionalTransition = 'stable';
+        }
+        
+        // Enhance confidence based on multiple factors
+        if (moodAnalysis.confidence) {
+          const factors = [];
+          
+          // Factor 1: Multiple moods detected (more moods = more nuanced = higher confidence)
+          if (moodAnalysis.detectedMoods && moodAnalysis.detectedMoods.length > 1) {
+            factors.push(0.1);
+          }
+          
+          // Factor 2: Emotional indicators present
+          if (moodAnalysis.emotionalIndicators && moodAnalysis.emotionalIndicators.length > 2) {
+            factors.push(0.1);
+          }
+          
+          // Factor 3: Text length (longer text = more context = higher confidence)
+          if (text.length > 100) {
+            factors.push(0.05);
+          }
+          
+          // Adjust confidence
+          const boost = factors.reduce((sum, factor) => sum + factor, 0);
+          moodAnalysis.confidence = Math.min(1, moodAnalysis.confidence + boost);
+        }
+        
         console.log('Successfully parsed mood analysis:', moodAnalysis);
         return moodAnalysis;
         
@@ -890,24 +1065,35 @@ class AICoachService {
       happy: [
         // English
         'happy', 'joy', 'excited', 'great', 'amazing', 'wonderful', 'fantastic', 'good', 'positive',
-        // Dutch
+        'pleased', 'delighted', 'cheerful', 'glad', 'thrilled', 'ecstatic', 'elated', 'content',
+        // Dutch - Extended
         'blij', 'vrolijk', 'gelukkig', 'opgewekt', 'enthousiast', 'geweldig', 'fantastisch', 'goed', 'positief',
+        'tevreden', 'opgetogen', 'verheugd', 'uitgelaten', 'dolblij', 'super', 'top', 'fijn', 'heerlijk',
+        'plezier', 'vreugde', 'lachen', 'glimlach', 'feest', 'geniet', 'geluk',
         // German
         'glücklich', 'fröhlich', 'aufgeregt', 'großartig', 'wunderbar', 'fantastisch', 'gut', 'positiv',
+        'froh', 'erfreut', 'begeistert', 'toll', 'prima', 'super',
         // French
         'heureux', 'joie', 'excité', 'formidable', 'merveilleux', 'fantastique', 'bon', 'positif',
+        'content', 'ravi', 'enchanté', 'super', 'génial',
         // Spanish
         'feliz', 'alegre', 'emocionado', 'genial', 'maravilloso', 'fantástico', 'bueno', 'positivo',
+        'contento', 'dichoso', 'encantado', 'estupendo',
         // Italian
         'felice', 'gioia', 'eccitato', 'grande', 'meraviglioso', 'fantastico', 'buono', 'positivo',
+        'contento', 'allegro', 'entusiasta',
         // Portuguese
-        'feliz', 'alegre', 'animado', 'ótimo', 'maravilhoso', 'fantástico', 'bom', 'positivo'
+        'feliz', 'alegre', 'animado', 'ótimo', 'maravilhoso', 'fantástico', 'bom', 'positivo',
+        'contente', 'radiante', 'empolgado'
       ],
       sad: [
         // English
         'sad', 'down', 'depressed', 'hurt', 'disappointed', 'low', 'terrible', 'awful', 'bad',
-        // Dutch
+        'unhappy', 'miserable', 'sorrowful', 'heartbroken', 'blue', 'gloomy', 'melancholy',
+        // Dutch - Extended
         'verdrietig', 'down', 'depressief', 'gekwetst', 'teleurgesteld', 'laag', 'verschrikkelijk', 'slecht', 'neerslachtig',
+        'bedroefd', 'somber', 'droevig', 'zwaarmoedig', 'ellendig', 'moedeloos', 'terneergeslagen', 'triest',
+        'huilen', 'tranen', 'pijn', 'verdriet', 'rouw', 'verlies',
         // German
         'traurig', 'deprimiert', 'verletzt', 'enttäuscht', 'niedergeschlagen', 'schrecklich', 'schlecht',
         // French
@@ -922,114 +1108,241 @@ class AICoachService {
       anxious: [
         // English
         'anxious', 'worried', 'nervous', 'scared', 'afraid', 'panic', 'stress', 'overwhelmed',
-        // Dutch
+        'tense', 'uneasy', 'restless', 'apprehensive', 'fearful', 'jittery', 'on edge',
+        // Dutch - Extended
         'angstig', 'bezorgd', 'nerveus', 'bang', 'paniek', 'stress', 'overweldigd', 'gespannen',
+        'onrustig', 'ongerust', 'bevreesd', 'benauwd', 'paniekerig', 'zenuwachtig', 'gejaagd',
+        'zorgen', 'angst', 'spanning', 'onrust', 'vrees', 'schrik',
         // German
         'ängstlich', 'besorgt', 'nervös', 'verängstigt', 'panik', 'stress', 'überwältigt',
+        'unruhig', 'sorge', 'aufgeregt', 'bange', 'furcht',
         // French
         'anxieux', 'inquiet', 'nerveux', 'effrayé', 'panique', 'stress', 'débordé',
+        'soucieux', 'agité', 'préoccupé', 'craintif', 'tracas',
         // Spanish
         'ansioso', 'preocupado', 'nervioso', 'asustado', 'pánico', 'estrés', 'abrumado',
+        'inquieto', 'agitado', 'temeroso', 'intranquilo', 'congoja',
         // Italian
         'ansioso', 'preoccupato', 'nervoso', 'spaventato', 'panico', 'stress', 'sopraffatto',
+        'inquieto', 'agitato', 'timoroso', 'impaurito', 'apprensione',
         // Portuguese
-        'ansioso', 'preocupado', 'nervoso', 'assustado', 'pânico', 'stress', 'sobrecarregado'
+        'ansioso', 'preocupado', 'nervoso', 'assustado', 'pânico', 'stress', 'sobrecarregado',
+        'inquieto', 'agitado', 'receoso', 'apreensivo', 'aflição',
+        // Japanese
+        '不安', '心配', '緊張', '恐れ', 'パニック', 'ストレス',
+        'ふあん', 'しんぱい', 'きんちょう', 'おそれ', 'すとれす',
+        // Korean
+        '불안한', '걱정되는', '긴장된', '두려운', '스트레스', '초조한',
+        // Chinese (Simplified)
+        '焦虑', '担心', '紧张', '害怕', '恐惧', '压力', '忧虑',
+        // Arabic
+        'قلق', 'خائف', 'متوتر', 'مضطرب', 'هلع', 'ضغط',
+        // Hindi
+        'चिंतित', 'परेशान', 'घबराया', 'डरा', 'तनाव', 'व्याकुल'
       ],
       angry: [
         // English
         'angry', 'mad', 'furious', 'annoyed', 'frustrated', 'irritated', 'rage',
-        // Dutch
+        'hostile', 'livid', 'outraged', 'irate', 'resentful', 'indignant',
+        // Dutch - Extended
         'boos', 'kwaad', 'woedend', 'geïrriteerd', 'gefrustreerd', 'geërgerd', 'woede',
+        'razend', 'pissig', 'verstoord', 'gebelgd', 'toornig', 'verontwaardigd',
         // German
         'wütend', 'sauer', 'verärgert', 'frustriert', 'gereizt', 'zorn',
+        'ärgerlich', 'empört', 'aufgebracht', 'erzürnt', 'verbittert',
         // French
         'en colère', 'fâché', 'furieux', 'agacé', 'frustré', 'irrité', 'rage',
+        'mécontent', 'indigné', 'révolté', 'exaspéré', 'courroucé',
         // Spanish
         'enojado', 'enfadado', 'furioso', 'molesto', 'frustrado', 'irritado', 'rabia',
+        'indignado', 'airado', 'iracundo', 'cabreado', 'ofuscado',
         // Italian
         'arrabbiato', 'furioso', 'infastidito', 'frustrato', 'irritato', 'rabbia',
+        'adirato', 'indignato', 'incavolato', 'alterato', 'risentito',
         // Portuguese
-        'bravo', 'irritado', 'furioso', 'aborrecido', 'frustrado', 'raiva'
+        'bravo', 'irritado', 'furioso', 'aborrecido', 'frustrado', 'raiva',
+        'indignado', 'irado', 'revoltado', 'zangado', 'contrariado',
+        // Japanese
+        '怒り', '腹立たしい', 'むかつく', '激怒', 'イライラ',
+        'いかり', 'はらだたしい', 'げきど', 'いらいら',
+        // Korean
+        '화난', '짜증나는', '분노한', '격분한', '성난',
+        // Chinese (Simplified)
+        '愤怒', '生气', '愤慨', '恼火', '气愤', '恼怒',
+        // Arabic
+        'غاضب', 'مستاء', 'محتد', 'مغضب', 'ساخط',
+        // Hindi
+        'गुस्सा', 'क्रोधित', 'नाराज', 'चिढ़', 'रोष'
       ],
       peaceful: [
         // English
         'peaceful', 'calm', 'relaxed', 'serene', 'quiet', 'tranquil', 'content',
-        // Dutch
+        'soothing', 'restful', 'harmonious', 'zen', 'meditative',
+        // Dutch - Extended
         'vredig', 'rustig', 'ontspannen', 'sereen', 'kalm', 'tevreden', 'vreedzaam',
+        'harmonieus', 'stil', 'bedaard', 'gelijkmoedig', 'zen',
         // German
         'friedlich', 'ruhig', 'entspannt', 'gelassen', 'still', 'zufrieden',
+        'harmonisch', 'ausgeglichen', 'besonnen', 'gemütlich',
         // French
         'paisible', 'calme', 'détendu', 'serein', 'tranquille', 'content',
+        'apaisé', 'reposé', 'harmonieux', 'zen',
         // Spanish
         'pacífico', 'tranquilo', 'relajado', 'sereno', 'silencioso', 'contento',
+        'apacible', 'sosegado', 'plácido', 'armonioso',
         // Italian
         'pacifico', 'calmo', 'rilassato', 'sereno', 'tranquillo', 'contento',
+        'placido', 'quieto', 'armonioso', 'riposato',
         // Portuguese
-        'pacífico', 'calmo', 'relaxado', 'sereno', 'tranquilo', 'contente'
+        'pacífico', 'calmo', 'relaxado', 'sereno', 'tranquilo', 'contente',
+        'sossegado', 'plácido', 'harmonioso', 'descansado',
+        // Japanese
+        '平和', '穏やか', '静か', 'リラックス', '落ち着いた', '安らか',
+        'へいわ', 'おだやか', 'しずか', 'おちついた', 'やすらか',
+        // Korean
+        '평화로운', '차분한', '편안한', '고요한', '안정된', '평온한',
+        // Chinese (Simplified)
+        '平静', '安静', '宁静', '祥和', '安详', '平和', '轻松',
+        // Arabic
+        'هادئ', 'مسالم', 'مطمئن', 'ساكن', 'مرتاح',
+        // Hindi
+        'शांत', 'शांतिपूर्ण', 'आरामदायक', 'सुकून', 'निश्चिंत'
       ],
       grateful: [
         // English
         'grateful', 'thankful', 'blessed', 'appreciate', 'lucky', 'fortunate',
-        // Dutch
+        'appreciative', 'indebted', 'obliged', 'recognition',
+        // Dutch - Extended
         'dankbaar', 'gezegend', 'waarderen', 'gelukkig', 'bevoorrecht',
+        'erkentelijk', 'waardering', 'dank', 'geluk', 'zegening',
         // German
         'dankbar', 'gesegnet', 'schätzen', 'glücklich', 'bevorzugt',
+        'wertschätzen', 'anerkennung', 'dank', 'verbunden',
         // French
         'reconnaissant', 'béni', 'apprécier', 'chanceux', 'privilégié',
+        'gratitude', 'remerciement', 'reconnaissance', 'obligé',
         // Spanish
         'agradecido', 'bendecido', 'apreciar', 'afortunado', 'privilegiado',
+        'gratitud', 'reconocimiento', 'bendición', 'gracias',
         // Italian
         'grato', 'benedetto', 'apprezzare', 'fortunato', 'privilegiato',
+        'gratitudine', 'riconoscente', 'ringraziamento', 'benedizione',
         // Portuguese
-        'grato', 'abençoado', 'apreciar', 'sortudo', 'privilegiado'
+        'grato', 'abençoado', 'apreciar', 'sortudo', 'privilegiado',
+        'agradecido', 'gratidão', 'reconhecimento', 'afortunado',
+        // Japanese
+        '感謝', 'ありがとう', '幸せ', '恵まれた', '幸運',
+        'かんしゃ', 'しあわせ', 'めぐまれた', 'こううん',
+        // Korean
+        '감사한', '고마운', '축복받은', '행운의', '감사',
+        // Chinese (Simplified)
+        '感激', '感谢', '感恩', '幸运', '有福', '庆幸',
+        // Arabic
+        'ممتن', 'شاكر', 'محظوظ', 'مبارك', 'شكر',
+        // Hindi
+        'आभारी', 'कृतज्ञ', 'धन्य', 'भाग्यशाली', 'धन्यवाद'
       ],
       confused: [
         // English
         'confused', 'lost', 'uncertain', 'unclear', 'mixed', 'conflicted',
-        // Dutch
+        'puzzled', 'bewildered', 'perplexed', 'disoriented', 'baffled',
+        // Dutch - Extended
         'verward', 'verloren', 'onzeker', 'onduidelijk', 'gemengd', 'conflicterend',
+        'verbijsterd', 'gedesoriënteerd', 'twijfel', 'verbaasd', 'verwarring',
         // German
         'verwirrt', 'verloren', 'unsicher', 'unklar', 'gemischt', 'konfliktreich',
+        'ratlos', 'durcheinander', 'orientierungslos', 'zweifel',
         // French
         'confus', 'perdu', 'incertain', 'flou', 'mélangé', 'conflictuel',
+        'désorienté', 'perplexe', 'embrouillé', 'trouble',
         // Spanish
         'confundido', 'perdido', 'incierto', 'poco claro', 'mezclado', 'conflictivo',
+        'desconcertado', 'desorientado', 'perplejo', 'dudoso',
         // Italian
         'confuso', 'perso', 'incerto', 'poco chiaro', 'misto', 'conflittuale',
+        'disorientato', 'perplesso', 'smarrito', 'dubbioso',
         // Portuguese
-        'confuso', 'perdido', 'incerto', 'pouco claro', 'misturado', 'conflituoso'
+        'confuso', 'perdido', 'incerto', 'pouco claro', 'misturado', 'conflituoso',
+        'desorientado', 'perplexo', 'desnorteado', 'duvidoso',
+        // Japanese
+        '混乱', '迷う', '困惑', '不明', 'わからない', '戸惑い',
+        'こんらん', 'まよう', 'こんわく', 'ふめい', 'とまどい',
+        // Korean
+        '혼란스러운', '헷갈리는', '어리둥절한', '막막한', '혼동',
+        // Chinese (Simplified)
+        '困惑', '迷茫', '混乱', '不清楚', '糊涂', '疑惑',
+        // Arabic
+        'محتار', 'مرتبك', 'حائر', 'مشوش', 'غامض',
+        // Hindi
+        'भ्रमित', 'उलझन', 'असमंजस', 'संशय', 'परेशान'
       ],
       lonely: [
         // English
         'lonely', 'alone', 'isolated', 'empty', 'disconnected',
-        // Dutch
+        'solitary', 'abandoned', 'forsaken', 'friendless', 'lonesome',
+        // Dutch - Extended
         'eenzaam', 'alleen', 'geïsoleerd', 'leeg', 'afgesloten',
+        'verlaten', 'afgescheiden', 'vereenzaamd', 'alleenstaand', 'afzondering',
         // German
         'einsam', 'allein', 'isoliert', 'leer', 'getrennt',
+        'verlassen', 'vereinsamt', 'abgeschieden', 'alleinstehend',
         // French
         'seul', 'isolé', 'vide', 'déconnecté',
+        'abandonné', 'esseulé', 'délaissé', 'solitude', 'solitaire',
         // Spanish
         'solo', 'aislado', 'vacío', 'desconectado',
+        'abandonado', 'desamparado', 'soledad', 'aislamiento', 'solitario',
         // Italian
         'solo', 'isolato', 'vuoto', 'disconnesso',
+        'abbandonato', 'solitudine', 'desolato', 'isolamento', 'solitario',
         // Portuguese
-        'sozinho', 'isolado', 'vazio', 'desconectado'
+        'sozinho', 'isolado', 'vazio', 'desconectado',
+        'abandonado', 'desamparado', 'solidão', 'isolamento', 'solitário',
+        // Japanese
+        '孤独', '寂しい', '一人', '孤立', '独り',
+        'こどく', 'さびしい', 'ひとり', 'こりつ',
+        // Korean
+        '외로운', '고독한', '혼자', '쓸쓸한', '적적한',
+        // Chinese (Simplified)
+        '孤独', '寂寞', '孤单', '独自', '空虚', '冷清',
+        // Arabic
+        'وحيد', 'منعزل', 'منفرد', 'وحدة', 'معزول',
+        // Hindi
+        'अकेला', 'एकाकी', 'तन्हा', 'अलग', 'खाली'
       ],
       energetic: [
         // English
         'energetic', 'motivated', 'inspired', 'driven', 'active', 'productive',
-        // Dutch
+        'enthusiastic', 'vibrant', 'dynamic', 'vigorous', 'lively', 'spirited',
+        // Dutch - Extended  
         'energiek', 'gemotiveerd', 'geïnspireerd', 'gedreven', 'actief', 'productief',
+        'enthousiast', 'levendig', 'dynamisch', 'krachtig', 'vol energie', 'bezield',
         // German
         'energisch', 'motiviert', 'inspiriert', 'getrieben', 'aktiv', 'produktiv',
+        'enthusiastisch', 'lebendig', 'dynamisch', 'kraftvoll', 'schwungvoll',
         // French
         'énergique', 'motivé', 'inspiré', 'déterminé', 'actif', 'productif',
+        'enthousiaste', 'vivace', 'dynamique', 'vigoureux', 'animé',
         // Spanish
         'enérgico', 'motivado', 'inspirado', 'decidido', 'activo', 'productivo',
+        'entusiasta', 'vibrante', 'dinámico', 'vigoroso', 'animado',
         // Italian
         'energico', 'motivato', 'ispirato', 'determinato', 'attivo', 'produttivo',
+        'entusiasta', 'vivace', 'dinamico', 'vigoroso', 'animato',
         // Portuguese
-        'enérgico', 'motivado', 'inspirado', 'determinado', 'ativo', 'produtivo'
+        'enérgico', 'motivado', 'inspirado', 'determinado', 'ativo', 'produtivo',
+        'entusiástico', 'vibrante', 'dinâmico', 'vigoroso', 'animado',
+        // Japanese
+        '元気', 'やる気', 'エネルギッシュ', '活発', '意欲', '活力',
+        'げんき', 'やるき', 'かっぱつ', 'いよく', 'かつりょく',
+        // Korean
+        '활기찬', '의욕적인', '열정적인', '에너지', '활력', '생기',
+        // Chinese (Simplified)
+        '精力充沛', '有活力', '积极', '活跃', '充满活力', '有动力',
+        // Arabic
+        'نشيط', 'متحمس', 'ملهم', 'طاقة', 'حيوي', 'فعال',
+        // Hindi
+        'ऊर्जावान', 'उत्साही', 'प्रेरित', 'सक्रिय', 'जोशीला', 'शक्तिशाली'
       ]
     };
     

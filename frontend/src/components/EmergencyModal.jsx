@@ -64,9 +64,9 @@ const EmergencyModal = ({
       setEmergencyResponse({
         message: "I'm here for you right now. Your safety is the most important thing.",
         immediateActions: [
-          "If you're in immediate danger, call 911",
-          "Contact a trusted friend or family member",
-          "Call the Crisis Text Line: Text HOME to 741741"
+          t('emergencyDanger', "If you're in immediate danger, call 911"),
+          t('contactTrustedPerson', "Contact a trusted friend or family member"),
+          t('crisisTextLine', "Call the Crisis Text Line: Text HOME to 741741")
         ],
         resources: [
           { name: 'Crisis Text Line', contact: 'Text HOME to 741741', urgent: true },

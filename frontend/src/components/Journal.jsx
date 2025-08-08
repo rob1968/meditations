@@ -69,13 +69,14 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     status: 'active' // 'active', 'recovering', 'relapsed', 'clean'
   });
   const [expandedMoodId, setExpandedMoodId] = useState(null);
+  const [showMoodDescription, setShowMoodDescription] = useState(null);
   const [justSaved, setJustSaved] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [lastSavedContent, setLastSavedContent] = useState('');
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
   
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState('write'); // 'write', 'calendar', 'archive', 'voice', 'addictions', 'coach'
+  const [activeTab, setActiveTab] = useState('write'); // 'write', 'calendar', 'archive', 'addictions', 'coach'
   
   // Ref to track if calendar has been initialized to prevent re-loading today's entry
   const calendarInitialized = useRef(false);
@@ -136,8 +137,8 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     show: false, 
     message: '', 
     onConfirm: null,
-    confirmText: 'Bevestigen',
-    cancelText: 'Annuleren'
+    confirmText: t('confirm', 'Bevestigen'),
+    cancelText: t('cancel', 'Annuleren')
   });
   
   // Control calendar visibility
@@ -1291,6 +1292,14 @@ const handleSaveEntry = async () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Function to show mood description for 3 seconds
+  const handleMoodIconClick = (moodData) => {
+    setShowMoodDescription(moodData);
+    setTimeout(() => {
+      setShowMoodDescription(null);
+    }, 3000);
+  };
+
 
   const startRecording = async () => {
     try {
@@ -1897,6 +1906,17 @@ const handleSaveEntry = async () => {
     };
   }, [user, showTriggerAlert]);
 
+  // Auto-hide error messages after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError('');
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   if (isLoading) {
     return (
       <div className="journal-container">
@@ -2014,6 +2034,50 @@ const handleSaveEntry = async () => {
 
   return (
     <div className="journal-container">
+      {/* CSS for mood description tooltip */}
+      <style>{`
+        @keyframes fadeInOut {
+          0% {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-10px);
+          }
+          10% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0px);
+          }
+          90% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-10px);
+          }
+        }
+      `}</style>
+      {/* Hover Effects CSS */}
+      <style>{`
+        .mood-card-hover {
+          position: relative;
+          overflow: visible;
+        }
+        
+        
+        .mood-card-hover:hover {
+          transform: translateY(-4px) !important;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+        }
+        
+        
+        
+        @media (max-width: 768px) {
+          .mood-card-hover:hover {
+            transform: translateY(-2px) !important;
+          }
+          
+        }
+      `}</style>
+      
       <PageHeader 
         user={user}
         onProfileClick={onProfileClick}
@@ -2035,6 +2099,7 @@ const handleSaveEntry = async () => {
         <button 
           className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
           onClick={() => setActiveTab('calendar')}
+          style={{ display: 'none' }}
         >
           <span className="tab-icon">📅</span>
           <span className="tab-label">{t('calendar', 'Kalender')}</span>
@@ -2045,13 +2110,6 @@ const handleSaveEntry = async () => {
         >
           <span className="tab-icon">📚</span>
           <span className="tab-label">{t('archive', 'Archief')}</span>
-        </button>
-        <button 
-          className={`tab ${activeTab === 'voice' ? 'active' : ''}`}
-          onClick={() => setActiveTab('voice')}
-        >
-          <span className="tab-icon">🎵</span>
-          <span className="tab-label">{t('audio', 'Audio')}</span>
         </button>
         <button 
           className={`tab ${activeTab === 'addictions' ? 'active' : ''}`}
@@ -2079,7 +2137,19 @@ const handleSaveEntry = async () => {
             {/* Today's Writing Card */}
             <div className="todays-writing-section">
               <div className="writing-card-header-centered">
-                <span className="today-date-styled">📅 {formatDate(new Date().toISOString().split('T')[0])}</span>
+                <span 
+                  className="today-date-styled"
+                  onClick={() => setActiveTab('calendar')}
+                  style={{ 
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    textDecorationStyle: 'dotted',
+                    textUnderlineOffset: '3px'
+                  }}
+                  title={t('openCalendar', 'Open kalender')}
+                >
+                  📅 {formatDate(new Date().toISOString().split('T')[0])}
+                </span>
               </div>
 
               {/* Quick Write Area */}
@@ -2105,14 +2175,6 @@ const handleSaveEntry = async () => {
                         }}
                       >
                         📝 {t('continueWriting', 'Verder schrijven')}
-                      </button>
-                      <button 
-                        className="read-entry-btn"
-                        onClick={() => {
-                          handleEditEntry(todaysEntry);
-                        }}
-                      >
-                        👁️ {t('readEntry', 'Lezen')}
                       </button>
                     </div>
                   </div>
@@ -2239,7 +2301,7 @@ const handleSaveEntry = async () => {
                     {getFilteredEntries().map((entry, index) => (
                       <div 
                         key={entry._id} 
-                        className="mood-grid-card clickable"
+                        className="mood-grid-card clickable mood-card-hover"
                         data-mood={entry.mood || 'neutral'}
                         style={{ 
                           '--card-index': index,
@@ -2249,7 +2311,9 @@ const handleSaveEntry = async () => {
                           boxShadow: '0 10px 40px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
                           border: '1px solid rgba(255,255,255,0.15)',
                           height: '240px',
-                          transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)'
+                          transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+                          position: 'relative',
+                          overflow: 'hidden'
                         }}
                         onClick={() => handleEditEntry(entry)}
                         title={`${t('openJournalEntry', 'Open journal entry')}: ${entry.title}`}
@@ -2289,9 +2353,6 @@ const handleSaveEntry = async () => {
                                 ⏱️ {Math.ceil(countWords(entry.content) / 200)}m
                               </span>
                             </div>
-                            <div className="mood-card-date" style={{ fontSize: '12px', opacity: '0.8', fontWeight: '500' }}>
-                              {new Date(entry.date).toLocaleDateString()}
-                            </div>
                           </div>
 
                           <h3 className="mood-card-title" style={{ fontSize: '18px', fontWeight: '600', marginTop: '12px', marginBottom: '8px' }}>
@@ -2312,23 +2373,12 @@ const handleSaveEntry = async () => {
                             >
                               📖
                             </button>
-                            {entry.audioFile && (
-                              <button 
-                                className="mood-action-btn secondary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handlePlayAudio(entry);
-                                }}
-                                title={playingEntryId === entry._id ? t('pauseAudio', 'Pause audio') : t('playAudio', 'Play audio')}
-                              >
-                                {playingEntryId === entry._id ? '⏸️' : '▶️'}
-                              </button>
-                            )}
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
+
 
                 </>
               )}
@@ -2336,8 +2386,8 @@ const handleSaveEntry = async () => {
           </div>
         )}
 
-        {/* Audio Tab */}
-        {activeTab === 'voice' && (
+        {/* Voice Tab - Removed: Audio functionality integrated into Browse tab */}
+        {false && activeTab === 'voice' && (
           <div className="voice-tab-content">
             {/* Journal Audio Generation Section */}
             <div className="journal-audio-section">
@@ -2377,11 +2427,6 @@ const handleSaveEntry = async () => {
                           {entry.mood && (
                             <span className="entry-mood-audio">
                               {moods.find(m => m.value === entry.mood)?.emoji}
-                            </span>
-                          )}
-                          {entry.audioFile && (
-                            <span className="has-audio-indicator" title={t('hasAudio', 'Has audio')}>
-                              🎵
                             </span>
                           )}
                         </div>
@@ -2457,7 +2502,7 @@ const handleSaveEntry = async () => {
                       onClick={startVoiceRecording}
                       disabled={!audioSupported}
                     >
-                      <div className="mic-icon pulse">🎙️</div>
+                      <div className="mic-icon pulse" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>🎙️</div>
                       <span>{t('startRecording', 'Start Recording')}</span>
                     </button>
                     
@@ -2474,7 +2519,7 @@ const handleSaveEntry = async () => {
                   <div className="voice-recorder-recording">
                     <div className="recording-visual">
                       <div className="recording-pulse recordingPulse"></div>
-                      <div className="mic-icon-large">🎙️</div>
+                      <div className="mic-icon-large" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>🎙️</div>
                     </div>
                     
                     <div className="recording-timer live-timer">
@@ -3023,7 +3068,20 @@ const handleSaveEntry = async () => {
           <div className="expanded-journal-form">
             <div className="form-header">
               <div className="date-indicator">
-                <span className="writing-for">
+                <span 
+                  className="writing-for"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setActiveTab('calendar');
+                  }}
+                  style={{ 
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    textDecorationStyle: 'dotted',
+                    textUnderlineOffset: '3px'
+                  }}
+                  title={t('openCalendar', 'Open kalender')}
+                >
                   {formatDate(formData.date)}
                 </span>
               </div>
@@ -3045,8 +3103,50 @@ const handleSaveEntry = async () => {
                   padding: '20px',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
                   margin: '16px 0',
-                  maxWidth: '100%'
+                  maxWidth: '100%',
+                  position: 'relative'
                 }}>
+                  
+                  {/* Mood Description Tooltip */}
+                  {showMoodDescription && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-70px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: 'linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.8) 100%)',
+                      color: '#fff',
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      maxWidth: '280px',
+                      textAlign: 'center',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                      backdropFilter: 'blur(20px)',
+                      zIndex: 1000,
+                      animation: 'fadeInOut 3s ease-in-out'
+                    }}>
+                      <div style={{ fontSize: '12px', opacity: '0.8', marginBottom: '4px' }}>
+                        {moods.find(m => m.value === showMoodDescription.mood)?.label || showMoodDescription.mood}
+                      </div>
+                      <div style={{ lineHeight: '1.4' }}>
+                        {showMoodDescription.description || t('noDescription', 'Geen beschrijving beschikbaar')}
+                      </div>
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '-8px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: '0',
+                        height: '0',
+                        borderLeft: '8px solid transparent',
+                        borderRight: '8px solid transparent',
+                        borderTop: '8px solid rgba(0,0,0,0.9)'
+                      }} />
+                    </div>
+                  )}
                   <div className="detected-mood-expanded" style={{
                     display: 'block',
                     width: '100%'
@@ -3065,7 +3165,20 @@ const handleSaveEntry = async () => {
                         margin: '0',
                         display: 'block'
                       }}>
-                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>
+                        <div 
+                          style={{ 
+                            fontSize: '32px', 
+                            marginBottom: '8px',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s ease'
+                          }}
+                          onClick={() => handleMoodIconClick({
+                            mood: currentEntry.moodAnalysis.detectedMoods[0]?.mood,
+                            description: moods.find(m => m.value === currentEntry.moodAnalysis.detectedMoods[0]?.mood)?.description
+                          })}
+                          onMouseOver={(e) => e.target.style.transform = 'scale(1.1)'}
+                          onMouseOut={(e) => e.target.style.transform = 'scale(1.0)'}
+                        >
                           {moods.find(m => m.value === currentEntry.moodAnalysis.detectedMoods[0]?.mood)?.emoji || '😐'}
                         </div>
                         <div style={{
@@ -3076,13 +3189,6 @@ const handleSaveEntry = async () => {
                           marginBottom: '4px'
                         }}>
                           {moods.find(m => m.value === currentEntry.moodAnalysis.detectedMoods[0]?.mood)?.label || currentEntry.moodAnalysis.detectedMoods[0]?.mood}
-                        </div>
-                        <div style={{
-                          fontSize: '11px',
-                          color: 'rgba(255,255,255,0.7)',
-                          fontWeight: '500'
-                        }}>
-                          {Math.round(currentEntry.moodAnalysis.detectedMoods[0]?.strength * 20)}%
                         </div>
                         {/* Overall sentiment */}
                         {currentEntry?.moodAnalysis?.overallSentiment && (
@@ -3118,62 +3224,52 @@ const handleSaveEntry = async () => {
                     <div style={{ 
                       display: 'flex',
                       flexWrap: 'wrap',
-                      gap: '12px',
-                      justifyContent: 'center',
+                      gap: '8px',
+                      justifyContent: 'space-evenly',
                       alignItems: 'center',
                       width: '100%',
-                      marginTop: '16px'
+                      marginTop: '16px',
+                      padding: '0 8px'
                     }}>
                       {(currentEntry?.moodAnalysis?.detectedMoods || []).slice(1, 5).map((detectedMood, index) => {
-                        const moodId = `${detectedMood.mood}_${index}`;
-                        const isSelected = selectedMoodForDescription === moodId;
                         return (
                           <div 
                             key={index} 
                             className="mood-item-expanded secondary-mood" 
                             style={{
-                              background: isSelected ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)',
+                              background: 'rgba(255,255,255,0.06)',
                               borderRadius: '10px',
                               padding: '8px',
                               backdropFilter: 'blur(10px)',
-                              border: `1px solid rgba(255,255,255,${isSelected ? '0.2' : '0.1'})`,
+                              border: '1px solid rgba(255,255,255,0.1)',
                               textAlign: 'center',
-                              flex: '0 0 auto',
-                              minWidth: isSelected ? '90px' : '70px',
-                              maxWidth: isSelected ? '90px' : '70px',
+                              flex: '1 1 0',
+                              minWidth: '60px',
+                              maxWidth: '80px',
                               cursor: 'pointer',
                               transition: 'all 0.3s ease',
-                              minHeight: isSelected ? '100px' : '70px'
+                              minHeight: '60px',
+                              aspectRatio: '1',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
                             }}
                             onClick={() => {
-                              setSelectedMoodForDescription(isSelected ? null : moodId);
+                              handleMoodIconClick({
+                                mood: detectedMood.mood,
+                                description: moods.find(m => m.value === detectedMood.mood)?.description
+                              });
                             }}
                           >
                             <div className="mood-icon-expanded" style={{
-                              fontSize: '20px',
-                              marginBottom: '4px'
+                              fontSize: '24px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              height: '100%'
                             }}>
                               {moods.find(m => m.value === detectedMood.mood)?.emoji || '😐'}
                             </div>
-                            <div className="mood-strength-small" style={{
-                              fontSize: '10px',
-                              color: 'rgba(255,255,255,0.7)',
-                              fontWeight: '500',
-                              marginBottom: isSelected ? '4px' : '0'
-                            }}>
-                              {Math.round(detectedMood.strength * 20)}%
-                            </div>
-                            {isSelected && (
-                              <div className="mood-name-small" style={{
-                                fontSize: '11px',
-                                fontWeight: '600',
-                                color: '#fff',
-                                lineHeight: '1.2',
-                                textAlign: 'center'
-                              }}>
-                                {moods.find(m => m.value === detectedMood.mood)?.label || detectedMood.mood}
-                              </div>
-                            )}
                           </div>
                         );
                       })}
@@ -3183,49 +3279,31 @@ const handleSaveEntry = async () => {
                 );
               })()}
 
-              {/* Main Writing Area */}
-              <div className="writing-tools-expanded">
-                {/* Voice Recording */}
-                {audioSupported && recordingState === 'idle' && (
-                  <button
-                    type="button"
-                    className="voice-tool-btn"
-                    onClick={startRecording}
-                    title={t('startVoiceRecording', 'Start spraak opname')}
-                  >
-                    🎤
-                  </button>
-                )}
-                
-                {recordingState === 'recording' && (
-                  <div className="recording-indicator">
-                    <button
-                      type="button"
-                      className="stop-recording-btn"
-                      onClick={stopRecording}
-                    >
-                      ⏹
-                    </button>
-                    <span className="recording-time">
-                      🔴 {formatRecordingTime(recordingTime)}
-                    </span>
-                  </div>
-                )}
-                
+
+              <div className="writing-area" style={{ position: 'relative' }}>
+                {/* Processing message - centered over text area */}
                 {recordingState === 'processing' && (
-                  <div className="processing-indicator">
+                  <div style={{ 
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 10,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: '#ffffff',
+                    border: '1px solid rgba(59, 130, 246, 0.4)',
+                    borderRadius: '20px',
+                    padding: '12px 16px',
+                    backdropFilter: 'blur(15px)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+                  }}>
                     <div className="spinner"></div>
-                    <span>{t('transcribing', 'Transcriberen...')}</span>
+                    <span style={{ color: '#1f2937', fontSize: '14px', fontWeight: '700', textShadow: 'none' }}>{t('transcribing', 'Transcriberen...')}</span>
                   </div>
                 )}
 
-                {/* Word Count */}
-                <div className="word-count">
-                  {countWords(formData.content)} {t('words', 'woorden')}
-                </div>
-              </div>
-
-              <div className="writing-area">
                 {/* Error Banner */}
                 {error && (
                   <div className="error-banner">
@@ -3253,17 +3331,84 @@ const handleSaveEntry = async () => {
                   debounceMs={1500}
                   autoApplyCorrections={true}
                 />
-                <div className="word-counter">
-                  {(() => {
-                    const wordCount = formData.content.trim().split(/\s+/).filter(word => word.length > 0).length;
-                    const isValidRange = wordCount >= 10 && wordCount <= 250;
-                    return (
-                      <span className={`word-count ${!isValidRange ? 'warning' : ''}`}>
-                        {wordCount}/250 {t('words', 'woorden')}
-                        {wordCount < 10 && <span className="min-warning"> (min 10)</span>}
-                      </span>
-                    );
-                  })()}
+                <div className="word-counter" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {/* Voice Recording Button */}
+                  <div>
+                    {audioSupported && recordingState === 'idle' && (
+                      <button
+                        type="button"
+                        className="voice-tool-btn"
+                        onClick={startRecording}
+                        title={t('startVoiceRecording', 'Start spraak opname')}
+                        style={{ 
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          border: '1px solid rgba(255,255,255,0.3)',
+                          background: 'rgba(255,255,255,0.1)',
+                          backdropFilter: 'blur(10px)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '16px',
+                          cursor: 'pointer',
+                          marginLeft: '8px'
+                        }}
+                      >
+                        🎤
+                      </button>
+                    )}
+                    
+                    {recordingState === 'recording' && (
+                      <div style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: '20px',
+                        padding: '6px 10px',
+                        backdropFilter: 'blur(10px)',
+                        marginLeft: '8px'
+                      }}>
+                        <button
+                          type="button"
+                          className="stop-recording-btn"
+                          onClick={stopRecording}
+                          style={{ 
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '4px',
+                            border: 'none',
+                            background: '#ef4444',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '10px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ⏹
+                        </button>
+                        <span style={{ color: '#ef4444', fontSize: '11px', fontWeight: '600' }}>
+                          🔴 {formatRecordingTime(recordingTime)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    {(() => {
+                      const wordCount = formData.content.trim().split(/\s+/).filter(word => word.length > 0).length;
+                      const isValidRange = wordCount >= 10 && wordCount <= 250;
+                      return (
+                        <span className={`word-count ${!isValidRange ? 'warning' : ''}`}>
+                          {wordCount}/250 {t('words', 'woorden')}
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
 
@@ -3286,17 +3431,271 @@ const handleSaveEntry = async () => {
 
                   {/* Delete button - only shown when editing existing entry */}
                   {editingEntry && (
-                    <button 
-                      className="delete-btn-expanded" 
-                      onClick={() => {
-                        handleDeleteEntry(editingEntry._id);
-                        setShowCreateForm(false);
-                      }}
-                      disabled={isPerformingGrammarCheck || isSavingEntry || transcribing || recordingState === 'processing'}
-                      title={t('deleteEntry', 'Dagboek entry verwijderen')}
-                    >
-                      🗑️ {t('delete', 'Verwijderen')}
-                    </button>
+                    <>
+                      <button 
+                        className="delete-btn-expanded" 
+                        onClick={() => {
+                          handleDeleteEntry(editingEntry._id);
+                          setShowCreateForm(false);
+                        }}
+                        disabled={isPerformingGrammarCheck || isSavingEntry || transcribing || recordingState === 'processing'}
+                        title={t('deleteEntry', 'Dagboek entry verwijderen')}
+                      >
+                        🗑️ {t('delete', 'Verwijderen')}
+                      </button>
+
+                      {/* Audio Controls for Detailed Entry */}
+                      <div className="journal-audio-section" style={{
+                        marginTop: '20px',
+                        padding: '20px',
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                        backdropFilter: 'blur(25px)',
+                        borderRadius: '16px',
+                        border: '1px solid rgba(255,255,255,0.15)'
+                      }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          🎙️ {t('audioVersion', 'Audio Versie')}
+                        </h3>
+
+                        {/* Voice Selection */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                          <label style={{ fontSize: '14px', minWidth: '60px' }}>
+                            {t('voice', 'Stem')}:
+                          </label>
+                          <select 
+                            value={selectedVoiceId} 
+                            onChange={(e) => {
+                              if (e.target.value === 'record_new') {
+                                setShowVoiceRecorder(!showVoiceRecorder);
+                                setSelectedVoiceId('default');
+                              } else {
+                                setSelectedVoiceId(e.target.value);
+                              }
+                            }}
+                            style={{
+                              background: 'rgba(255,255,255,0.15)',
+                              border: '1px solid rgba(255,255,255,0.3)',
+                              borderRadius: '8px',
+                              padding: '8px 12px',
+                              color: 'white',
+                              fontSize: '14px',
+                              flex: 1
+                            }}
+                          >
+                            <option value="default">Sarah (Default)</option>
+                            <option value="EXAVITQu4vr4xnSDxMaL">Sarah - Calm</option>
+                            <option value="pNInz6obpgDQGcFmaJgB">Adam - Deep</option>
+                            <option value="21m00Tcm4TlvDq8ikWAM">Rachel - Warm</option>
+                            {userCustomVoices.map(voice => (
+                              <option key={voice.voiceId} value={voice.voiceId}>
+                                {voice.name}
+                              </option>
+                            ))}
+                            <option value="record_new">➕ {t('recordNewVoice', 'Record New Voice')}</option>
+                          </select>
+                        </div>
+
+                        {/* Audio Action Buttons */}
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          {!editingEntry.audioFile ? (
+                            <button 
+                              onClick={() => handleGenerateAudio(editingEntry)}
+                              disabled={generatingAudio === editingEntry._id}
+                              style={{
+                                background: generatingAudio === editingEntry._id ? 'rgba(255,165,0,0.3)' : 'rgba(34,197,94,0.3)',
+                                border: generatingAudio === editingEntry._id ? '1px solid rgba(255,165,0,0.5)' : '1px solid rgba(34,197,94,0.5)',
+                                borderRadius: '12px',
+                                padding: '12px 20px',
+                                color: 'white',
+                                fontSize: '14px',
+                                cursor: generatingAudio === editingEntry._id ? 'not-allowed' : 'pointer',
+                                opacity: generatingAudio === editingEntry._id ? 0.7 : 1,
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                fontWeight: '500'
+                              }}
+                            >
+                              {generatingAudio === editingEntry._id ? (
+                                <>⏳ {t('generating', 'Generating...')}</>
+                              ) : (
+                                <>🎙️ {t('generateAudio', 'Generate Audio')}</>
+                              )}
+                            </button>
+                          ) : (
+                            <>
+                              <button 
+                                onClick={() => handlePlayAudio(editingEntry)}
+                                style={{
+                                  background: playingEntryId === editingEntry._id ? 'rgba(255,165,0,0.3)' : 'rgba(59,130,246,0.3)',
+                                  border: playingEntryId === editingEntry._id ? '1px solid rgba(255,165,0,0.5)' : '1px solid rgba(59,130,246,0.5)',
+                                  borderRadius: '12px',
+                                  padding: '12px 20px',
+                                  color: 'white',
+                                  fontSize: '14px',
+                                  cursor: 'pointer',
+                                  flex: 1,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '8px',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                {playingEntryId === editingEntry._id ? (
+                                  <>⏸️ {t('pause', 'Pause')}</>
+                                ) : (
+                                  <>▶️ {t('playAudio', 'Play Audio')}</>
+                                )}
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteAudio(editingEntry)}
+                                style={{
+                                  background: 'rgba(239,68,68,0.3)',
+                                  border: '1px solid rgba(239,68,68,0.5)',
+                                  borderRadius: '12px',
+                                  padding: '12px 16px',
+                                  color: 'white',
+                                  fontSize: '14px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                                title={t('deleteAudio', 'Delete audio')}
+                              >
+                                🗑️
+                              </button>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Voice Recording Section */}
+                        {showVoiceRecorder && (
+                          <div style={{ 
+                            marginTop: '16px', 
+                            padding: '16px', 
+                            background: 'rgba(255,255,255,0.1)', 
+                            borderRadius: '12px',
+                            border: '1px solid rgba(255,255,255,0.2)'
+                          }}>
+                            <h4 style={{ fontSize: '14px', fontWeight: '500', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              🎤 {t('recordCustomVoice', 'Record Custom Voice')}
+                            </h4>
+                            
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                              {voiceRecordingState === 'idle' && (
+                                <button 
+                                  onClick={startVoiceRecording}
+                                  style={{
+                                    background: 'rgba(239,68,68,0.3)',
+                                    border: '1px solid rgba(239,68,68,0.5)',
+                                    borderRadius: '8px',
+                                    padding: '10px 16px',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                  }}
+                                >
+                                  🔴 {t('startRecording', 'Start Recording')}
+                                </button>
+                              )}
+                              
+                              {voiceRecordingState === 'recording' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <button 
+                                    onClick={stopVoiceRecording}
+                                    style={{
+                                      background: 'rgba(34,197,94,0.3)',
+                                      border: '1px solid rgba(34,197,94,0.5)',
+                                      borderRadius: '8px',
+                                      padding: '10px 16px',
+                                      color: 'white',
+                                      fontSize: '14px',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px'
+                                    }}
+                                  >
+                                    ⏹️ {t('stopRecording', 'Stop')} ({voiceRecordingTime}s)
+                                  </button>
+                                  <div style={{ fontSize: '12px', opacity: '0.8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    🔴 {t('recordingInProgress', 'Recording...')}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {voiceRecordingState === 'preview' && recordedVoiceBlob && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+                                  <audio 
+                                    controls 
+                                    src={URL.createObjectURL(recordedVoiceBlob)} 
+                                    style={{ 
+                                      flex: 1, 
+                                      height: '32px'
+                                    }} 
+                                  />
+                                  <input 
+                                    type="text"
+                                    placeholder={t('voiceName', 'Voice name')}
+                                    value={customVoiceName}
+                                    onChange={(e) => setCustomVoiceName(e.target.value)}
+                                    style={{
+                                      background: 'rgba(255,255,255,0.1)',
+                                      border: '1px solid rgba(255,255,255,0.3)',
+                                      borderRadius: '8px',
+                                      padding: '8px 12px',
+                                      color: 'white',
+                                      fontSize: '14px',
+                                      width: '120px'
+                                    }}
+                                  />
+                                  <button 
+                                    onClick={saveCustomVoice}
+                                    disabled={!customVoiceName.trim() || uploadingCustomVoice}
+                                    style={{
+                                      background: uploadingCustomVoice ? 'rgba(156,163,175,0.3)' : 'rgba(34,197,94,0.3)',
+                                      border: uploadingCustomVoice ? '1px solid rgba(156,163,175,0.5)' : '1px solid rgba(34,197,94,0.5)',
+                                      borderRadius: '8px',
+                                      padding: '8px 12px',
+                                      color: 'white',
+                                      fontSize: '14px',
+                                      cursor: uploadingCustomVoice ? 'not-allowed' : 'pointer',
+                                      opacity: !customVoiceName.trim() || uploadingCustomVoice ? 0.5 : 1
+                                    }}
+                                  >
+                                    {uploadingCustomVoice ? '💾...' : '💾 ' + t('save', 'Save')}
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      setVoiceRecordingState('idle');
+                                      setRecordedVoiceBlob(null);
+                                    }}
+                                    style={{
+                                      background: 'rgba(156,163,175,0.3)',
+                                      border: '1px solid rgba(156,163,175,0.5)',
+                                      borderRadius: '8px',
+                                      padding: '8px 12px',
+                                      color: 'white',
+                                      cursor: 'pointer',
+                                      fontSize: '14px'
+                                    }}
+                                  >
+                                    🔄
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
                 

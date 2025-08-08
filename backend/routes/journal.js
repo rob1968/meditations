@@ -312,7 +312,10 @@ router.post('/create', async (req, res) => {
           overallSentiment: detectedMood.overallSentiment,
           description: detectedMood.moodDescription,
           detectedMoods: detectedMood.detectedMoods || [],
-          moodCount: detectedMood.moodCount || 1
+          moodCount: detectedMood.moodCount || 1,
+          emotionalIntensity: detectedMood.emotionalIntensity || 3,
+          emotionalTransition: detectedMood.emotionalTransition || 'stable',
+          suggestedFocus: detectedMood.suggestedFocus || null
         };
       } else if (mood && typeof mood === 'string' && mood.trim()) {
         existingEntry.mood = mood.trim();
@@ -360,7 +363,10 @@ router.post('/create', async (req, res) => {
           overallSentiment: detectedMood.overallSentiment,
           description: detectedMood.moodDescription,
           detectedMoods: detectedMood.detectedMoods || [],
-          moodCount: detectedMood.moodCount || 1
+          moodCount: detectedMood.moodCount || 1,
+          emotionalIntensity: detectedMood.emotionalIntensity || 3,
+          emotionalTransition: detectedMood.emotionalTransition || 'stable',
+          suggestedFocus: detectedMood.suggestedFocus || null
         };
       } else if (mood && typeof mood === 'string' && mood.trim()) {
         entryData.mood = mood.trim();
