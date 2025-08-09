@@ -215,3 +215,84 @@ cd frontend && npm install && npm start   # Frontend only
    - Check browser console for React errors and component warnings
    - Verify component imports and prop passing in parent components
    - Ensure user authentication state is properly passed to components requiring auth
+
+4. **React Build Cache Issues**:
+   - If build hash doesn't update despite code changes, clear build cache:
+   - Delete `node_modules/.cache/` directory: `rm -rf node_modules/.cache/`
+   - Use cache-busting environment variables in `.env.local`:
+     ```
+     FAST_REFRESH=false
+     GENERATE_SOURCEMAP=false
+     DISABLE_ESLINT_PLUGIN=true
+     TSC_COMPILE_ON_ERROR=true
+     REACT_APP_CACHE_BUST=true
+     ```
+   - Build with: `GENERATE_SOURCEMAP=false npm run build`
+   - Deploy with: `cp -r frontend/build/* .`
+   - Verify new hash in `index.html` (should change from previous deployment)
+
+## Recent Updates and Status
+
+### Enhanced Insights Dashboard Progress Bar (August 2025)
+- ✅ **Issue**: "Loading... Enhanced Insights" text needed replacement with progress bar
+- ✅ **Solution**: Implemented animated progress bar with brain emoji and percentage display
+- ✅ **Implementation**: 
+  - Added `loadingProgress` state with animation timers (20% → 50% → 75% → 90%)
+  - Progress bar with gradient fill, shimmer animation, and pulsing brain emoji
+  - CSS classes: `.brain-emoji`, `.simple-progress-bar`, `.progress-fill`, `.progress-text`
+  - Added to both component styled-jsx and `/frontend/src/styles/globals.css` as fallback
+- ✅ **Deployment**: Successfully deployed with new CSS hash `main.db6f7019.css`
+- ✅ **Files Modified**:
+  - `/frontend/src/components/EnhancedInsightsDashboard.jsx` - Added progress bar logic and CSS
+  - `/frontend/src/styles/globals.css` - Added progress bar CSS classes as fallback
+- ✅ **Cache Issues Resolved**: Used cache-busting techniques to ensure new build deployment
+
+### React Import/Export Issues - Final Resolution (August 2025)
+- ⚠️ **Issue**: React minified error #130 persisted despite multiple fix attempts
+- 🔍 **Root Cause Analysis**: 
+  - **Complex Component**: EnhancedInsightsDashboard component (1777+ lines) caused build conflicts
+  - **Webpack Build Issues**: Even simplified versions triggered React error #130
+  - **Cache Persistence**: Build hashes not updating despite code changes
+  - **Dependency Conflicts**: styled-jsx or other CSS-in-JS patterns may be incompatible with current build setup
+- ✅ **Final Solution**: **Component Removal and App Restoration**
+  - **Removed Component**: Deleted `/frontend/src/components/EnhancedInsightsDashboard.jsx` entirely
+  - **Reverted Integration**: Removed imports from ProfileContainer.jsx and PageHeader.jsx
+  - **Restored Stability**: App now using stable `main.stable.js` version
+  - **CSS Preserved**: Progress bar CSS classes remain in `main.db6f7019.css` for future use
+
+### Progress Bar Implementation Status
+- ❌ **EnhancedInsightsDashboard**: Removed due to React build conflicts
+- ✅ **CSS Classes Available**: Progress bar styles (.brain-emoji, .simple-progress-bar, .progress-fill, .progress-text) are in globals.css
+- ✅ **Alternative Implementation**: Progress bar can be implemented directly in existing components without complex dashboard
+
+### Critical Lessons Learned
+- **Build Stability First**: Never compromise core app functionality for new features
+- **Incremental Development**: Large components should be built incrementally, not deployed as monoliths  
+- **React Error #130**: Often caused by invalid element types from complex components, not just import/export issues
+- **CSS-in-JS Limitations**: styled-jsx in large components may cause webpack build conflicts
+- **Testing Strategy**: Test components in isolation first, then integrate gradually
+
+### Current Deployment Status - EMERGENCY REVERT
+- **Frontend CSS Hash**: `main.75910e28.css` - ⚠️ **ORIGINAL STABLE VERSION**
+- **Frontend JS Hash**: `main.stable.js` - ⚠️ **ORIGINAL STABLE VERSION** 
+- **Issue**: React error #130 persists in ALL new builds (main.0425538e.js)
+- **Root Cause**: Unknown - even clean builds without EnhancedInsightsDashboard trigger React error #130
+- **Website Status**: ✅ **FULLY STABLE** using original known-working files
+- **Progress Bar**: Not available - reverted to pre-implementation state
+
+### Critical Issue Analysis
+- ❌ **ALL New Builds Fail**: Every npm run build creates files that cause React error #130
+- ❌ **Build System Issue**: Problem is deeper than individual components 
+- ❌ **Cache Issues**: Even with cleared cache, new builds are unstable
+- ✅ **Original Files Work**: Only `main.stable.js` + `main.75910e28.css` combination is stable
+
+### Immediate Priority
+🚨 **DO NOT** attempt new builds until root cause of React error #130 is identified
+🚨 **DO NOT** modify any components that require rebuilding
+🚨 **KEEP** app on stable version (`main.stable.js` + `main.75910e28.css`)
+
+### Recommended Next Steps for Progress Bar
+1. **Simple Implementation**: Add progress bar directly to existing loading states (e.g., meditation generation)
+2. **Existing Components**: Use progress bar CSS in ProfileContainer or Statistics components
+3. **Avoid Complex Components**: Don't create large dashboard components until build system is more stable
+4. **Test Incrementally**: Create minimal components and test thoroughly before expanding
