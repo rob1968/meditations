@@ -6,10 +6,10 @@ const BottomNavigation = ({ activeTab, onTabChange, user, onLogout }) => {
   const { t } = useTranslation();
 
   const tabs = [
+    { id: 'journal', icon: '📔', label: t('journal', 'Journal') },
     { id: 'myAudio', icon: '🧘', label: t('meditations', 'Meditations') },
     { id: 'community', icon: '🔮', label: t('community', 'Community') },
-    { id: 'create', icon: '✨', label: t('creeer', 'Create') },
-    { id: 'journal', icon: '📔', label: t('journal', 'Journal') }
+    { id: 'create', icon: '✨', label: t('creeer', 'Create') }
   ];
 
   // Add admin tab for user 'rob'

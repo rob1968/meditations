@@ -2,7 +2,10 @@ const express = require('express');
 const router = express.Router();
 const JournalEntry = require('../models/JournalEntry');
 const User = require('../models/User');
-const aiCoachService = require('../services/aiCoachService');
+const Addiction = require('../models/Addiction');
+const AICoachService = require('../services/aiCoachService');
+const aiCoachService = new AICoachService();
+const relapseDetectionService = require('../services/relapseDetectionService');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -15,11 +18,25 @@ if (!fs.existsSync(journalsDir)) {
   fs.mkdirSync(journalsDir, { recursive: true });
 }
 
-// Helper function for automatic AI Coach analysis (DISABLED)
+// Helper function for automatic AI Coach analysis
 const triggerAICoachAnalysis = async (journalEntry) => {
-  // Disabled for now to focus on mood detection
-  console.log(`AI Coach analysis disabled for entry ${journalEntry._id}`);
-  return;
+  try {
+    console.log(`Triggering AI Coach analysis for journal entry ${journalEntry._id}`);
+    
+    // Perform trigger and risk analysis
+    const analysisResult = await aiCoachService.analyzeJournalEntry(journalEntry.userId, journalEntry);
+    
+    console.log('AI Coach analysis result:', {
+      triggersCount: analysisResult?.analysisResults?.triggersDetected?.length || 0,
+      riskLevel: analysisResult?.analysisResults?.riskAssessment?.level,
+      hasResponse: !!analysisResult?.messages?.length
+    });
+    
+    return analysisResult;
+  } catch (error) {
+    console.error('Error in AI Coach analysis:', error);
+    return null;
+  }
 };
 
 // Set up multer for file uploads
@@ -258,7 +275,7 @@ router.get('/user/:userId', async (req, res) => {
 // Create new journal entry or update existing daily entry
 router.post('/create', async (req, res) => {
   try {
-    const { userId, title, content, mood, tags, date } = req.body;
+    const { userId, title, content, mood, tags, date, language = 'en' } = req.body;
     
     if (!userId || !title || !content) {
       return res.status(400).json({ 
@@ -273,13 +290,32 @@ router.post('/create', async (req, res) => {
     
     console.log('Creating/updating journal entry for date:', normalizedDate);
     
+    // Check if content is nonsense before processing
+    try {
+      console.log('Checking content for nonsense...');
+      const nonsenseCheck = await aiCoachService.checkNonsenseOnly(content);
+      
+      if (nonsenseCheck.isNonsense) {
+        console.log('Nonsense content detected:', nonsenseCheck.reason);
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Text contains invalid or nonsensical content. Please provide meaningful content for your journal entry.',
+          isNonsense: true,
+          reason: nonsenseCheck.reason
+        });
+      }
+      console.log('Content validation passed');
+    } catch (error) {
+      console.error('Error checking for nonsense:', error);
+      // Continue without nonsense check if it fails
+    }
+    
     // Analyze mood from content using AI
-    const aiCoachService = require('../services/aiCoachService');
     let detectedMood = null;
     
     try {
       console.log('Analyzing mood from journal content...');
-      detectedMood = await aiCoachService.analyzeMoodFromText(content, userId);
+      detectedMood = await aiCoachService.analyzeMoodFromText(content, userId, language);
       console.log('Detected mood:', detectedMood);
     } catch (error) {
       console.error('Error analyzing mood:', error);
@@ -386,6 +422,37 @@ router.post('/create', async (req, res) => {
       // Trigger AI Coach analysis for new entry
       triggerAICoachAnalysis(newEntry);
       
+      // Check for relapse mentions and update addiction status
+      try {
+        const userAddictions = await Addiction.find({ userId });
+        const userLanguage = language || 'en';
+        
+        const relapseDetection = await relapseDetectionService.detectRelapse(
+          content,
+          userAddictions,
+          userLanguage
+        );
+        
+        console.log('Relapse detection results:', {
+          relapseDetected: relapseDetection.relapseDetected,
+          confidence: relapseDetection.confidence,
+          keywords: relapseDetection.keywords
+        });
+        
+        if (relapseDetection.relapseDetected || relapseDetection.recoveryDetected) {
+          const statusUpdate = await relapseDetectionService.updateAddictionStatus(
+            userId,
+            relapseDetection,
+            newEntry.createdAt
+          );
+          
+          console.log('Addiction status update:', statusUpdate);
+        }
+      } catch (relapseError) {
+        console.error('Error in relapse detection:', relapseError);
+        // Don't fail the journal entry creation if relapse detection fails
+      }
+      
       res.json({
         success: true,
         entry: newEntry,
@@ -404,7 +471,7 @@ router.post('/create', async (req, res) => {
 router.put('/:entryId', async (req, res) => {
   try {
     const { entryId } = req.params;
-    const { userId, title, content, mood, tags } = req.body;
+    const { userId, title, content, mood, tags, language = 'en' } = req.body;
     
     console.log('Updating journal entry:', {
       entryId,
@@ -440,13 +507,34 @@ router.put('/:entryId', async (req, res) => {
     // Update fields
     if (title !== undefined) entry.title = title.trim();
     if (content !== undefined) {
-      entry.content = content.trim();
+      const trimmedContent = content.trim();
+      
+      // Check if updated content is nonsense
+      try {
+        console.log('Checking updated content for nonsense...');
+        const nonsenseCheck = await aiCoachService.checkNonsenseOnly(trimmedContent);
+        
+        if (nonsenseCheck.isNonsense) {
+          console.log('Nonsense content detected in update:', nonsenseCheck.reason);
+          return res.status(400).json({ 
+            success: false, 
+            error: 'Updated text contains invalid or nonsensical content. Please provide meaningful content for your journal entry.',
+            isNonsense: true,
+            reason: nonsenseCheck.reason
+          });
+        }
+        console.log('Updated content validation passed');
+      } catch (error) {
+        console.error('Error checking updated content for nonsense:', error);
+        // Continue without nonsense check if it fails
+      }
+      
+      entry.content = trimmedContent;
       
       // Re-analyze mood when content changes
       try {
         console.log('Re-analyzing mood after content update...');
-        const aiCoachService = require('../services/aiCoachService');
-        const detectedMood = await aiCoachService.analyzeMoodFromText(entry.content, userId);
+        const detectedMood = await aiCoachService.analyzeMoodFromText(entry.content, userId, language);
         
         if (detectedMood && detectedMood.primaryMood) {
           entry.mood = detectedMood.primaryMood;
@@ -496,6 +584,40 @@ router.put('/:entryId', async (req, res) => {
       mood: entry.mood,
       tags: entry.tags
     });
+    
+    // Trigger AI Coach analysis for updated entry
+    triggerAICoachAnalysis(entry);
+    
+    // Check for relapse mentions in updated content and update addiction status
+    try {
+      const userAddictions = await Addiction.find({ userId });
+      const userLanguage = language || 'en';
+      
+      const relapseDetection = await relapseDetectionService.detectRelapse(
+        content,
+        userAddictions,
+        userLanguage
+      );
+      
+      console.log('Relapse detection results (update):', {
+        relapseDetected: relapseDetection.relapseDetected,
+        confidence: relapseDetection.confidence,
+        keywords: relapseDetection.keywords
+      });
+      
+      if (relapseDetection.relapseDetected || relapseDetection.recoveryDetected) {
+        const statusUpdate = await relapseDetectionService.updateAddictionStatus(
+          userId,
+          relapseDetection,
+          entry.createdAt
+        );
+        
+        console.log('Addiction status update (update):', statusUpdate);
+      }
+    } catch (relapseError) {
+      console.error('Error in relapse detection (update):', relapseError);
+      // Don't fail the journal entry update if relapse detection fails
+    }
     
     res.json({
       success: true,
@@ -1159,6 +1281,36 @@ router.delete('/voice-clone/:voiceId', async (req, res) => {
   } catch (error) {
     console.error('Error deleting custom voice:', error);
     res.status(500).json({ success: false, error: 'Failed to delete custom voice' });
+  }
+});
+
+// Test endpoint to manually trigger analysis on existing entry
+router.post('/test-analysis/:entryId', async (req, res) => {
+  try {
+    const { entryId } = req.params;
+    console.log('Manual analysis test for entry:', entryId);
+    
+    const entry = await JournalEntry.findById(entryId);
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Entry not found' });
+    }
+    
+    // Run AI Coach analysis
+    const analysisResult = await triggerAICoachAnalysis(entry);
+    
+    res.json({
+      success: true,
+      entry: {
+        id: entry._id,
+        title: entry.title,
+        content: entry.content.substring(0, 100) + '...'
+      },
+      analysisResult
+    });
+    
+  } catch (error) {
+    console.error('Error in manual analysis test:', error);
+    res.status(500).json({ success: false, error: 'Analysis failed' });
   }
 });
 

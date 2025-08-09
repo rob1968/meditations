@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const OpenAI = require('openai');
 const AICoach = require('../models/AICoach');
 const JournalEntry = require('../models/JournalEntry');
 const Addiction = require('../models/Addiction');
@@ -6,8 +6,10 @@ const User = require('../models/User');
 
 class AICoachService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_CLOUD_API_KEY);
-    this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+    this.modelName = "gpt-4o"; // Using GPT-4o (GPT-5 may not be available yet)
     
     // Coach persona configuration
     this.coachPersona = {
@@ -169,50 +171,65 @@ class AICoachService {
       // Build personalized user context
       const userContext = this.buildPersonalizedContext(user, addictions);
       
-      const prompt = `
-        You are Alex, an empathetic AI addiction recovery coach. Analyze this journal entry for:
-        1. Emotional state and sentiment
-        2. Potential addiction triggers
-        3. Risk level assessment
-        4. Suggested interventions
-        
-        User context:
-        ${userContext}
-        
-        Journal entry:
-        Title: ${journalEntry.title}
-        Content: ${journalEntry.content}
-        Mood: ${journalEntry.mood}
-        Date: ${journalEntry.date}
-        
-        Respond with a JSON object containing:
-        {
-          "sentimentScore": -1 to 1,
-          "emotionalState": {
-            "primary": "emotion",
-            "secondary": ["emotions"],
-            "stability": "stable|declining|improving|volatile"
-          },
-          "triggersDetected": [
-            {
-              "trigger": "specific trigger",
-              "confidence": 0-1,
-              "relatedAddiction": "addiction_type",
-              "context": "why this is concerning"
-            }
-          ],
-          "riskLevel": "low|medium|high",
-          "riskFactors": ["factor1", "factor2"],
-          "coachResponse": "supportive message in user's language",
-          "suggestedInterventions": ["intervention1", "intervention2"]
-        }
-        
-        Keep the coach response encouraging, short (max 100 words), and culturally appropriate.
-      `;
+      // Language-specific analysis instructions
+      const userLanguage = user?.preferredLanguage || 'en';
+      const languageInstructions = {
+        'en': 'Respond with coachResponse and suggestedInterventions in English.',
+        'nl': 'Antwoord met coachResponse en suggestedInterventions in het Nederlands.',
+        'de': 'Antworten Sie mit coachResponse und suggestedInterventions auf Deutsch.',
+        'fr': 'Répondez avec coachResponse et suggestedInterventions en français.',
+        'es': 'Responda con coachResponse y suggestedInterventions en español.',
+        'it': 'Rispondi con coachResponse e suggestedInterventions in italiano.',
+        'pt': 'Responda com coachResponse e suggestedInterventions em português.',
+        'ru': 'Отвечайте с coachResponse и suggestedInterventions на русском языке.',
+        'zh': '用中文回答 coachResponse 和 suggestedInterventions。',
+        'ja': 'coachResponse と suggestedInterventions を日本語で回答してください。',
+        'ko': 'coachResponse와 suggestedInterventions를 한국어로 답변하세요.',
+        'hi': 'coachResponse और suggestedInterventions को हिंदी में उत्तर दें।',
+        'ar': 'أجب بـ coachResponse و suggestedInterventions باللغة العربية.'
+      };
       
-      const result = await this.model.generateContent(prompt);
-      const responseText = result.response.text();
-      console.log('Raw Gemini response for journal analysis:', responseText);
+      const langInstruction = languageInstructions[userLanguage] || languageInstructions['en'];
+
+      // Optimized prompt for OpenAI GPT-4o
+      const prompt = `You are Alex, an empathetic AI addiction recovery coach specializing in emotional analysis and trigger detection.
+
+ANALYZE THIS JOURNAL ENTRY:
+Title: "${journalEntry.title}"
+Content: "${journalEntry.content}"
+Date: ${journalEntry.date}
+
+USER CONTEXT: ${userContext}
+
+LANGUAGE INSTRUCTION: ${langInstruction}
+
+PROVIDE ANALYSIS AS VALID JSON:
+{
+  "sentimentScore": [number between -1 and 1],
+  "emotionalState": {
+    "primary": "[main emotion]",
+    "secondary": ["[additional emotions]"],
+    "stability": "stable|declining|improving|volatile"
+  },
+  "triggersDetected": [
+    {
+      "trigger": "[specific trigger]",
+      "confidence": [0-1],
+      "relatedAddiction": "[addiction type]", 
+      "context": "[brief explanation]"
+    }
+  ],
+  "riskLevel": "low|medium|high",
+  "riskFactors": ["[specific risk factors]"],
+  "coachResponse": "[supportive message in user's preferred language (${userLanguage}), max 100 words]",
+  "suggestedInterventions": ["[specific actionable advice in user's preferred language (${userLanguage})]"]
+}
+
+Important: Response must be valid JSON only. Ensure coachResponse and suggestedInterventions are in the user's preferred language: ${userLanguage}.`;
+      
+      const result = await this.openai.chat.completions.create({ model: this.modelName, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 1000 });
+      const responseText = result.choices[0].message.content;
+      console.log('Raw OpenAI GPT-4o response for journal analysis:', responseText);
       
       // Clean the response text - remove markdown code blocks if present
       let cleanedText = responseText.trim();
@@ -224,7 +241,7 @@ class AICoachService {
         cleanedText = cleanedText.replace(/^```\s*/, '').replace(/```\s*$/, '');
       }
       
-      console.log('Cleaned Gemini response for journal analysis:', cleanedText);
+      console.log('Cleaned OpenAI response for journal analysis:', cleanedText);
       
       const analysis = JSON.parse(cleanedText);
       
@@ -234,15 +251,23 @@ class AICoachService {
       return analysis;
       
     } catch (error) {
-      console.error('Error analyzing journal entry:', error);
-      return this.getDefaultAnalysis();
+      console.error('Error analyzing journal entry with OpenAI GPT-4o:', error);
+      console.error('Error details:', {
+        message: error.message,
+        type: error.type,
+        code: error.code,
+        status: error.status
+      });
+      // Get user for language preference in default response
+      const user = await User.findById(userId).catch(() => null);
+      return this.getDefaultAnalysis(user?.preferredLanguage || 'en');
     }
   }
 
   /**
    * Generate coaching chat response
    */
-  async generateChatResponse(userId, userMessage, context = {}) {
+  async generateChatResponse(userId, userMessage, context = {}, overrideLanguage = null) {
     try {
       const user = await User.findById(userId);
       const addictions = await Addiction.find({ userId, status: { $in: ['active', 'recovering'] } });
@@ -260,8 +285,31 @@ class AICoachService {
       // Build personalized user context
       const userContext = this.buildPersonalizedContext(user, addictions);
       
+      // Language-specific coaching instructions
+      const languageInstructions = {
+        'en': 'IMPORTANT: Respond in English only. Be warm and supportive.',
+        'nl': 'BELANGRIJK: Antwoord ALLEEN in het Nederlands. Wees warm en ondersteunend.',
+        'de': 'WICHTIG: Antworten Sie NUR auf Deutsch. Seien Sie herzlich und unterstützend.',
+        'fr': 'IMPORTANT: Répondez UNIQUEMENT en français. Soyez chaleureux et solidaire.',
+        'es': 'IMPORTANTE: Responde SOLO en español. Sé cálido y solidario.',
+        'it': 'IMPORTANTE: Rispondi SOLO in italiano. Sii caloroso e solidale.',
+        'pt': 'IMPORTANTE: Responda APENAS em português. Seja caloroso e solidário.',
+        'ru': 'ВАЖНО: Отвечайте ТОЛЬКО на русском языке. Будьте теплыми и поддерживающими.',
+        'zh': '重要：只用中文回答。要温暖和支持。',
+        'ja': '重要：日本語のみで回答してください。温かく、支援的になってください。',
+        'ko': '중요: 한국어로만 답변하세요. 따뜻하고 지지적이어야 합니다.',
+        'hi': 'महत्वपूर्ण: केवल हिंदी में जवाब दें। गर्मजोशी और सहायक बनें।',
+        'ar': 'مهم: أجب بالعربية فقط. كن دافئًا وداعمًا.'
+      };
+
+      // Use override language from UI if provided, otherwise fall back to user preference
+      const userLanguage = overrideLanguage || user?.preferredLanguage || 'en';
+      const langInstruction = languageInstructions[userLanguage] || languageInstructions['en'];
+
       const prompt = `
         You are Alex, a professional AI addiction recovery coach. Respond to this user message with empathy and practical guidance.
+        
+        ${langInstruction}
         
         User context:
         ${userContext}
@@ -277,18 +325,17 @@ class AICoachService {
         - Keep response under 150 words
         - Offer practical, actionable advice
         - Ask follow-up questions when appropriate
-        - Use the user's preferred language and adapt cultural sensitivity
         - Reference their specific addiction type when relevant
         - Avoid clinical or medical advice
         - Focus on emotional support and behavioral strategies
         - Adapt your communication style to their age and background
         - Consider their location for relevant resources or references
         
-        Respond as Alex would, naturally and conversationally.
+        Respond as Alex would, naturally and conversationally in the user's preferred language (${userLanguage}).
       `;
       
-      const result = await this.model.generateContent(prompt);
-      const coachResponse = result.response.text();
+      const result = await this.openai.chat.completions.create({ model: this.modelName, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 1000 });
+      const coachResponse = result.choices[0].message.content;
       
       // Save conversation
       await this.saveChatMessage(userId, userMessage, coachResponse, context);
@@ -301,9 +348,46 @@ class AICoachService {
       
     } catch (error) {
       console.error('Error generating chat response:', error);
+      
+      // Get user language for fallback response (use override language first)
+      const user = await User.findById(userId).catch(() => null);
+      const userLanguage = overrideLanguage || user?.preferredLanguage || 'en';
+      
+      const fallbackResponses = {
+        'en': "I'm here to support you. Can you tell me how you're feeling right now?",
+        'nl': "Ik ben er om je te ondersteunen. Kun je me vertellen hoe je je nu voelt?",
+        'de': "Ich bin hier, um Sie zu unterstützen. Können Sie mir sagen, wie Sie sich gerade fühlen?",
+        'fr': "Je suis là pour vous accompagner. Pouvez-vous me dire comment vous vous sentez maintenant?",
+        'es': "Estoy aquí para apoyarte. ¿Puedes decirme cómo te sientes ahora?",
+        'it': "Sono qui per supportarti. Puoi dirmi come ti senti adesso?",
+        'pt': "Estou aqui para apoiá-lo. Pode dizer-me como se sente agora?",
+        'ru': "Я здесь, чтобы поддержать вас. Можете ли вы сказать мне, как вы себя чувствуете сейчас?",
+        'zh': "我在这里支持你。你能告诉我你现在的感受吗？",
+        'ja': "あなたをサポートするためにここにいます。今の気持ちを教えてもらえますか？",
+        'ko': "당신을 지원하기 위해 여기 있습니다. 지금 기분이 어떤지 말씀해 주시겠어요？",
+        'hi': "मैं आपका समर्थन करने के लिए यहाँ हूँ। क्या आप मुझे बता सकते हैं कि आप अभी कैसा महसूस कर रहे हैं？",
+        'ar': "أنا هنا لدعمك. هل يمكنك أن تخبرني كيف تشعر الآن؟"
+      };
+      
+      const fallbackSuggestions = {
+        'en': ["Take a deep breath", "Share more about your day"],
+        'nl': ["Neem een diepe ademhaling", "Vertel meer over je dag"],
+        'de': ["Atmen Sie tief durch", "Erzählen Sie mehr über Ihren Tag"],
+        'fr': ["Prenez une grande respiration", "Partagez plus sur votre journée"],
+        'es': ["Respira profundo", "Comparte más sobre tu día"],
+        'it': ["Fai un respiro profondo", "Condividi di più sulla tua giornata"],
+        'pt': ["Respire fundo", "Partilhe mais sobre o seu dia"],
+        'ru': ["Сделайте глубокий вдох", "Расскажите больше о своем дне"],
+        'zh': ["深呼吸", "分享更多关于你的一天"],
+        'ja': ["深呼吸をしてください", "あなたの一日についてもっと教えてください"],
+        'ko': ["심호흡하세요", "당신의 하루에 대해 더 알려주세요"],
+        'hi': ["गहरी सांस लें", "अपने दिन के बारे में और बताएं"],
+        'ar': ["خذ نفساً عميقاً", "شارك المزيد عن يومك"]
+      };
+      
       return {
-        response: "I'm here to support you. Can you tell me how you're feeling right now?",
-        suggestions: ["Take a deep breath", "Share more about your day"],
+        response: fallbackResponses[userLanguage] || fallbackResponses['en'],
+        suggestions: fallbackSuggestions[userLanguage] || fallbackSuggestions['en'],
         riskLevel: "low"
       };
     }
@@ -369,8 +453,8 @@ class AICoachService {
         Make it personal, urgent but calming, and actionable. Consider their age, cultural background, and personal context.
       `;
       
-      const result = await this.model.generateContent(prompt);
-      let text = result.response.text();
+      const result = await this.openai.chat.completions.create({ model: this.modelName, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 1000 });
+      let text = result.choices[0].message.content;
       
       // Clean markdown code blocks if present
       text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
@@ -431,8 +515,8 @@ class AICoachService {
         Be encouraging and focus on progress, however small.
       `;
       
-      const result = await this.model.generateContent(prompt);
-      let text = result.response.text();
+      const result = await this.openai.chat.completions.create({ model: this.modelName, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 1000 });
+      let text = result.choices[0].message.content;
       
       // Clean markdown code blocks if present
       text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
@@ -451,13 +535,39 @@ class AICoachService {
   async saveAnalysis(userId, sessionType, analysis, journalId = null) {
     const sessionId = `${userId}_${Date.now()}_${sessionType}`;
     
+    // Map addiction type strings to actual Addiction document IDs
+    let processedTriggers = analysis.triggersDetected || [];
+    if (processedTriggers.length > 0) {
+      // Get user's addictions to map type strings to ObjectIds
+      const userAddictions = await Addiction.find({ userId });
+      
+      processedTriggers = processedTriggers.map(trigger => {
+        // If relatedAddiction is a string, try to find the matching addiction ID
+        if (trigger.relatedAddiction && typeof trigger.relatedAddiction === 'string') {
+          const matchingAddiction = userAddictions.find(
+            addiction => addiction.type === trigger.relatedAddiction
+          );
+          
+          // Return trigger with ObjectId if found, otherwise exclude relatedAddiction
+          if (matchingAddiction) {
+            return { ...trigger, relatedAddiction: matchingAddiction._id };
+          } else {
+            // Remove relatedAddiction if we can't find a matching ID
+            const { relatedAddiction, ...triggerWithoutAddiction } = trigger;
+            return triggerWithoutAddiction;
+          }
+        }
+        return trigger;
+      });
+    }
+    
     const coachSession = new AICoach({
       userId,
       sessionId,
       sessionType,
       analysisResults: {
         sentimentScore: analysis.sentimentScore,
-        triggersDetected: analysis.triggersDetected,
+        triggersDetected: processedTriggers,
         riskAssessment: {
           level: analysis.riskLevel,
           factors: analysis.riskFactors,
@@ -530,36 +640,218 @@ class AICoachService {
   }
 
   // Default fallback responses
-  getDefaultAnalysis() {
+  getDefaultAnalysis(language = 'en') {
+    const coachResponses = {
+      'en': "Thank you for sharing. I'm here to support you on your journey.",
+      'nl': "Dank je voor het delen. Ik ben er om je te ondersteunen op je reis.",
+      'de': "Danke, dass Sie das mit mir geteilt haben. Ich bin hier, um Sie auf Ihrem Weg zu unterstützen.",
+      'fr': "Merci de partager. Je suis là pour vous accompagner dans votre parcours.",
+      'es': "Gracias por compartir. Estoy aquí para apoyarte en tu viaje.",
+      'it': "Grazie per aver condiviso. Sono qui per supportarti nel tuo percorso.",
+      'pt': "Obrigado por partilhar. Estou aqui para apoiá-lo na sua jornada.",
+      'ru': "Спасибо, что поделились. Я здесь, чтобы поддержать вас на вашем пути.",
+      'zh': "谢谢你的分享。我在这里支持你的旅程。",
+      'ja': "シェアしていただきありがとうございます。あなたの旅路をサポートするためにここにいます。",
+      'ko': "공유해 주셔서 감사합니다. 당신의 여정을 지원하기 위해 여기 있습니다.",
+      'hi': "साझा करने के लिए धन्यवाद। मैं आपकी यात्रा में आपका समर्थन करने के लिए यहाँ हूँ।",
+      'ar': "شكراً لك على المشاركة. أنا هنا لدعمك في رحلتك."
+    };
+
     return {
       sentimentScore: 0,
       emotionalState: { primary: "neutral", secondary: [], stability: "stable" },
       triggersDetected: [],
       riskLevel: "low",
       riskFactors: [],
-      coachResponse: "Thank you for sharing. I'm here to support you on your journey.",
+      coachResponse: coachResponses[language] || coachResponses['en'],
       suggestedInterventions: ["mindfulness", "breathing"]
     };
   }
 
-  getDefaultIntervention(triggerType) {
+  getDefaultIntervention(triggerType, language = 'en') {
+    const interventionMessages = {
+      'en': {
+        immediateAction: "Take 5 deep breaths",
+        message: "You're stronger than this moment. Let's take it one breath at a time.",
+        copingStrategy: "Breathe in for 4 counts, hold for 4, exhale for 6. Repeat 5 times.",
+        followUpQuestions: ["How are you feeling now?", "What triggered this moment?"]
+      },
+      'nl': {
+        immediateAction: "Neem 5 diepe ademhalingen",
+        message: "Je bent sterker dan dit moment. Laten we het adem voor adem doen.",
+        copingStrategy: "Adem in gedurende 4 tellen, houd 4 tellen vast, adem uit gedurende 6 tellen. Herhaal 5 keer.",
+        followUpQuestions: ["Hoe voel je je nu?", "Wat heeft dit moment veroorzaakt?"]
+      },
+      'de': {
+        immediateAction: "Nehmen Sie 5 tiefe Atemzüge",
+        message: "Sie sind stärker als dieser Moment. Lassen Sie es uns Atemzug für Atemzug angehen.",
+        copingStrategy: "Atmen Sie 4 Sekunden ein, halten Sie 4 Sekunden an, atmen Sie 6 Sekunden aus. 5 Mal wiederholen.",
+        followUpQuestions: ["Wie fühlen Sie sich jetzt?", "Was hat diesen Moment ausgelöst?"]
+      },
+      'fr': {
+        immediateAction: "Prenez 5 respirations profondes",
+        message: "Vous êtes plus fort que ce moment. Prenons-le souffle par souffle.",
+        copingStrategy: "Inspirez pendant 4 temps, retenez pendant 4, expirez pendant 6. Répétez 5 fois.",
+        followUpQuestions: ["Comment vous sentez-vous maintenant?", "Qu'est-ce qui a déclenché ce moment?"]
+      },
+      'es': {
+        immediateAction: "Toma 5 respiraciones profundas",
+        message: "Eres más fuerte que este momento. Vamos respiración por respiración.",
+        copingStrategy: "Inhala durante 4 tiempos, mantén durante 4, exhala durante 6. Repite 5 veces.",
+        followUpQuestions: ["¿Cómo te sientes ahora?", "¿Qué desencadenó este momento?"]
+      },
+      'it': {
+        immediateAction: "Fai 5 respiri profondi",
+        message: "Sei più forte di questo momento. Prendiamolo un respiro alla volta.",
+        copingStrategy: "Inspira per 4 tempi, trattieni per 4, espira per 6. Ripeti 5 volte.",
+        followUpQuestions: ["Come ti senti ora?", "Cosa ha scatenato questo momento?"]
+      },
+      'pt': {
+        immediateAction: "Faça 5 respirações profundas",
+        message: "Você é mais forte que este momento. Vamos passo a passo, respiração por respiração.",
+        copingStrategy: "Inspire por 4 tempos, segure por 4, expire por 6. Repita 5 vezes.",
+        followUpQuestions: ["Como se sente agora?", "O que desencadeou este momento?"]
+      },
+      'ru': {
+        immediateAction: "Сделайте 5 глубоких вдохов",
+        message: "Вы сильнее этого момента. Давайте пройдем через это дыхание за дыханием.",
+        copingStrategy: "Вдыхайте на 4 счета, задержите на 4, выдыхайте на 6. Повторите 5 раз.",
+        followUpQuestions: ["Как вы себя чувствуете сейчас?", "Что вызвало этот момент?"]
+      },
+      'zh': {
+        immediateAction: "深呼吸5次",
+        message: "你比这一刻更强大。让我们一次一个呼吸地度过。",
+        copingStrategy: "吸气4拍，屏息4拍，呼气6拍。重复5次。",
+        followUpQuestions: ["你现在感觉如何？", "是什么引发了这一刻？"]
+      },
+      'ja': {
+        immediateAction: "5回深呼吸をしてください",
+        message: "あなたはこの瞬間より強いです。一呼吸ずつ乗り越えましょう。",
+        copingStrategy: "4カウントで息を吸い、4カウント止めて、6カウントで吐きます。5回繰り返します。",
+        followUpQuestions: ["今どのように感じていますか？", "何がこの瞬間を引き起こしましたか？"]
+      },
+      'ko': {
+        immediateAction: "5번 깊게 숨쉬세요",
+        message: "당신은 이 순간보다 더 강합니다. 한 번의 호흡씩 함께 해봅시다.",
+        copingStrategy: "4박자 동안 숨을 들이쉬고, 4박자 동안 참았다가, 6박자 동안 내쉬세요. 5번 반복하세요.",
+        followUpQuestions: ["지금 기분이 어떤가요?", "무엇이 이 순간을 유발했나요?"]
+      },
+      'hi': {
+        immediateAction: "5 गहरी सांसें लें",
+        message: "आप इस पल से कहीं अधिक मजबूत हैं। आइए एक-एक सांस करके इसे पार करते हैं।",
+        copingStrategy: "4 गिनती के लिए सांस अंदर लें, 4 के लिए रोकें, 6 के लिए छोड़ें। 5 बार दोहराएं।",
+        followUpQuestions: ["अब आप कैसा महसूस कर रहे हैं?", "इस पल को किस बात ने ट्रिगर किया?"]
+      },
+      'ar': {
+        immediateAction: "خذ 5 أنفاس عميقة",
+        message: "أنت أقوى من هذه اللحظة. دعنا نأخذها نفساً واحداً في كل مرة.",
+        copingStrategy: "تنفس لمدة 4 عدات، احتفظ لمدة 4، ازفر لمدة 6. كرر 5 مرات.",
+        followUpQuestions: ["كيف تشعر الآن؟", "ما الذي أثار هذه اللحظة؟"]
+      }
+    };
+
+    const langMessages = interventionMessages[language] || interventionMessages['en'];
+    
     return {
       interventionType: "breathing",
-      immediateAction: "Take 5 deep breaths",
-      message: "You're stronger than this moment. Let's take it one breath at a time.",
-      copingStrategy: "Breathe in for 4 counts, hold for 4, exhale for 6. Repeat 5 times.",
-      followUpQuestions: ["How are you feeling now?", "What triggered this moment?"]
+      immediateAction: langMessages.immediateAction,
+      message: langMessages.message,
+      copingStrategy: langMessages.copingStrategy,
+      followUpQuestions: langMessages.followUpQuestions
     };
   }
 
-  getDefaultInsights() {
+  getDefaultInsights(language = 'en') {
+    const insightMessages = {
+      'en': {
+        keyInsights: ["You're taking positive steps by using this app"],
+        achievements: ["Staying engaged with your recovery"],
+        recommendedActions: ["Continue journaling daily"],
+        motivationalMessage: "Every day is a new opportunity for growth."
+      },
+      'nl': {
+        keyInsights: ["Je neemt positieve stappen door deze app te gebruiken"],
+        achievements: ["Betrokken blijven bij je herstel"],
+        recommendedActions: ["Blijf dagelijks dagboek schrijven"],
+        motivationalMessage: "Elke dag is een nieuwe kans voor groei."
+      },
+      'de': {
+        keyInsights: ["Sie machen positive Schritte, indem Sie diese App nutzen"],
+        achievements: ["Engagiert bleiben in Ihrer Genesung"],
+        recommendedActions: ["Führen Sie weiterhin täglich Tagebuch"],
+        motivationalMessage: "Jeder Tag ist eine neue Chance für Wachstum."
+      },
+      'fr': {
+        keyInsights: ["Vous faites des pas positifs en utilisant cette application"],
+        achievements: ["Rester engagé dans votre rétablissement"],
+        recommendedActions: ["Continuez à tenir un journal quotidien"],
+        motivationalMessage: "Chaque jour est une nouvelle opportunité de croissance."
+      },
+      'es': {
+        keyInsights: ["Estás dando pasos positivos al usar esta aplicación"],
+        achievements: ["Mantenerte comprometido con tu recuperación"],
+        recommendedActions: ["Continúa escribiendo en tu diario diariamente"],
+        motivationalMessage: "Cada día es una nueva oportunidad para el crecimiento."
+      },
+      'it': {
+        keyInsights: ["Stai facendo passi positivi usando questa app"],
+        achievements: ["Rimanere coinvolto nel tuo recupero"],
+        recommendedActions: ["Continua a scrivere il diario quotidianamente"],
+        motivationalMessage: "Ogni giorno è una nuova opportunità per crescere."
+      },
+      'pt': {
+        keyInsights: ["Está dando passos positivos ao usar esta aplicação"],
+        achievements: ["Manter-se envolvido na sua recuperação"],
+        recommendedActions: ["Continue a escrever no diário diariamente"],
+        motivationalMessage: "Cada dia é uma nova oportunidade para crescer."
+      },
+      'ru': {
+        keyInsights: ["Вы делаете позитивные шаги, используя это приложение"],
+        achievements: ["Сохранение активности в восстановлении"],
+        recommendedActions: ["Продолжайте вести дневник ежедневно"],
+        motivationalMessage: "Каждый день - это новая возможность для роста."
+      },
+      'zh': {
+        keyInsights: ["通过使用这个应用程序，你正在迈出积极的步伐"],
+        achievements: ["保持参与康复过程"],
+        recommendedActions: ["继续每天写日记"],
+        motivationalMessage: "每一天都是成长的新机会。"
+      },
+      'ja': {
+        keyInsights: ["このアプリを使用することでポジティブな歩みを進めています"],
+        achievements: ["回復に取り組み続けている"],
+        recommendedActions: ["日記を毎日書き続ける"],
+        motivationalMessage: "毎日が成長のための新しい機会です。"
+      },
+      'ko': {
+        keyInsights: ["이 앱을 사용함으로써 긍정적인 발걸음을 내딛고 있습니다"],
+        achievements: ["회복에 계속 참여하기"],
+        recommendedActions: ["매일 일기 쓰기를 계속하세요"],
+        motivationalMessage: "매일은 성장을 위한 새로운 기회입니다."
+      },
+      'hi': {
+        keyInsights: ["इस ऐप का उपयोग करके आप सकारात्मक कदम उठा रहे हैं"],
+        achievements: ["अपनी रिकवरी में संलग्न रहना"],
+        recommendedActions: ["रोजाना डायरी लिखना जारी रखें"],
+        motivationalMessage: "हर दिन विकास के लिए एक नया अवसर है।"
+      },
+      'ar': {
+        keyInsights: ["أنت تتخذ خطوات إيجابية باستخدام هذا التطبيق"],
+        achievements: ["البقاء منخرطاً في تعافيك"],
+        recommendedActions: ["واصل كتابة اليوميات يومياً"],
+        motivationalMessage: "كل يوم هو فرصة جديدة للنمو."
+      }
+    };
+
+    const langMessages = insightMessages[language] || insightMessages['en'];
+
     return {
       weeklyProgress: "neutral",
-      keyInsights: ["You're taking positive steps by using this app"],
+      keyInsights: langMessages.keyInsights,
       moodTrend: "stable",
-      achievements: ["Staying engaged with your recovery"],
-      recommendedActions: ["Continue journaling daily"],
-      motivationalMessage: "Every day is a new opportunity for growth."
+      achievements: langMessages.achievements,
+      recommendedActions: langMessages.recommendedActions,
+      motivationalMessage: langMessages.motivationalMessage
     };
   }
 
@@ -605,26 +897,165 @@ class AICoachService {
   getPersonalizedStressSuggestions(user, addictions) {
     const age = user?.age || (user?.birthDate ? this.calculateAge(user.birthDate) : null);
     const country = user?.location?.country?.toLowerCase();
+    const preferredLanguage = user?.preferredLanguage || 'en';
     
-    let suggestions = ["Try the 4-7-8 breathing technique"];
+    // Base breathing technique suggestion in multiple languages
+    const breathingTechniques = {
+      'en': "Try the 4-7-8 breathing technique",
+      'nl': "Probeer de 4-7-8 ademhalingstechniek",
+      'de': "Probieren Sie die 4-7-8 Atemtechnik",
+      'fr': "Essayez la technique de respiration 4-7-8",
+      'es': "Prueba la técnica de respiración 4-7-8",
+      'it': "Prova la tecnica di respirazione 4-7-8",
+      'pt': "Experimente a técnica de respiração 4-7-8",
+      'ru': "Попробуйте дыхательную технику 4-7-8",
+      'zh': "尝试4-7-8呼吸技巧",
+      'ja': "4-7-8呼吸法を試してください",
+      'ko': "4-7-8 호흡법을 시도해보세요",
+      'hi': "4-7-8 सांस तकनीक आज़माएं",
+      'ar': "جرب تقنية التنفس 4-7-8"
+    };
     
-    // Age-appropriate suggestions
-    if (age && age < 25) {
-      suggestions.push("Listen to calming music or nature sounds");
-      suggestions.push("Try a quick meditation app session");
-    } else if (age && age >= 50) {
-      suggestions.push("Take a peaceful walk in nature");
-      suggestions.push("Practice gentle stretching or yoga");
-    } else {
-      suggestions.push("Take a 10-minute break from what you're doing");
-      suggestions.push("Try progressive muscle relaxation");
-    }
+    let suggestions = [breathingTechniques[preferredLanguage] || breathingTechniques['en']];
     
-    // Cultural adaptations
+    // Age-appropriate suggestions by language
+    const ageSuggestions = {
+      'en': {
+        young: ["Listen to calming music or nature sounds", "Try a quick meditation app session"],
+        middle: ["Take a 10-minute break from what you're doing", "Try progressive muscle relaxation"],
+        older: ["Take a peaceful walk in nature", "Practice gentle stretching or yoga"]
+      },
+      'nl': {
+        young: ["Luister naar rustgevende muziek of natuurgeluiden", "Probeer een korte meditatie-app sessie"],
+        middle: ["Neem een 10-minuten pauze van wat je aan het doen bent", "Probeer progressieve spierontspanning"],
+        older: ["Maak een rustige wandeling in de natuur", "Oefen zachte stretching of yoga"]
+      },
+      'de': {
+        young: ["Hören Sie beruhigende Musik oder Naturgeräusche", "Probieren Sie eine kurze Meditations-App-Sitzung"],
+        middle: ["Machen Sie eine 10-minütige Pause von dem, was Sie tun", "Probieren Sie progressive Muskelentspannung"],
+        older: ["Machen Sie einen ruhigen Spaziergang in der Natur", "Üben Sie sanfte Dehnungen oder Yoga"]
+      },
+      'fr': {
+        young: ["Écoutez de la musique apaisante ou des sons de la nature", "Essayez une session rapide d'application de méditation"],
+        middle: ["Prenez une pause de 10 minutes de ce que vous faites", "Essayez la relaxation musculaire progressive"],
+        older: ["Faites une promenade paisible dans la nature", "Pratiquez des étirements doux ou du yoga"]
+      },
+      'es': {
+        young: ["Escucha música relajante o sonidos de la naturaleza", "Prueba una sesión rápida de aplicación de meditación"],
+        middle: ["Toma un descanso de 10 minutos de lo que estás haciendo", "Prueba la relajación muscular progresiva"],
+        older: ["Da un paseo tranquilo en la naturaleza", "Practica estiramientos suaves o yoga"]
+      },
+      'it': {
+        young: ["Ascolta musica rilassante o suoni della natura", "Prova una sessione rapida con un'app di meditazione"],
+        middle: ["Prenditi una pausa di 10 minuti da quello che stai facendo", "Prova il rilassamento muscolare progressivo"],
+        older: ["Fai una passeggiata tranquilla nella natura", "Pratica stretching dolce o yoga"]
+      },
+      'pt': {
+        young: ["Ouça música relaxante ou sons da natureza", "Experimente uma sessão rápida de aplicativo de meditação"],
+        middle: ["Faça uma pausa de 10 minutos do que está fazendo", "Experimente relaxamento muscular progressivo"],
+        older: ["Faça uma caminhada tranquila na natureza", "Pratique alongamentos suaves ou yoga"]
+      },
+      'ru': {
+        young: ["Слушайте успокаивающую музыку или звуки природы", "Попробуйте быструю сессию приложения для медитации"],
+        middle: ["Сделайте 10-минутный перерыв от того, что делаете", "Попробуйте прогрессивную мышечную релаксацию"],
+        older: ["Прогуляйтесь спокойно на природе", "Практикуйте легкую растяжку или йогу"]
+      },
+      'zh': {
+        young: ["听平静的音乐或自然声音", "尝试快速冥想应用程序"],
+        middle: ["从正在做的事情中休息10分钟", "尝试渐进性肌肉放松"],
+        older: ["在大自然中平静地散步", "练习温和的拉伸或瑜伽"]
+      },
+      'ja': {
+        young: ["落ち着いた音楽や自然音を聞く", "瞑想アプリで短いセッションを試す"],
+        middle: ["今していることから10分休憩する", "漸進的筋弛緩法を試す"],
+        older: ["自然の中で静かな散歩をする", "優しいストレッチやヨガを練習する"]
+      },
+      'ko': {
+        young: ["차분한 음악이나 자연 소리를 들어보세요", "명상 앱에서 빠른 세션을 시도해보세요"],
+        middle: ["하고 있는 일에서 10분간 휴식을 취하세요", "점진적 근육 이완법을 시도해보세요"],
+        older: ["자연 속에서 평화로운 산책을 하세요", "부드러운 스트레칭이나 요가를 연습하세요"]
+      },
+      'hi': {
+        young: ["शांत संगीत या प्राकृतिक ध्वनियां सुनें", "एक त्वरित मेडिटेशन ऐप सेशन आज़माएं"],
+        middle: ["जो कुछ आप कर रहे हैं उससे 10 मिनट का ब्रेक लें", "प्रगतिशील मांसपेशी विश्राम आज़माएं"],
+        older: ["प्रकृति में शांतिपूर्ण सैर करें", "हल्की स्ट्रेचिंग या योग का अभ्यास करें"]
+      },
+      'ar': {
+        young: ["استمع إلى الموسيقى المهدئة أو أصوات الطبيعة", "جرب جلسة سريعة لتطبيق التأمل"],
+        middle: ["خذ استراحة 10 دقائق من ما تفعله", "جرب استرخاء العضلات التدريجي"],
+        older: ["خذ نزهة هادئة في الطبيعة", "مارس التمدد اللطيف أو اليوغا"]
+      }
+    };
+    
+    let ageCategory = 'middle';
+    if (age && age < 25) ageCategory = 'young';
+    else if (age && age >= 50) ageCategory = 'older';
+    
+    const langSuggestions = ageSuggestions[preferredLanguage] || ageSuggestions['en'];
+    suggestions.push(...langSuggestions[ageCategory]);
+    
+    // Cultural adaptations by language
+    const culturalSuggestions = {
+      'en': {
+        'netherlands': "Go for a bike ride or walk along water",
+        'germany': "Spend time in a forest or green space (Waldeinsamkeit)"
+      },
+      'nl': {
+        'netherlands': "Ga fietsen of wandelen langs het water",
+        'germany': "Breng tijd door in een bos of groene ruimte"
+      },
+      'de': {
+        'netherlands': "Machen Sie eine Radtour oder einen Spaziergang am Wasser",
+        'germany': "Verbringen Sie Zeit in einem Wald oder Grünraum (Waldeinsamkeit)"
+      },
+      'fr': {
+        'netherlands': "Faites du vélo ou marchez le long de l'eau",
+        'germany': "Passez du temps dans une forêt ou un espace vert"
+      },
+      'es': {
+        'netherlands': "Ve en bicicleta o camina junto al agua",
+        'germany': "Pasa tiempo en un bosque o espacio verde"
+      },
+      'it': {
+        'netherlands': "Vai in bicicletta o cammina lungo l'acqua",
+        'germany': "Trascorri del tempo in una foresta o spazio verde"
+      },
+      'pt': {
+        'netherlands': "Ande de bicicleta ou caminhe ao longo da água",
+        'germany': "Passe tempo numa floresta ou espaço verde"
+      },
+      'ru': {
+        'netherlands': "Покатайтесь на велосипеде или прогуляйтесь вдоль воды",
+        'germany': "Проведите время в лесу или зеленом пространстве"
+      },
+      'zh': {
+        'netherlands': "骑自行车或沿水边散步",
+        'germany': "在森林或绿色空间中度过时光"
+      },
+      'ja': {
+        'netherlands': "自転車に乗ったり、水辺を歩いたりする",
+        'germany': "森林や緑地で時間を過ごす"
+      },
+      'ko': {
+        'netherlands': "자전거를 타거나 물가를 산책하세요",
+        'germany': "숲이나 녹지 공간에서 시간을 보내세요"
+      },
+      'hi': {
+        'netherlands': "साइकिल चलाएं या पानी के किनारे टहलें",
+        'germany': "जंगल या हरित स्थान में समय बिताएं"
+      },
+      'ar': {
+        'netherlands': "اذهب لركوب الدراجة أو المشي بجوار الماء",
+        'germany': "اقض وقتاً في الغابة أو المساحة الخضراء"
+      }
+    };
+    
     if (['netherlands', 'nl', 'holland'].includes(country)) {
-      suggestions.push("Go for a bike ride or walk along water");
+      const culturalLang = culturalSuggestions[preferredLanguage] || culturalSuggestions['en'];
+      suggestions.push(culturalLang['netherlands']);
     } else if (['germany', 'de'].includes(country)) {
-      suggestions.push("Spend time in a forest or green space (Waldeinsamkeit)");
+      const culturalLang = culturalSuggestions[preferredLanguage] || culturalSuggestions['en'];
+      suggestions.push(culturalLang['germany']);
     }
     
     return suggestions;
@@ -633,27 +1064,168 @@ class AICoachService {
   getPersonalizedCravingSuggestions(user, addictions) {
     const age = user?.age || (user?.birthDate ? this.calculateAge(user.birthDate) : null);
     const addictionTypes = addictions.map(a => a.type);
+    const preferredLanguage = user?.preferredLanguage || 'en';
     
-    let suggestions = ["Use the 'surf the urge' technique - cravings peak and subside"];
+    // Base "surf the urge" technique in multiple languages
+    const baseTechniques = {
+      'en': "Use the 'surf the urge' technique - cravings peak and subside",
+      'nl': "Gebruik de 'surf de drang' techniek - cravings pieken en nemen af",
+      'de': "Nutzen Sie die 'Verlangen überwinden' Technik - Verlangen erreicht seinen Höhepunkt und lässt nach",
+      'fr': "Utilisez la technique 'surfer sur l'envie' - les envies atteignent un pic et diminuent",
+      'es': "Usa la técnica 'surfear el impulso' - los antojos alcanzan su pico y disminuyen",
+      'it': "Usa la tecnica 'cavalca il desiderio' - le voglie raggiungono il picco e diminuiscono",
+      'pt': "Use a técnica 'surfar o impulso' - os desejos atingem o pico e diminuem",
+      'ru': "Используйте технику 'проехать желание' - тяга достигает пика и спадает",
+      'zh': "使用'冲浪渴望'技巧 - 渴望达到顶峰然后消退",
+      'ja': "『欲求をサーフィンする』技法を使う - 渇望はピークに達し、その後和らぎます",
+      'ko': "'갈망 타기' 기술을 사용하세요 - 갈망은 최고조에 달한 후 가라앉습니다",
+      'hi': "'इच्छा पर सवार होना' तकनीक का उपयोग करें - लालसा चरम पर पहुंचती है और कम हो जाती है",
+      'ar': "استخدم تقنية 'ركوب الرغبة' - الرغبة الشديدة تصل لذروتها ثم تهدأ"
+    };
     
-    // Addiction-specific suggestions
+    let suggestions = [baseTechniques[preferredLanguage] || baseTechniques['en']];
+    
+    // Addiction-specific suggestions by language
+    const addictionSuggestions = {
+      'en': {
+        smoking: ["Keep your hands busy with a stress ball", "Drink water slowly through a straw"],
+        alcohol: ["Have a non-alcoholic substitute ready", "Remove yourself from triggering environments"],
+        social_media: ["Put your phone in another room for 30 minutes", "Call a friend instead of scrolling"]
+      },
+      'nl': {
+        smoking: ["Houd je handen bezig met een stressbal", "Drink langzaam water door een rietje"],
+        alcohol: ["Houd een alcoholvrij alternatief bij de hand", "Ga weg uit triggerende omgevingen"],
+        social_media: ["Leg je telefoon 30 minuten in een andere kamer", "Bel een vriend in plaats van scrollen"]
+      },
+      'de': {
+        smoking: ["Beschäftigen Sie Ihre Hände mit einem Stressball", "Trinken Sie langsam Wasser durch einen Strohhalm"],
+        alcohol: ["Halten Sie einen alkoholfreien Ersatz bereit", "Entfernen Sie sich aus auslösenden Umgebungen"],
+        social_media: ["Legen Sie Ihr Handy 30 Minuten in einen anderen Raum", "Rufen Sie einen Freund an statt zu scrollen"]
+      },
+      'fr': {
+        smoking: ["Occupez vos mains avec une balle anti-stress", "Buvez de l'eau lentement avec une paille"],
+        alcohol: ["Ayez un substitut non-alcoolisé à portée", "Éloignez-vous des environnements déclencheurs"],
+        social_media: ["Mettez votre téléphone dans une autre pièce pendant 30 minutes", "Appelez un ami au lieu de scroller"]
+      },
+      'es': {
+        smoking: ["Mantén tus manos ocupadas con una pelota antiestrés", "Bebe agua lentamente con una pajita"],
+        alcohol: ["Ten listo un sustituto sin alcohol", "Aléjate de entornos desencadenantes"],
+        social_media: ["Pon tu teléfono en otra habitación por 30 minutos", "Llama a un amigo en lugar de hacer scroll"]
+      },
+      'it': {
+        smoking: ["Tieni le mani occupate con una palla antistress", "Bevi acqua lentamente con una cannuccia"],
+        alcohol: ["Tieni pronto un sostituto analcolico", "Allontanati dagli ambienti scatenanti"],
+        social_media: ["Metti il telefono in un'altra stanza per 30 minuti", "Chiama un amico invece di scorrere"]
+      },
+      'pt': {
+        smoking: ["Mantenha as mãos ocupadas com uma bola antistresse", "Beba água lentamente com um canudo"],
+        alcohol: ["Tenha um substituto sem álcool preparado", "Afaste-se de ambientes desencadeadores"],
+        social_media: ["Coloque o telefone noutra sala por 30 minutos", "Ligue para um amigo em vez de fazer scroll"]
+      },
+      'ru': {
+        smoking: ["Займите руки антистрессовым мячиком", "Медленно пейте воду через соломинку"],
+        alcohol: ["Подготовьте безалкогольную замену", "Удалитесь из провоцирующей обстановки"],
+        social_media: ["Положите телефон в другую комнату на 30 минут", "Позвоните другу вместо скроллинга"]
+      },
+      'zh': {
+        smoking: ["用减压球让手保持忙碌", "用吸管慢慢喝水"],
+        alcohol: ["准备好无酒精替代品", "远离触发环境"],
+        social_media: ["将手机放到另一个房间30分钟", "给朋友打电话而不是滑动屏幕"]
+      },
+      'ja': {
+        smoking: ["ストレスボールで手を忙しく保つ", "ストローでゆっくりと水を飲む"],
+        alcohol: ["ノンアルコールの代替品を用意する", "引き金となる環境から離れる"],
+        social_media: ["30分間電話を別の部屋に置く", "スクロールの代わりに友人に電話する"]
+      },
+      'ko': {
+        smoking: ["스트레스볼로 손을 바쁘게 유지하세요", "빨대로 천천히 물을 마셔보세요"],
+        alcohol: ["무알코올 대체품을 준비하세요", "유발 환경에서 벗어나세요"],
+        social_media: ["휴대폰을 30분간 다른 방에 두세요", "스크롤 대신 친구에게 전화하세요"]
+      },
+      'hi': {
+        smoking: ["अपने हाथों को स्ट्रेस बॉल से व्यस्त रखें", "स्ट्रॉ से धीरे-धीरे पानी पिएं"],
+        alcohol: ["एक नॉन-अल्कोहलिक विकल्प तैयार रखें", "ट्रिगर करने वाले वातावरण से दूर रहें"],
+        social_media: ["अपना फोन 30 मिनट के लिए दूसरे कमरे में रखें", "स्क्रॉल करने के बजाय किसी दोस्त को कॉल करें"]
+      },
+      'ar': {
+        smoking: ["اشغل يديك بكرة الضغط", "اشرب الماء ببطء من خلال المصاصة"],
+        alcohol: ["احتفظ ببديل غير كحولي جاهز", "ابتعد عن البيئات المحفزة"],
+        social_media: ["ضع هاتفك في غرفة أخرى لمدة 30 دقيقة", "اتصل بصديق بدلاً من التمرير"]
+      }
+    };
+    
+    // Add addiction-specific suggestions
     if (addictionTypes.includes('smoking')) {
-      suggestions.push("Keep your hands busy with a stress ball");
-      suggestions.push("Drink water slowly through a straw");
+      const smokingSuggestions = addictionSuggestions[preferredLanguage]?.smoking || addictionSuggestions['en'].smoking;
+      suggestions.push(...smokingSuggestions);
     } else if (addictionTypes.includes('alcohol')) {
-      suggestions.push("Have a non-alcoholic substitute ready");
-      suggestions.push("Remove yourself from triggering environments");
+      const alcoholSuggestions = addictionSuggestions[preferredLanguage]?.alcohol || addictionSuggestions['en'].alcohol;
+      suggestions.push(...alcoholSuggestions);
     } else if (addictionTypes.includes('social_media')) {
-      suggestions.push("Put your phone in another room for 30 minutes");
-      suggestions.push("Call a friend instead of scrolling");
+      const socialMediaSuggestions = addictionSuggestions[preferredLanguage]?.social_media || addictionSuggestions['en'].social_media;
+      suggestions.push(...socialMediaSuggestions);
     }
     
-    // Age-appropriate
-    if (age && age < 30) {
-      suggestions.push("Text a trusted friend for support");
-    } else {
-      suggestions.push("Call someone from your support network");
-    }
+    // Age-appropriate support suggestions by language
+    const supportSuggestions = {
+      'en': {
+        young: "Text a trusted friend for support",
+        older: "Call someone from your support network"
+      },
+      'nl': {
+        young: "Stuur een betrouwbare vriend een bericht voor steun",
+        older: "Bel iemand uit je steunnetwerk"
+      },
+      'de': {
+        young: "Schreiben Sie einem vertrauenswürdigen Freund für Unterstützung",
+        older: "Rufen Sie jemanden aus Ihrem Unterstützungsnetzwerk an"
+      },
+      'fr': {
+        young: "Envoyez un message à un ami de confiance pour du soutien",
+        older: "Appelez quelqu'un de votre réseau de soutien"
+      },
+      'es': {
+        young: "Envía un mensaje a un amigo de confianza para apoyo",
+        older: "Llama a alguien de tu red de apoyo"
+      },
+      'it': {
+        young: "Manda un messaggio a un amico fidato per supporto",
+        older: "Chiama qualcuno dalla tua rete di supporto"
+      },
+      'pt': {
+        young: "Envie uma mensagem para um amigo de confiança para apoio",
+        older: "Ligue para alguém da sua rede de apoio"
+      },
+      'ru': {
+        young: "Напишите доверенному другу для поддержки",
+        older: "Позвоните кому-то из вашей сети поддержки"
+      },
+      'zh': {
+        young: "给值得信任的朋友发消息寻求支持",
+        older: "给你的支持网络中的某人打电话"
+      },
+      'ja': {
+        young: "信頼できる友人にサポートのためのメッセージを送る",
+        older: "サポートネットワークの誰かに電話する"
+      },
+      'ko': {
+        young: "지원을 위해 신뢰할 수 있는 친구에게 문자를 보내세요",
+        older: "지원 네트워크에서 누군가에게 전화하세요"
+      },
+      'hi': {
+        young: "सहायता के लिए किसी विश्वसनीय दोस्त को मैसेज करें",
+        older: "अपने सहायता नेटवर्क से किसी को कॉल करें"
+      },
+      'ar': {
+        young: "أرسل رسالة لصديق موثوق للحصول على الدعم",
+        older: "اتصل بشخص من شبكة الدعم الخاصة بك"
+      }
+    };
+    
+    const ageCategory = (age && age < 30) ? 'young' : 'older';
+    const supportSuggestion = supportSuggestions[preferredLanguage]?.[ageCategory] || 
+                             supportSuggestions['en'][ageCategory];
+    suggestions.push(supportSuggestion);
     
     return suggestions;
   }
@@ -661,26 +1233,124 @@ class AICoachService {
   getPersonalizedSocialSuggestions(user, addictions) {
     const age = user?.age || (user?.birthDate ? this.calculateAge(user.birthDate) : null);
     const hasEmergencyContacts = user?.emergencyContacts?.length > 0;
+    const preferredLanguage = user?.preferredLanguage || 'en';
     
     let suggestions = [];
     
+    // Emergency contact suggestions in multiple languages
     if (hasEmergencyContacts) {
-      suggestions.push("Reach out to one of your emergency contacts");
+      const emergencyMessages = {
+        'en': "Reach out to one of your emergency contacts",
+        'nl': "Neem contact op met een van je noodcontacten",
+        'de': "Kontaktieren Sie einen Ihrer Notfallkontakte",
+        'fr': "Contactez un de vos contacts d'urgence",
+        'es': "Comunícate con uno de tus contactos de emergencia",
+        'it': "Contatta uno dei tuoi contatti di emergenza",
+        'pt': "Entre em contato com um dos seus contatos de emergência",
+        'ru': "Обратитесь к одному из ваших экстренных контактов",
+        'zh': "联系您的紧急联系人之一",
+        'ja': "緊急連絡先の一人に連絡してください",
+        'ko': "긴급 연락처 중 한 명에게 연락하세요",
+        'hi': "अपने आपातकालीन संपर्कों में से किसी एक से संपर्क करें",
+        'ar': "تواصل مع أحد جهات الاتصال الطارئة"
+      };
+      suggestions.push(emergencyMessages[preferredLanguage] || emergencyMessages['en']);
     }
     
-    // Age-appropriate social suggestions
-    if (age && age < 25) {
-      suggestions.push("Join an online support group or chat");
-      suggestions.push("Watch a comfort movie or show");
-    } else if (age && age >= 25 && age < 50) {
-      suggestions.push("Call a family member or friend");
-      suggestions.push("Join a local community activity");
-    } else {
-      suggestions.push("Visit with a neighbor or friend");
-      suggestions.push("Attend a community group or service");
-    }
+    // Age-appropriate social suggestions by language
+    const socialSuggestions = {
+      'en': {
+        young: ["Join an online support group or chat", "Watch a comfort movie or show"],
+        middle: ["Call a family member or friend", "Join a local community activity"],
+        older: ["Visit with a neighbor or friend", "Attend a community group or service"]
+      },
+      'nl': {
+        young: ["Doe mee aan een online steungroep", "Kijk een troostfilm of serie"],
+        middle: ["Bel een familielid of vriend", "Doe mee aan een lokale activiteit"],
+        older: ["Bezoek een buur of vriend", "Ga naar een gemeenschapsgroep"]
+      },
+      'de': {
+        young: ["Treten Sie einer Online-Selbsthilfegruppe bei", "Schauen Sie einen Trostfilm"],
+        middle: ["Rufen Sie ein Familienmitglied oder einen Freund an", "Nehmen Sie an einer lokalen Aktivität teil"],
+        older: ["Besuchen Sie einen Nachbarn oder Freund", "Gehen Sie zu einer Gemeindeveranstaltung"]
+      },
+      'fr': {
+        young: ["Rejoignez un groupe de soutien en ligne", "Regardez un film ou une série réconfortante"],
+        middle: ["Appelez un membre de la famille ou un ami", "Participez à une activité communautaire"],
+        older: ["Rendez visite à un voisin ou un ami", "Participez à un groupe communautaire"]
+      },
+      'es': {
+        young: ["Únete a un grupo de apoyo en línea", "Ve una película o serie reconfortante"],
+        middle: ["Llama a un familiar o amigo", "Participa en una actividad comunitaria"],
+        older: ["Visita a un vecino o amigo", "Asiste a un grupo comunitario"]
+      },
+      'it': {
+        young: ["Unisciti a un gruppo di supporto online", "Guarda un film o una serie consolante"],
+        middle: ["Chiama un familiare o un amico", "Partecipa a un'attività comunitaria"],
+        older: ["Visita un vicino o un amico", "Partecipa a un gruppo comunitario"]
+      },
+      'pt': {
+        young: ["Junte-se a um grupo de apoio online", "Assista a um filme ou série reconfortante"],
+        middle: ["Ligue para um familiar ou amigo", "Participe numa atividade comunitária"],
+        older: ["Visite um vizinho ou amigo", "Participe num grupo comunitário"]
+      },
+      'ru': {
+        young: ["Присоединитесь к онлайн-группе поддержки", "Посмотрите утешительный фильм или сериал"],
+        middle: ["Позвоните члену семьи или другу", "Присоединитесь к местной активности"],
+        older: ["Навестите соседа или друга", "Посетите общественную группу"]
+      },
+      'zh': {
+        young: ["加入在线支持小组", "看一部安慰的电影或电视剧"],
+        middle: ["给家人或朋友打电话", "参加当地社区活动"],
+        older: ["拜访邻居或朋友", "参加社区团体活动"]
+      },
+      'ja': {
+        young: ["オンラインサポートグループに参加", "心を癒す映画やドラマを観る"],
+        middle: ["家族や友人に電話する", "地域のコミュニティ活動に参加"],
+        older: ["近所の人や友人を訪ねる", "地域グループに参加する"]
+      },
+      'ko': {
+        young: ["온라인 지원 그룹에 참여하세요", "위안이 되는 영화나 드라마를 시청하세요"],
+        middle: ["가족이나 친구에게 전화하세요", "지역 커뮤니티 활동에 참여하세요"],
+        older: ["이웃이나 친구를 방문하세요", "지역 단체에 참석하세요"]
+      },
+      'hi': {
+        young: ["ऑनलाइन सहायता समूह में शामिल हों", "आरामदायक फिल्म या शो देखें"],
+        middle: ["परिवार या दोस्त को कॉल करें", "स्थानीय सामुदायिक गतिविधि में भाग लें"],
+        older: ["पड़ोसी या दोस्त से मिलें", "सामुदायिक समूह में भाग लें"]
+      },
+      'ar': {
+        young: ["انضم إلى مجموعة دعم عبر الإنترنت", "شاهد فيلماً أو مسلسلاً مريحاً"],
+        middle: ["اتصل بأحد أفراد العائلة أو الأصدقاء", "شارك في نشاط مجتمعي محلي"],
+        older: ["زر جاراً أو صديقاً", "احضر مجموعة مجتمعية"]
+      }
+    };
     
-    suggestions.push("Remember: this feeling is temporary");
+    let ageCategory = 'middle';
+    if (age && age < 25) ageCategory = 'young';
+    else if (age && age >= 50) ageCategory = 'older';
+    
+    const langSuggestions = socialSuggestions[preferredLanguage] || socialSuggestions['en'];
+    suggestions.push(...langSuggestions[ageCategory]);
+    
+    // Reminder message in multiple languages
+    const reminderMessages = {
+      'en': "Remember: this feeling is temporary",
+      'nl': "Onthoud: dit gevoel is tijdelijk",
+      'de': "Denken Sie daran: Dieses Gefühl ist vorübergehend",
+      'fr': "Rappelez-vous: ce sentiment est temporaire",
+      'es': "Recuerda: este sentimiento es temporal",
+      'it': "Ricorda: questa sensazione è temporanea",
+      'pt': "Lembre-se: este sentimento é temporário",
+      'ru': "Помните: это чувство временно",
+      'zh': "请记住：这种感觉是暂时的",
+      'ja': "覚えておいてください：この気持ちは一時的なものです",
+      'ko': "기억하세요: 이 감정은 일시적입니다",
+      'hi': "याद रखें: यह भावना अस्थायी है",
+      'ar': "تذكر: هذا الشعور مؤقت"
+    };
+    
+    suggestions.push(reminderMessages[preferredLanguage] || reminderMessages['en']);
     
     return suggestions;
   }
@@ -689,23 +1359,87 @@ class AICoachService {
     const age = user?.age || (user?.birthDate ? this.calculateAge(user.birthDate) : null);
     const preferredLanguage = user?.preferredLanguage || 'en';
     
-    let suggestions = ["Tell me more about how you're feeling"];
+    // Multilingual base suggestions
+    const baseSuggestions = {
+      'en': ["Tell me more about how you're feeling", "How can I support you right now?"],
+      'nl': ["Vertel me meer over hoe je je voelt", "Laten we dit samen bespreken"],
+      'de': ["Erzählen Sie mir mehr über Ihre Gefühle", "Wie kann ich Ihnen helfen?"],
+      'fr': ["Dites-moi comment vous vous sentez", "Comment puis-je vous aider?"],
+      'es': ["Cuéntame cómo te sientes", "¿Cómo puedo apoyarte ahora?"],
+      'it': ["Dimmi come ti senti", "Come posso aiutarti adesso?"],
+      'pt': ["Conte-me como se sente", "Como posso apoiá-lo agora?"],
+      'ru': ["Расскажите, как вы себя чувствуете", "Как я могу вас поддержать?"],
+      'zh': ["告诉我你的感受", "我现在如何帮助你？"],
+      'ja': ["お気持ちを聞かせてください", "今どのようにサポートできますか？"],
+      'ko': ["기분이 어떤지 알려주세요", "지금 어떻게 도와드릴까요？"],
+      'hi': ["मुझे बताएं कि आप कैसा महसूस कर रहे हैं", "मैं अब आपकी कैसे सहायता कर सकता हूँ？"],
+      'ar': ["أخبرني كيف تشعر", "كيف يمكنني دعمك الآن؟"]
+    };
     
-    // Language-appropriate
-    if (preferredLanguage === 'nl') {
-      suggestions.push("Laten we dit samen bespreken"); // Let's discuss this together
-    } else if (preferredLanguage === 'de') {
-      suggestions.push("Erzählen Sie mir mehr darüber"); // Tell me more about it
-    } else {
-      suggestions.push("How can I support you right now?");
-    }
+    let suggestions = baseSuggestions[preferredLanguage] || baseSuggestions['en'];
+    suggestions = [...suggestions]; // Create copy
     
-    // Age-appropriate general support
-    if (age && age < 30) {
-      suggestions.push("What's been on your mind lately?");
-    } else {
-      suggestions.push("What would be most helpful for you today?");
-    }
+    // Age-appropriate suggestions by language
+    const ageSuggestions = {
+      'en': {
+        young: "What's been on your mind lately?",
+        mature: "What would be most helpful for you today?"
+      },
+      'nl': {
+        young: "Wat houdt je de laatste tijd bezig?",
+        mature: "Wat zou vandaag het meest behulpzaam zijn?"
+      },
+      'de': {
+        young: "Was beschäftigt Sie in letzter Zeit?",
+        mature: "Was wäre heute am hilfreichsten für Sie?"
+      },
+      'fr': {
+        young: "Qu'est-ce qui vous préoccupe dernièrement?",
+        mature: "Qu'est-ce qui vous aiderait le plus aujourd'hui?"
+      },
+      'es': {
+        young: "¿Qué te ha estado preocupando últimamente?",
+        mature: "¿Qué sería más útil para ti hoy?"
+      },
+      'it': {
+        young: "Cosa ti preoccupa ultimamente?",
+        mature: "Cosa ti sarebbe più utile oggi?"
+      },
+      'pt': {
+        young: "O que tem estado na sua mente ultimamente?",
+        mature: "O que seria mais útil para si hoje?"
+      },
+      'ru': {
+        young: "Что вас беспокоит в последнее время?",
+        mature: "Что было бы наиболее полезно для вас сегодня?"
+      },
+      'zh': {
+        young: "最近什么事情让你担心？",
+        mature: "今天什么对你最有帮助？"
+      },
+      'ja': {
+        young: "最近何が気になっていますか？",
+        mature: "今日は何が最も役に立ちますか？"
+      },
+      'ko': {
+        young: "최근에 무엇이 마음에 걸리나요？",
+        mature: "오늘 무엇이 가장 도움이 될까요？"
+      },
+      'hi': {
+        young: "हाल ही में आपको क्या परेशान कर रहा है？",
+        mature: "आज आपके लिए सबसे मददगार क्या होगा？"
+      },
+      'ar': {
+        young: "ما الذي يشغل بالك مؤخرًا؟",
+        mature: "ما الذي سيكون الأكثر فائدة لك اليوم؟"
+      }
+    };
+    
+    const ageCategory = (age && age < 30) ? 'young' : 'mature';
+    const ageSuggestion = ageSuggestions[preferredLanguage]?.[ageCategory] || 
+                         ageSuggestions['en'][ageCategory];
+    
+    suggestions.push(ageSuggestion);
     
     return suggestions;
   }
@@ -713,7 +1447,7 @@ class AICoachService {
   /**
    * Analyze mood from journal entry text using AI
    */
-  async analyzeMoodFromText(text, userId = null) {
+  async analyzeMoodFromText(text, userId = null, language = 'en') {
     try {
       // Check minimum word count (10 words)
       const wordCount = text.trim().split(/\s+/).length;
@@ -759,13 +1493,15 @@ class AICoachService {
         textMetrics.avgWordsPerSentence = textMetrics.wordCount / textMetrics.sentenceCount;
       }
 
-      const prompt = `
-        You are an expert emotional intelligence analyst with advanced training in multilingual emotion detection and cultural psychology.
-        
-        ${userContextInfo}
-        
-        TEXT ANALYSIS:
-        Journal Entry: "${text}"
+      // Optimized mood detection prompt for OpenAI GPT-4o
+      const prompt = `You are an expert emotional intelligence analyst specializing in multilingual mood detection.
+
+ANALYZE THIS JOURNAL TEXT:
+"${text}"
+
+USER CONTEXT: ${userContextInfo}
+
+DETECT MOOD WITH PRECISION:
         
         TEXT METRICS:
         - Word count: ${textMetrics.wordCount}
@@ -830,7 +1566,7 @@ class AICoachService {
           "emotionalIndicators": ["max 5 specific phrases/words from text"],
           "overallSentiment": "positive|neutral|negative|mixed",
           "emotionalIntensity": number_1_to_5,
-          "moodDescription": "Compassionate 2-3 sentence description",
+          "moodDescription": "Compassionate 2-3 sentence description in ${language === 'en' ? 'English' : language === 'nl' ? 'Dutch' : language === 'de' ? 'German' : language === 'fr' ? 'French' : language === 'es' ? 'Spanish' : language === 'it' ? 'Italian' : language === 'ja' ? 'Japanese' : language === 'ko' ? 'Korean' : language === 'pt' ? 'Portuguese' : language === 'ru' ? 'Russian' : language === 'zh' ? 'Chinese' : language === 'ar' ? 'Arabic' : language === 'hi' ? 'Hindi' : 'English'}",
           "detectedMoods": [
             {
               "mood": "mood_name",
@@ -842,7 +1578,7 @@ class AICoachService {
           ],
           "moodCount": number_of_detected_moods,
           "emotionalTransition": "stable|improving|declining|fluctuating",
-          "suggestedFocus": "Specific wellbeing suggestion based on analysis",
+          "suggestedFocus": "Specific wellbeing suggestion in ${language === 'en' ? 'English' : language === 'nl' ? 'Dutch' : language === 'de' ? 'German' : language === 'fr' ? 'French' : language === 'es' ? 'Spanish' : language === 'it' ? 'Italian' : language === 'ja' ? 'Japanese' : language === 'ko' ? 'Korean' : language === 'pt' ? 'Portuguese' : language === 'ru' ? 'Russian' : language === 'zh' ? 'Chinese' : language === 'ar' ? 'Arabic' : language === 'hi' ? 'Hindi' : 'English'}",
           "culturalContext": "Brief note on cultural expression patterns if relevant",
           "emotionalComplexity": number_1_to_5,
           "predominantTheme": "work|relationships|health|personal_growth|daily_life|crisis|celebration|transition"
@@ -861,9 +1597,9 @@ class AICoachService {
         - Be especially sensitive to crisis indicators or breakthrough moments
       `;
       
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text_response = response.text();
+      const result = await this.openai.chat.completions.create({ model: this.modelName, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 1000 });
+      const response = result.choices[0].message;
+      const text_response = response.content;
       
       try {
         // Clean the response text - remove markdown code blocks if present
@@ -879,7 +1615,7 @@ class AICoachService {
         // Clean any remaining formatting issues
         cleanedText = cleanedText.trim();
         
-        console.log('Cleaned Gemini response for mood analysis:', cleanedText);
+        console.log('Cleaned OpenAI response for mood analysis:', cleanedText);
         
         const moodAnalysis = JSON.parse(cleanedText);
         
@@ -1162,7 +1898,7 @@ class AICoachService {
         
       } catch (parseError) {
         console.error('Error parsing mood analysis:', parseError);
-        console.error('Raw Gemini response was:', text_response);
+        console.error('Raw OpenAI GPT-4o response was:', text_response);
         return this.getDefaultMoodAnalysis(text);
       }
       
@@ -1824,7 +2560,7 @@ class AICoachService {
       // Analyze engagement metrics
       const engagementMetrics = this.calculateEngagementMetrics(journalEntries, coachSessions, timeframe);
       
-      // Generate AI insights using Gemini
+      // Generate AI insights using OpenAI GPT-4o
       const aiInsights = await this.generateAIInsights({
         moodAnalysis,
         triggerAnalysis,
@@ -1875,9 +2611,15 @@ class AICoachService {
     let validEntries = 0;
     
     journalEntries.forEach(entry => {
-      if (entry.mood && moodScores[entry.mood]) {
-        moodCounts[entry.mood] = (moodCounts[entry.mood] || 0) + 1;
-        totalScore += moodScores[entry.mood];
+      // Use primary mood from AI analysis if available, otherwise fall back to basic mood
+      let moodToUse = entry.mood;
+      if (entry.moodAnalysis?.detectedMoods && entry.moodAnalysis.detectedMoods.length > 0) {
+        moodToUse = entry.moodAnalysis.detectedMoods[0].mood;
+      }
+      
+      if (moodToUse && moodScores[moodToUse]) {
+        moodCounts[moodToUse] = (moodCounts[moodToUse] || 0) + 1;
+        totalScore += moodScores[moodToUse];
         validEntries++;
       }
     });
@@ -1914,8 +2656,14 @@ class AICoachService {
     let count = 0;
     
     entries.forEach(entry => {
-      if (entry.mood && moodScores[entry.mood]) {
-        total += moodScores[entry.mood];
+      // Use primary mood from AI analysis if available, otherwise fall back to basic mood
+      let moodToUse = entry.mood;
+      if (entry.moodAnalysis?.detectedMoods && entry.moodAnalysis.detectedMoods.length > 0) {
+        moodToUse = entry.moodAnalysis.detectedMoods[0].mood;
+      }
+      
+      if (moodToUse && moodScores[moodToUse]) {
+        total += moodScores[moodToUse];
         count++;
       }
     });
@@ -2083,9 +2831,9 @@ Provide insights in this JSON format:
 
 Be supportive, specific, and actionable. Focus on progress made and positive steps forward.`;
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      let text = response.text();
+      const result = await this.openai.chat.completions.create({ model: this.modelName, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 1000 });
+      const response = result.choices[0].message;
+      let text = response.content;
       
       try {
         // Clean markdown code blocks if present
@@ -2274,9 +3022,9 @@ Provide immediate, compassionate, and professional crisis support in this JSON f
 
 Be direct, caring, and focus on immediate safety. Do not provide medical advice. Encourage professional help if needed.`;
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      let text = response.text();
+      const result = await this.openai.chat.completions.create({ model: this.modelName, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 1000 });
+      const response = result.choices[0].message;
+      let text = response.content;
       
       try {
         // Clean markdown code blocks if present
@@ -2822,9 +3570,9 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
         Be helpful but not overly pedantic. Focus on meaningful errors.
       `;
       
-      const result = await this.model.generateContent(prompt);
-      const responseText = result.response.text();
-      console.log('Raw Gemini response for grammar check:', responseText);
+      const result = await this.openai.chat.completions.create({ model: this.modelName, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 1000 });
+      const responseText = result.choices[0].message.content;
+      console.log('Raw OpenAI GPT-4o response for grammar check:', responseText);
       
       // Clean the response text - remove markdown code blocks if present
       let cleanedText = responseText.trim();
@@ -2836,7 +3584,7 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
         cleanedText = cleanedText.replace(/^```\s*/, '').replace(/```\s*$/, '');
       }
       
-      console.log('Cleaned Gemini response for grammar check:', cleanedText);
+      console.log('Cleaned OpenAI response for grammar check:', cleanedText);
       
       const analysis = JSON.parse(cleanedText);
       
@@ -2905,22 +3653,29 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
         
         Consider as nonsense:
         - Random characters or symbols
-        - Repeated nonsensical strings
+        - Repeated nonsensical strings  
         - Complete gibberish without any meaningful words
         - Test strings like "asdkasd" or keyboard mashing
+        - Mixed text where meaningful content is combined with significant amounts of gibberish
+        - Any text containing substantial portions of random letter combinations
+        
+        CRITICAL RULE: If ANY significant portion of the text contains gibberish/random letter combinations (like "askldjaslkd", "alskdjalskd"), mark as nonsense.
+        
+        STRICT RULE: If more than 15% of the text consists of gibberish/random characters, mark as nonsense.
         
         Do NOT consider as nonsense:
-        - Poor grammar or spelling
+        - Poor grammar or spelling errors
         - Simple sentences
         - Emotional expressions
-        - Different languages
-        - Short entries
+        - Different languages (including mixed languages)
+        - Short entries with meaning
+        - Typos or autocorrect errors
         
         Return only: true or false
       `;
       
-      const result = await this.model.generateContent(prompt);
-      const responseText = result.response.text().trim().toLowerCase();
+      const result = await this.openai.chat.completions.create({ model: this.modelName, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 1000 });
+      const responseText = result.choices[0].message.content.trim().toLowerCase();
       
       return responseText === 'true';
       
@@ -2986,8 +3741,8 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
         Return only the 2-letter language code, nothing else.
       `;
       
-      const result = await this.model.generateContent(prompt);
-      const detectedLang = result.response.text().trim().toLowerCase();
+      const result = await this.openai.chat.completions.create({ model: this.modelName, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 1000 });
+      const detectedLang = result.choices[0].message.content.trim().toLowerCase();
       
       // Validate the detected language
       const supportedLanguages = ['en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'ar', 'hi'];
@@ -3060,9 +3815,9 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
         Be helpful but accurate in your assessment.
       `;
       
-      const result = await this.model.generateContent(prompt);
-      const responseText = result.response.text();
-      console.log('Raw Gemini response for context verification:', responseText);
+      const result = await this.openai.chat.completions.create({ model: this.modelName, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 1000 });
+      const responseText = result.choices[0].message.content;
+      console.log('Raw OpenAI GPT-4o response for context verification:', responseText);
       
       // Clean the response text - remove markdown code blocks if present
       let cleanedText = responseText.trim();
@@ -3074,7 +3829,7 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
         cleanedText = cleanedText.replace(/^```\s*/, '').replace(/```\s*$/, '');
       }
       
-      console.log('Cleaned Gemini response for context verification:', cleanedText);
+      console.log('Cleaned OpenAI response for context verification:', cleanedText);
       
       const analysis = JSON.parse(cleanedText);
       
@@ -3119,6 +3874,117 @@ Be direct, caring, and focus on immediate safety. Do not provide medical advice.
       suggestions: ['Text appears to be readable']
     };
   }
+
+  /**
+   * Generate comprehensive progress insights for user
+   */
+  async generateProgressInsights(userId, data) {
+    try {
+      const user = await User.findById(userId);
+      const userLanguage = user?.preferredLanguage || 'en';
+      const { journalEntries, coachSessions, addictions, timeframe } = data;
+
+      // Build personalized user context
+      const userContext = this.buildPersonalizedContext(user, addictions);
+
+      // Language-specific insight instructions
+      const languageInstructions = {
+        'en': 'Provide all insights, achievements, and recommendations in English.',
+        'nl': 'Geef alle inzichten, prestaties en aanbevelingen in het Nederlands.',
+        'de': 'Geben Sie alle Erkenntnisse, Erfolge und Empfehlungen auf Deutsch an.',
+        'fr': 'Fournissez tous les aperçus, réalisations et recommandations en français.',
+        'es': 'Proporcione todos los conocimientos, logros y recomendaciones en español.',
+        'it': 'Fornisci tutte le intuizioni, i risultati e le raccomandazioni in italiano.',
+        'pt': 'Forneça todas as perceções, conquistas e recomendações em português.',
+        'ru': 'Предоставьте все идеи, достижения и рекомендации на русском языке.',
+        'zh': '用中文提供所有见解、成就和建议。',
+        'ja': 'すべての洞察、成果、推奨事項を日本語で提供してください。',
+        'ko': '모든 통찰, 성취, 권장 사항을 한국어로 제공하세요.',
+        'hi': 'सभी अंतर्दृष्टि, उपलब्धियाँ और सिफारिशें हिंदी में प्रदान करें।',
+        'ar': 'قدم جميع الرؤى والإنجازات والتوصيات باللغة العربية.'
+      };
+
+      const langInstruction = languageInstructions[userLanguage] || languageInstructions['en'];
+
+      const prompt = `You are Alex, an empathetic AI addiction recovery coach. Analyze this user's progress over the last ${timeframe} days and provide comprehensive insights.
+
+USER CONTEXT: ${userContext}
+
+DATA TO ANALYZE:
+- Journal entries: ${journalEntries.length} entries
+- Coach sessions: ${coachSessions.length} sessions
+- Active addictions: ${addictions.length}
+
+LANGUAGE INSTRUCTION: ${langInstruction}
+
+Based on the user's data, provide insights in JSON format:
+{
+  "weeklyProgress": "improving|stable|declining|mixed",
+  "keyInsights": [
+    "Insight 1 in user's language (${userLanguage})",
+    "Insight 2 in user's language (${userLanguage})",
+    "Insight 3 in user's language (${userLanguage})"
+  ],
+  "moodTrend": "improving|stable|declining|volatile",
+  "achievements": [
+    "Achievement 1 in user's language (${userLanguage})",
+    "Achievement 2 in user's language (${userLanguage})"
+  ],
+  "recommendedActions": [
+    "Action 1 in user's language (${userLanguage})",
+    "Action 2 in user's language (${userLanguage})"
+  ],
+  "motivationalMessage": "Encouraging message in user's language (${userLanguage}), max 50 words",
+  "areasOfImprovement": [
+    "Area 1 in user's language (${userLanguage})",
+    "Area 2 in user's language (${userLanguage})"
+  ],
+  "strengthsIdentified": [
+    "Strength 1 in user's language (${userLanguage})",
+    "Strength 2 in user's language (${userLanguage})"
+  ],
+  "riskFactors": [
+    "Risk factor 1 (if any)"
+  ],
+  "overallScore": [0-100 progress score],
+  "nextGoals": [
+    "Goal 1 in user's language (${userLanguage})",
+    "Goal 2 in user's language (${userLanguage})"
+  ]
 }
 
-module.exports = new AICoachService();
+Important: All text fields must be in the user's preferred language (${userLanguage}). Be encouraging, specific, and culturally appropriate.`;
+
+      const result = await this.openai.chat.completions.create({
+        model: this.modelName,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 1500
+      });
+
+      const responseText = result.choices[0].message.content;
+      
+      // Clean the response text
+      let cleanedText = responseText.trim();
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+      } else if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.replace(/^```\s*/, '').replace(/```\s*$/, '');
+      }
+
+      const insights = JSON.parse(cleanedText);
+      
+      // Store insights in AI Coach record
+      await this.saveAnalysis(userId, 'insight', insights);
+      
+      return insights;
+
+    } catch (error) {
+      console.error('Error generating progress insights:', error);
+      const user = await User.findById(userId).catch(() => null);
+      return this.getDefaultInsights(user?.preferredLanguage || 'en');
+    }
+  }
+}
+
+module.exports = AICoachService;

@@ -4,95 +4,77 @@ import axios from 'axios';
 import { getFullUrl } from '../config/api';
 
 const ProgressDashboard = ({ user, onStartCoaching }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [insights, setInsights] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [timeframe, setTimeframe] = useState('30');
+  const [timeframe, setTimeframe] = useState('7');
 
   useEffect(() => {
     if (user) {
-      fetchInsights();
+      fetchEnhancedInsights();
     }
   }, [user, timeframe]);
 
-  // Auto-hide error messages after 5 seconds
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        setError('');
-      }, 5000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
-
-  const fetchInsights = async () => {
+  const fetchEnhancedInsights = async () => {
     try {
       setIsLoading(true);
       setError('');
       
-      const response = await axios.get(getFullUrl(`/api/ai-coach/insights/${user.id}?timeframe=${timeframe}`));
+      const params = new URLSearchParams({
+        timeframe,
+        sophistication: 'intermediate',
+        categories: 'recovery_progress,wellness_trends',
+        comparisons: 'true',
+        predictions: 'true',
+        language: i18n.language
+      });
+      
+      const response = await axios.get(
+        getFullUrl(`/api/ai-coach/enhanced-insights/${user.id}?${params}`)
+      );
       
       if (response.data.success) {
         setInsights(response.data.insights);
+        console.log('Enhanced Insights loaded:', response.data.insights);
       } else {
         setError(t('failedToLoadInsights', 'Failed to load insights'));
       }
     } catch (error) {
-      console.error('Error fetching insights:', error);
+      console.error('Error fetching enhanced insights:', error);
       setError(t('failedToLoadProgressInsights', 'Failed to load progress insights'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getProgressColor = (progress) => {
-    switch (progress) {
-      case 'improving': return '#10b981';
-      case 'stable': return '#f59e0b';
-      case 'concerning': return '#ef4444';
+  const getRiskColor = (level) => {
+    switch (level?.toLowerCase()) {
+      case 'low': return '#10b981';
+      case 'medium': return '#f59e0b';
+      case 'high': return '#ef4444';
+      case 'critical': return '#dc2626';
       default: return '#6b7280';
     }
   };
 
   const getTrendIcon = (trend) => {
-    switch (trend) {
+    switch (trend?.toLowerCase()) {
       case 'improving': return '📈';
+      case 'stable': return '📊';
       case 'declining': return '📉';
-      case 'stable': return '➡️';
+      case 'volatile': return '⚡';
       default: return '📊';
     }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high': return '#ef4444';
-      case 'medium': return '#f59e0b';
-      case 'low': return '#10b981';
-      default: return '#6b7280';
-    }
-  };
-
-  const formatCleanDays = (cleanDays) => {
-    if (!cleanDays || Object.keys(cleanDays).length === 0) {
-      return t('noActiveRecoveryTracking', 'No active recovery tracking');
-    }
-    
-    return Object.entries(cleanDays).map(([addiction, days]) => (
-      <div key={addiction} className="clean-days-item">
-        <span className="addiction-type">{addiction}</span>
-        <span className="days-count">{days} {t('days', 'days')}</span>
-      </div>
-    ));
   };
 
   if (isLoading) {
     return (
       <div className="progress-dashboard loading">
-        <div className="loading-spinner">
-          <div className="spinner"></div>
-          <p>{t('loading', 'Loading')} {t('progressInsights', 'Progress Insights')}...</p>
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <h3>{t('loading', 'Loading')} Enhanced Insights...</h3>
+          <p>Analyzing your wellness patterns...</p>
         </div>
       </div>
     );
@@ -101,11 +83,11 @@ const ProgressDashboard = ({ user, onStartCoaching }) => {
   if (error) {
     return (
       <div className="progress-dashboard error">
-        <div className="error-message">
-          <h3>😔 {t('errorLoadingInsights', 'Error Loading Insights')}</h3>
+        <div className="error-container">
+          <h3>😔 {t('insightsError', 'Insights Error')}</h3>
           <p>{error}</p>
-          <button onClick={fetchInsights} className="retry-btn">
-            🔄 {t('tryAgain', 'Try Again')}
+          <button onClick={fetchEnhancedInsights} className="retry-button">
+            {t('tryAgain', 'Try Again')}
           </button>
         </div>
       </div>
@@ -115,9 +97,9 @@ const ProgressDashboard = ({ user, onStartCoaching }) => {
   if (!insights) {
     return (
       <div className="progress-dashboard no-data">
-        <div className="no-data-message">
+        <div className="no-data-container">
           <h3>📊 {t('noInsightsYet', 'No Insights Yet')}</h3>
-          <p>{t('startJournalingForInsights', 'Start journaling to see your progress insights!')}</p>
+          <p>{t('addJournalEntries', 'Add some journal entries to see your progress insights')}</p>
         </div>
       </div>
     );
@@ -126,275 +108,639 @@ const ProgressDashboard = ({ user, onStartCoaching }) => {
   return (
     <div className="progress-dashboard">
       {/* Header */}
-      <div className="dashboard-header">
-        <div className="header-title">
-          <h2>📊 {t('progressInsights', 'Progress Insights')}</h2>
-          <p className="timeframe-info">
-            {t('last', 'Last')} {insights.overview.timeframe}
-          </p>
-        </div>
+      <div className="insights-header">
+        <h2>📊 {t('recoveryInsights', 'Recovery Progress Insights')}</h2>
+        <p>{t('basedOnData', 'Based on your journal entries and progress tracking')}</p>
         
         <div className="timeframe-selector">
-          <select 
-            value={timeframe} 
-            onChange={(e) => setTimeframe(e.target.value)}
-            className="timeframe-select"
-          >
-            <option value="7">7 {t('days', 'days')}</option>
-            <option value="30">30 {t('days', 'days')}</option>
-            <option value="90">90 {t('days', 'days')}</option>
+          <label>{t('timeframe', 'Timeframe')}:</label>
+          <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
+            <option value="7">{t('lastWeek', 'Last 7 days')}</option>
+            <option value="30">{t('lastMonth', 'Last 30 days')}</option>
+            <option value="90">{t('last3Months', 'Last 3 months')}</option>
           </select>
         </div>
       </div>
 
-      {/* Overview Cards */}
+      {/* Overview Stats */}
       <div className="overview-grid">
         <div className="overview-card">
           <div className="card-icon">📝</div>
           <div className="card-content">
-            <h3>{insights.overview.totalJournalEntries}</h3>
+            <h3>{insights?.metadata?.dataPointsAnalyzed?.journalEntries || 0}</h3>
             <p>{t('journalEntries', 'Journal Entries')}</p>
-          </div>
-        </div>
-        
-        <div className="overview-card">
-          <div className="card-icon">💬</div>
-          <div className="card-content">
-            <h3>{insights.overview.totalCoachSessions}</h3>
-            <p>{t('coachSessions', 'Coach Sessions')}</p>
           </div>
         </div>
         
         <div className="overview-card">
           <div className="card-icon">🎯</div>
           <div className="card-content">
-            <h3>{insights.overview.activeAddictions}</h3>
-            <p>{t('activeRecovery', 'Active Recovery')}</p>
+            <h3>{insights?.metadata?.dataPointsAnalyzed?.addictionData || 0}</h3>
+            <p>{t('activeRecovery', 'Tracked Addictions')}</p>
           </div>
         </div>
         
         <div className="overview-card">
-          <div className="card-icon">🔥</div>
+          <div className="card-icon">💪</div>
           <div className="card-content">
-            <h3>{insights.engagementMetrics.currentJournalStreak}</h3>
-            <p>{t('dayStreak', 'Day Streak')}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Progress Status */}
-      <div className="progress-status-card">
-        <div className="status-header">
-          <h3>🎯 {t('overallProgress', 'Overall Progress')}</h3>
-          <div 
-            className="progress-indicator"
-            style={{ color: getProgressColor(insights.aiInsights.overallProgress) }}
-          >
-            {insights.aiInsights.overallProgress}
+            <h3>{insights?.categories?.recovery_progress?.overallRecoveryHealth?.score || 0}</h3>
+            <p>{t('recoveryScore', 'Recovery Score')}</p>
           </div>
         </div>
         
-        <div className="motivational-message">
-          <p>"{insights.aiInsights.motivationalMessage}"</p>
-        </div>
-      </div>
-
-      {/* Mood Analysis */}
-      <div className="analysis-card">
-        <div className="card-header">
-          <h3>{getTrendIcon(insights.moodAnalysis.trend)} {t('moodAnalysis', 'Mood Analysis')}</h3>
-          <div className="trend-indicator">
-            {insights.moodAnalysis.trend}
+        <div className="overview-card">
+          <div className="card-icon">{getTrendIcon(insights?.categories?.recovery_progress?.overallRecoveryHealth?.trend)}</div>
+          <div className="card-content">
+            <h3>{insights?.categories?.recovery_progress?.overallRecoveryHealth?.trend || 'stable'}</h3>
+            <p>{t('trend', 'Trend')}</p>
           </div>
-        </div>
-        
-        <div className="mood-metrics">
-          <div className="metric">
-            <span className="metric-label">{t('averageScore', 'Average Score')}</span>
-            <span className="metric-value">{insights.moodAnalysis.averageScore}/10</span>
-          </div>
-          
-          <div className="metric">
-            <span className="metric-label">{t('mostCommonMood', 'Most Common')}</span>
-            <span className="metric-value">{insights.moodAnalysis.mostCommonMood}</span>
-          </div>
-          
-          <div className="metric">
-            <span className="metric-label">{t('improvement', 'Improvement')}</span>
-            <span className={`metric-value ${insights.moodAnalysis.improvement >= 0 ? 'positive' : 'negative'}`}>
-              {insights.moodAnalysis.improvement >= 0 ? '+' : ''}{insights.moodAnalysis.improvement}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Trigger Analysis */}
-      <div className="analysis-card">
-        <div className="card-header">
-          <h3>⚠️ {t('triggerAnalysis', 'Trigger Analysis')}</h3>
-        </div>
-        
-        <div className="trigger-metrics">
-          <div className="trigger-counts">
-            <div className="trigger-count high-risk">
-              <span className="count">{insights.triggerAnalysis.highRiskCount}</span>
-              <span className="label">{t('highRisk', 'High Risk')}</span>
-            </div>
-            
-            <div className="trigger-count medium-risk">
-              <span className="count">{insights.triggerAnalysis.mediumRiskCount}</span>
-              <span className="label">{t('mediumRisk', 'Medium Risk')}</span>
-            </div>
-            
-            <div className="trigger-count low-risk">
-              <span className="count">{insights.triggerAnalysis.lowRiskCount}</span>
-              <span className="label">{t('lowRisk', 'Low Risk')}</span>
-            </div>
-          </div>
-          
-          {insights.triggerAnalysis.mostCommonTrigger !== 'none' && (
-            <div className="common-trigger">
-              <span className="label">{t('mostCommonTrigger', 'Most Common')}:</span>
-              <span className="value">{insights.triggerAnalysis.mostCommonTrigger}</span>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Recovery Progress */}
-      <div className="analysis-card">
-        <div className="card-header">
-          <h3>🌱 {t('recoveryProgress', 'Recovery Progress')}</h3>
-        </div>
-        
-        <div className="recovery-metrics">
-          {insights.recoveryProgress.longestStreak > 0 && (
-            <div className="metric">
-              <span className="metric-label">{t('longestStreak', 'Longest Streak')}</span>
-              <span className="metric-value">{insights.recoveryProgress.longestStreak} {t('days', 'days')}</span>
+      {insights?.categories?.recovery_progress && (
+        <div className="recovery-section">
+          <h3>🎯 {t('recoveryProgress', 'Recovery Progress')}</h3>
+          
+          {/* Overall Health */}
+          {insights.categories.recovery_progress.overallRecoveryHealth && (
+            <div className="overall-health-card">
+              <div className="health-header">
+                <div className="health-score">
+                  <span className="score-number" 
+                        style={{ color: getRiskColor(insights.categories.recovery_progress.overallRecoveryHealth.score > 70 ? 'low' : 'medium') }}>
+                    {insights.categories.recovery_progress.overallRecoveryHealth.score}
+                  </span>
+                  <span className="score-label">/100</span>
+                </div>
+                <div className="health-trend">
+                  <span className="trend-icon">{getTrendIcon(insights.categories.recovery_progress.overallRecoveryHealth.trend)}</span>
+                  <span className="trend-text">{insights.categories.recovery_progress.overallRecoveryHealth.trend}</span>
+                </div>
+              </div>
+              <p className="health-summary">{insights.categories.recovery_progress.overallRecoveryHealth.summary}</p>
             </div>
           )}
-          
-          <div className="clean-days-section">
-            <h4>{t('cleanDays', 'Clean Days')}</h4>
-            <div className="clean-days-list">
-              {formatCleanDays(insights.recoveryProgress.cleanDays)}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Key Insights */}
-      <div className="insights-card">
-        <div className="card-header">
-          <h3>💡 {t('keyInsights', 'Key Insights')}</h3>
-        </div>
-        
-        <div className="insights-list">
-          {insights.aiInsights.keyInsights.map((insight, index) => (
-            <div key={index} className="insight-item">
-              <span className="insight-bullet">•</span>
-              <span className="insight-text">{insight}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Strengths & Improvements */}
-      <div className="strengths-improvements-grid">
-        <div className="strengths-card">
-          <div className="card-header">
-            <h3>💪 {t('strengths', 'Strengths')}</h3>
-          </div>
-          
-          <div className="items-list">
-            {insights.aiInsights.strengths.map((strength, index) => (
-              <div key={index} className="strength-item">
-                <span className="item-icon">✅</span>
-                <span className="item-text">{strength}</span>
+          {/* Addiction Breakdown */}
+          {insights.categories.recovery_progress.addictionBreakdown?.length > 0 && (
+            <div className="addictions-section">
+              <h4>{t('addictionBreakdown', 'Addiction Progress')}</h4>
+              <div className="addictions-grid">
+                {insights.categories.recovery_progress.addictionBreakdown.map((addiction, index) => (
+                  <div key={index} className="addiction-card">
+                    <div className="addiction-header">
+                      <div className="addiction-type">
+                        <span className="addiction-icon">
+                          {addiction.type === 'gambling' ? '🎰' :
+                           addiction.type === 'alcohol' ? '🍺' :
+                           addiction.type === 'smoking' ? '🚬' :
+                           addiction.type === 'social_media' ? '📱' :
+                           addiction.type === 'shopping' ? '🛍️' : '⚪'}
+                        </span>
+                        <span className="addiction-name">{addiction.type}</span>
+                      </div>
+                      <div className="risk-badge" style={{ backgroundColor: getRiskColor(addiction.riskLevel) }}>
+                        {addiction.riskLevel}
+                      </div>
+                    </div>
+                    
+                    <div className="addiction-stats">
+                      <div className="stat">
+                        <span className="stat-label">{t('daysClean', 'Days Clean')}</span>
+                        <span className="stat-value">{addiction.daysClean}</span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-label">{t('status', 'Status')}</span>
+                        <span className="stat-value">{addiction.status}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="addiction-details">
+                      <p className="trigger-info">
+                        <strong>{t('triggers', 'Triggers')}:</strong> {addiction.triggerFrequency}
+                      </p>
+                      <p className="progress-summary">{addiction.progressSummary}</p>
+                      
+                      {addiction.recommendations?.length > 0 && (
+                        <div className="recommendations">
+                          <strong>{t('recommendations', 'Recommendations')}:</strong>
+                          <ul>
+                            {addiction.recommendations.map((rec, i) => (
+                              <li key={i}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-        
-        <div className="improvements-card">
-          <div className="card-header">
-            <h3>🎯 {t('areasForImprovement', 'Areas for Improvement')}</h3>
-          </div>
-          
-          <div className="items-list">
-            {insights.aiInsights.areasForImprovement.map((area, index) => (
-              <div key={index} className="improvement-item">
-                <span className="item-icon">🔧</span>
-                <span className="item-text">{area}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            </div>
+          )}
 
-      {/* Recommendations */}
-      <div className="recommendations-card">
-        <div className="card-header">
-          <h3>📋 {t('recommendations', 'Recommendations')}</h3>
-        </div>
-        
-        <div className="recommendations-list">
-          {insights.recommendations.map((rec, index) => (
-            <div key={index} className="recommendation-item">
-              <div 
-                className="priority-indicator"
-                style={{ backgroundColor: getPriorityColor(rec.priority) }}
-              ></div>
+          {/* Trigger Insights */}
+          {insights.categories.recovery_progress.triggerInsights && (
+            <div className="triggers-section">
+              <h4>⚠️ {t('triggerInsights', 'Trigger Analysis')}</h4>
               
-              <div className="recommendation-content">
-                <h4>{rec.title}</h4>
-                <p>{rec.description}</p>
-                <button 
-                  className="action-button"
-                  onClick={() => {
-                    if (rec.action.includes('Alex') || rec.action.includes('coach')) {
-                      onStartCoaching();
-                    }
-                  }}
-                >
-                  {rec.action}
-                </button>
+              <div className="triggers-grid">
+                {insights.categories.recovery_progress.triggerInsights.mostCommonTriggers?.length > 0 && (
+                  <div className="trigger-card">
+                    <h5>{t('commonTriggers', 'Most Common Triggers')}</h5>
+                    <div className="trigger-tags">
+                      {insights.categories.recovery_progress.triggerInsights.mostCommonTriggers.map((trigger, index) => (
+                        <span key={index} className="trigger-tag">{trigger}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {insights.categories.recovery_progress.triggerInsights.triggerMoodCorrelation && (
+                  <div className="trigger-card">
+                    <h5>{t('moodCorrelation', 'Mood Correlation')}</h5>
+                    <p>{insights.categories.recovery_progress.triggerInsights.triggerMoodCorrelation}</p>
+                  </div>
+                )}
               </div>
             </div>
-          ))}
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Next Steps */}
-      <div className="next-steps-card">
-        <div className="card-header">
-          <h3>🚀 {t('nextSteps', 'Next Steps')}</h3>
+      {/* Key Highlights */}
+      {insights?.overview && (
+        <div className="highlights-section">
+          <h3>✨ {t('keyHighlights', 'Key Highlights')}</h3>
+          <div className="highlight-card">
+            <p className="highlight-text">{insights.overview.keyHighlight}</p>
+            <p className="progress-summary">{insights.overview.progressSummary}</p>
+            {insights.overview.nextFocus && (
+              <div className="next-focus">
+                <strong>{t('nextFocus', 'Next Focus')}:</strong> {insights.overview.nextFocus}
+              </div>
+            )}
+          </div>
         </div>
-        
-        <div className="next-steps-list">
-          {insights.aiInsights.nextSteps.map((step, index) => (
-            <div key={index} className="next-step-item">
-              <span className="step-number">{index + 1}</span>
-              <span className="step-text">{step}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
 
-      {/* Footer */}
-      <div className="dashboard-footer">
-        <button 
-          className="talk-to-alex-btn"
-          onClick={onStartCoaching}
-        >
-          💬 {t('talkToAlex', 'Talk to Alex')}
-        </button>
-        
-        <p className="last-updated">
-          {t('lastUpdated', 'Last updated')}: {new Date(insights.generatedAt).toLocaleDateString()}
-        </p>
-      </div>
+      <style jsx>{`
+        .progress-dashboard {
+          padding: var(--space-lg);
+          min-height: 100vh;
+          max-width: 414px;
+          margin: 0 auto;
+        }
+
+        .insights-header {
+          text-align: center;
+          margin-bottom: var(--space-2xl);
+          background: var(--glass-light);
+          padding: var(--space-xl);
+          border-radius: var(--radius-xl);
+          backdrop-filter: blur(15px);
+          border: 1px solid var(--glass-medium);
+        }
+
+        .insights-header h2 {
+          margin: 0 0 var(--space-sm) 0;
+          color: var(--text-primary);
+          font-size: var(--text-2xl);
+          font-weight: 600;
+        }
+
+        .insights-header p {
+          color: var(--text-secondary);
+          margin: 0 0 var(--space-lg) 0;
+          font-size: var(--text-base);
+        }
+
+        .timeframe-selector {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: var(--space-sm);
+        }
+
+        .timeframe-selector label {
+          color: var(--text-secondary);
+          font-size: var(--text-sm);
+          font-weight: 500;
+        }
+
+        .timeframe-selector select {
+          padding: var(--space-sm) var(--space-md);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: var(--radius-md);
+          background: var(--glass-medium);
+          color: var(--text-primary);
+          font-size: var(--text-sm);
+          backdrop-filter: blur(10px);
+          transition: all var(--duration-normal) var(--easing-smooth);
+        }
+
+        .timeframe-selector select:focus {
+          outline: none;
+          border-color: rgba(255, 255, 255, 0.3);
+          background: var(--glass-light);
+        }
+
+        .overview-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: var(--space-md);
+          margin-bottom: var(--space-2xl);
+        }
+
+        .overview-card {
+          background: var(--glass-light);
+          padding: var(--space-lg);
+          border-radius: var(--radius-lg);
+          backdrop-filter: blur(15px);
+          border: 1px solid var(--glass-medium);
+          transition: all var(--duration-normal) var(--easing-smooth);
+          display: flex;
+          align-items: center;
+          gap: var(--space-md);
+        }
+
+        .overview-card:hover {
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-lg);
+          border-color: var(--glass-light);
+        }
+
+        .card-icon {
+          font-size: var(--text-xl);
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--glass-medium);
+          border-radius: var(--radius-sm);
+          flex-shrink: 0;
+        }
+
+        .card-content h3 {
+          margin: 0;
+          font-size: var(--text-xl);
+          font-weight: 700;
+          color: var(--text-primary);
+          line-height: 1;
+        }
+
+        .card-content p {
+          margin: 4px 0 0 0;
+          color: var(--text-secondary);
+          font-size: var(--text-xs);
+          line-height: 1.2;
+        }
+
+        .recovery-section {
+          background: var(--glass-light);
+          padding: var(--space-xl);
+          border-radius: var(--radius-xl);
+          backdrop-filter: blur(15px);
+          border: 1px solid var(--glass-medium);
+          margin-bottom: var(--space-xl);
+        }
+
+        .recovery-section h3 {
+          margin: 0 0 var(--space-lg) 0;
+          color: var(--text-primary);
+          font-size: var(--text-lg);
+          font-weight: 600;
+        }
+
+        .overall-health-card {
+          background: var(--glass-medium);
+          padding: var(--space-lg);
+          border-radius: var(--radius-md);
+          margin-bottom: var(--space-xl);
+          backdrop-filter: blur(10px);
+        }
+
+        .health-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: var(--space-sm);
+        }
+
+        .health-score {
+          display: flex;
+          align-items: baseline;
+          gap: 4px;
+        }
+
+        .score-number {
+          font-size: var(--text-3xl);
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+
+        .score-label {
+          font-size: var(--text-lg);
+          color: var(--text-secondary);
+        }
+
+        .health-trend {
+          display: flex;
+          align-items: center;
+          gap: var(--space-xs);
+          font-size: var(--text-sm);
+          color: var(--text-secondary);
+          background: var(--glass-light);
+          padding: var(--space-xs) var(--space-sm);
+          border-radius: var(--radius-sm);
+        }
+
+        .health-summary {
+          color: var(--text-secondary);
+          margin: 0;
+          line-height: 1.5;
+          font-size: var(--text-sm);
+        }
+
+        .addictions-section h4 {
+          margin: 0 0 var(--space-lg) 0;
+          color: var(--text-primary);
+          font-size: var(--text-base);
+          font-weight: 600;
+        }
+
+        .addictions-grid {
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-lg);
+        }
+
+        .addiction-card {
+          border: 1px solid var(--glass-medium);
+          border-radius: var(--radius-lg);
+          padding: var(--space-lg);
+          background: var(--glass-medium);
+          backdrop-filter: blur(10px);
+          transition: all var(--duration-normal) var(--easing-smooth);
+        }
+
+        .addiction-card:hover {
+          transform: translateY(-1px);
+          box-shadow: var(--shadow-md);
+          border-color: var(--glass-light);
+        }
+
+        .addiction-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: var(--space-md);
+        }
+
+        .addiction-type {
+          display: flex;
+          align-items: center;
+          gap: var(--space-xs);
+        }
+
+        .addiction-icon {
+          font-size: var(--text-lg);
+        }
+
+        .addiction-name {
+          font-weight: 600;
+          text-transform: capitalize;
+          color: var(--text-primary);
+          font-size: var(--text-base);
+        }
+
+        .risk-badge {
+          padding: 4px 8px;
+          border-radius: var(--radius-sm);
+          color: white;
+          font-size: var(--text-xs);
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .addiction-stats {
+          display: flex;
+          gap: var(--space-lg);
+          margin-bottom: var(--space-md);
+          padding-bottom: var(--space-md);
+          border-bottom: 1px solid var(--glass-light);
+        }
+
+        .stat {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          flex: 1;
+        }
+
+        .stat-label {
+          font-size: var(--text-xs);
+          color: var(--text-tertiary);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          font-weight: 500;
+        }
+
+        .stat-value {
+          font-size: var(--text-lg);
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+
+        .addiction-details p {
+          margin: var(--space-xs) 0;
+          color: var(--text-secondary);
+          line-height: 1.4;
+          font-size: var(--text-sm);
+        }
+
+        .recommendations {
+          margin-top: var(--space-sm);
+          padding-top: var(--space-sm);
+          border-top: 1px solid var(--glass-light);
+        }
+
+        .recommendations ul {
+          margin: var(--space-xs) 0 0 0;
+          padding-left: var(--space-lg);
+        }
+
+        .recommendations li {
+          color: var(--text-secondary);
+          margin-bottom: 4px;
+          font-size: var(--text-sm);
+        }
+
+        .triggers-section {
+          margin-top: var(--space-xl);
+        }
+
+        .triggers-section h4 {
+          margin: 0 0 var(--space-lg) 0;
+          color: var(--text-primary);
+          font-size: var(--text-base);
+          font-weight: 600;
+        }
+
+        .triggers-grid {
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-md);
+        }
+
+        .trigger-card {
+          background: rgba(251, 191, 36, 0.1);
+          border: 1px solid rgba(251, 191, 36, 0.3);
+          border-radius: var(--radius-md);
+          padding: var(--space-md);
+          backdrop-filter: blur(10px);
+        }
+
+        .trigger-card h5 {
+          margin: 0 0 var(--space-sm) 0;
+          color: #f59e0b;
+          font-size: var(--text-sm);
+          font-weight: 600;
+        }
+
+        .trigger-card p {
+          margin: 0;
+          color: var(--text-secondary);
+          font-size: var(--text-sm);
+          line-height: 1.4;
+        }
+
+        .trigger-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--space-xs);
+        }
+
+        .trigger-tag {
+          background: #f59e0b;
+          color: white;
+          padding: 4px 8px;
+          border-radius: var(--radius-sm);
+          font-size: var(--text-xs);
+          font-weight: 500;
+        }
+
+        .highlights-section {
+          background: var(--glass-light);
+          padding: var(--space-xl);
+          border-radius: var(--radius-xl);
+          backdrop-filter: blur(15px);
+          border: 1px solid var(--glass-medium);
+        }
+
+        .highlights-section h3 {
+          margin: 0 0 var(--space-lg) 0;
+          color: var(--text-primary);
+          font-size: var(--text-lg);
+          font-weight: 600;
+        }
+
+        .highlight-card {
+          background: rgba(16, 185, 129, 0.1);
+          border: 1px solid rgba(16, 185, 129, 0.3);
+          border-radius: var(--radius-md);
+          padding: var(--space-lg);
+          backdrop-filter: blur(10px);
+        }
+
+        .highlight-text {
+          font-size: var(--text-base);
+          font-weight: 600;
+          color: #10b981;
+          margin: 0 0 var(--space-xs) 0;
+        }
+
+        .progress-summary {
+          color: var(--text-secondary);
+          margin: 0 0 var(--space-sm) 0;
+          font-size: var(--text-sm);
+          line-height: 1.4;
+        }
+
+        .next-focus {
+          color: #10b981;
+          font-weight: 500;
+          font-size: var(--text-sm);
+        }
+
+        .loading-container, .error-container, .no-data-container {
+          text-align: center;
+          padding: var(--space-5xl) var(--space-lg);
+          color: var(--text-primary);
+        }
+
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid var(--glass-light);
+          border-top: 3px solid var(--text-primary);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin: 0 auto var(--space-lg);
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .retry-button {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border: none;
+          padding: var(--space-sm) var(--space-lg);
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          font-weight: 600;
+          font-size: var(--text-sm);
+          transition: all var(--duration-normal) var(--easing-smooth);
+        }
+
+        .retry-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        @media (max-width: 768px) {
+          .progress-dashboard {
+            padding: var(--space-md);
+          }
+
+          .overview-grid {
+            grid-template-columns: 1fr;
+            gap: var(--space-sm);
+          }
+
+          .overview-card {
+            padding: var(--space-md);
+            gap: var(--space-sm);
+          }
+
+          .card-content h3 {
+            font-size: var(--text-lg);
+          }
+
+          .card-content p {
+            font-size: 11px;
+          }
+
+          .addiction-stats {
+            gap: var(--space-md);
+          }
+        }
+      `}</style>
     </div>
   );
 };

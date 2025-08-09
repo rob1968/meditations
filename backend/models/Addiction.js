@@ -165,6 +165,20 @@ AddictionSchema.methods.getDaysClean = function() {
   return Math.max(0, diffDays);
 };
 
+// Get most recent relapse date
+AddictionSchema.methods.getLastRelapseDate = function() {
+  if (this.status !== 'relapsed') {
+    return null;
+  }
+  
+  // Find the most recent relapse milestone
+  const relapseMilestones = this.milestones
+    .filter(m => m.type === 'relapse')
+    .sort((a, b) => b.date - a.date);
+  
+  return relapseMilestones.length > 0 ? relapseMilestones[0].date : null;
+};
+
 // Add milestone
 AddictionSchema.methods.addMilestone = function(type, description, daysClean = null) {
   const milestone = {

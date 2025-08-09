@@ -144,14 +144,9 @@ const App = () => {
 
   // Global function to stop all background audio
   const stopAllBackgroundAudio = () => {
-    console.log('stopAllBackgroundAudio called');
-    
     // Method 1: Try using the ref if available
     if (backgroundSliderRef.current && backgroundSliderRef.current.stopBackgroundSound) {
-      console.log('Calling stopBackgroundSound via ref');
       backgroundSliderRef.current.stopBackgroundSound();
-    } else {
-      console.log('backgroundSliderRef not available, trying alternative method');
     }
     
     // Method 2: Force stop all audio elements (backup method)
@@ -159,7 +154,6 @@ const App = () => {
       const audioElements = document.querySelectorAll('audio');
       audioElements.forEach(audio => {
         if (!audio.paused) {
-          console.log('Force stopping audio element:', audio);
           audio.pause();
         }
       });
@@ -199,7 +193,6 @@ const App = () => {
   };
 
   const generateTextPreview = async () => {
-    console.log('Starting text generation...');
     setIsGeneratingText(true);
     setError('');
     try {
@@ -217,7 +210,6 @@ const App = () => {
       setText('');
       setGeneratedText('');
     } finally {
-      console.log('Text generation finished');
       setIsGeneratingText(false);
     }
   };
@@ -410,7 +402,6 @@ const App = () => {
             <div className="text-actions">
               <button
                 onClick={async () => {
-                  console.log('Starting wizard text generation...');
                   setIsGeneratingText(true);
                   setError('');
                   try {
@@ -721,8 +712,6 @@ const App = () => {
   // Initialize Pi authentication and check for existing user session
   useEffect(() => {
     const initializeApp = async () => {
-      console.log('[App] Starting app initialization...');
-      
       // First, check for existing traditional user session before Pi authentication
       const storedUser = localStorage.getItem('user');
       const authMethod = localStorage.getItem('authMethod');
@@ -733,7 +722,6 @@ const App = () => {
           
           // If user is already logged in (any method), don't try auto-authentication
           if (userData && userData.id) {
-            console.log('[App] User already logged in:', userData.username, 'via', authMethod || 'traditional');
             setUser(userData);
             
             if (userData.preferredLanguage) {
@@ -752,22 +740,17 @@ const App = () => {
       // Always attempt to initialize Pi authentication for future use
       setIsPiEnvironment(false); // Pi browser detection disabled
       
-      console.log('[App] Initializing Pi authentication service...');
       try {
         const initialized = await piAuthService.initialize();
         setPiAuthInitialized(initialized);
         
         if (initialized) {
-          console.log('[App] Pi authentication service initialized successfully');
-          
           // Only attempt auto-login if user was previously authenticated with Pi
           // and no current session exists
           if (authMethod === 'pi') {
-            console.log('[App] Previous Pi authentication detected - attempting auto-login...');
             try {
               const result = await piAuthService.autoAuthenticate();
               if (result.success) {
-                console.log('[App] Pi auto-authentication successful');
                 setUser(result.user);
                 if (result.user.preferredLanguage) {
                   i18n.changeLanguage(result.user.preferredLanguage);
@@ -776,7 +759,6 @@ const App = () => {
                 return; // Exit early since we've authenticated
               }
             } catch (error) {
-              console.log('[App] Pi auto-authentication failed:', error.message);
               // Clear Pi auth data and continue
               localStorage.removeItem('authMethod');
               localStorage.removeItem('user');
@@ -791,11 +773,8 @@ const App = () => {
       // Fallback: Load saved language preference from localStorage if no user preferred language
       const savedLanguage = localStorage.getItem('selectedLanguage');
       if (savedLanguage) {
-        console.log('[App] Loading saved language preference:', savedLanguage);
         i18n.changeLanguage(savedLanguage);
       }
-      
-      console.log('[App] App initialization completed');
     };
     
     initializeApp();
@@ -847,20 +826,15 @@ const App = () => {
       localStorage.setItem('selectedLanguage', userData.preferredLanguage);
     }
     
-    console.log('User logged in:', userData.authMethod || 'traditional', userData.username);
     handleTabChange('journal');
   };
 
   const handleLogout = () => {
-    console.log('[App] Starting logout process...');
-    
     // Check if user was authenticated with Pi and logout from Pi service
     const authMethod = localStorage.getItem('authMethod');
     if (authMethod === 'pi') {
-      console.log('[App] Logging out Pi user...');
       try {
         piAuthService.logout();
-        console.log('[App] Pi service logout completed');
       } catch (error) {
         console.error('[App] Error during Pi logout:', error);
       }
@@ -884,7 +858,6 @@ const App = () => {
       window.location.reload();
     }, 100);
     
-    console.log('[App] User logged out and page will reload');
     // Note: We keep the language preference even after logout
   };
 
@@ -943,10 +916,8 @@ const App = () => {
           formData.append('savedBackgroundId', savedBg.id);
           formData.append('savedBackgroundUserId', savedBg.userId);
           formData.append('savedBackgroundFilename', savedBg.filename);
-          console.log('Frontend: Using saved background:', savedBg);
         } else {
           // This should not happen anymore since we upload immediately
-          console.warn('Frontend: Unexpected - using non-saved background file');
           formData.append('customBackground', customBackgroundFile);
         }
       }
@@ -1045,24 +1016,18 @@ const App = () => {
 
   const handleCustomBackgroundDelete = async (backgroundId) => {
     try {
-      console.log('Delete request starting:', { backgroundId, userId: user?.id });
-      
       if (!user?.id) {
-        console.log('No user ID found');
         showAlert(t('loginRequired', 'Je moet ingelogd zijn om achtergronden te verwijderen'));
         return;
       }
 
       const url = getFullUrl(`/api/custom-backgrounds/${backgroundId}`);
-      console.log('Making DELETE request to:', url);
 
       const response = await axios.delete(url, {
         headers: {
           'x-user-id': user.id
         }
       });
-      
-      console.log('Delete response:', response.data);
 
       if (response.data.success) {
         // Update the saved backgrounds list
@@ -1077,7 +1042,6 @@ const App = () => {
       }
     } catch (error) {
       console.error('Error deleting background:', error);
-      console.error('Error details:', error.response?.data || error.message);
       showAlert(t('errorDeletingBackground', 'Fout bij het verwijderen van achtergrond') + ': ' + (error.response?.data?.error || error.message));
     }
   };
@@ -1097,7 +1061,6 @@ const App = () => {
       name = data.name;
       description = data.description;
     } else {
-      console.error('Invalid upload data:', data);
       return { success: false, error: 'Invalid upload data' };
     }
     
@@ -1142,8 +1105,6 @@ const App = () => {
             formData.append('customName', name);
             formData.append('customDescription', description);
 
-            console.log('Frontend: Uploading background with name:', name);
-            
             const response = await axios.post(getFullUrl('/api/meditation/custom-background/upload'), formData, {
               headers: {
                 'Content-Type': 'multipart/form-data'
@@ -1167,7 +1128,6 @@ const App = () => {
               // Refresh the list of saved backgrounds
               fetchSavedCustomBackgrounds();
               
-              console.log('Background uploaded successfully:', response.data);
               return { success: true, backgroundId: response.data.backgroundId };
             }
           } catch (error) {
@@ -1203,8 +1163,6 @@ const App = () => {
         formData.append('customName', customBackgroundName);
         formData.append('customDescription', customBackgroundDescription);
 
-        console.log('Frontend: Uploading background with name:', customBackgroundName);
-        
         const response = await axios.post(getFullUrl('/api/meditation/custom-background/upload'), formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
@@ -1228,8 +1186,6 @@ const App = () => {
           
           // Refresh the list of saved backgrounds
           fetchSavedCustomBackgrounds();
-          
-          console.log('Background uploaded successfully:', response.data);
         }
       } catch (error) {
         console.error('Error uploading custom background:', error);
@@ -1258,8 +1214,6 @@ const App = () => {
       formData.append('userId', user.id);
       formData.append('customName', name);
       formData.append('customDescription', description);
-
-      console.log('Frontend: Uploading background with name:', name);
       
       const response = await axios.post(getFullUrl('/api/meditation/custom-background/upload'), formData, {
         headers: {
@@ -1268,8 +1222,6 @@ const App = () => {
       });
 
       if (response.data.success) {
-        console.log('Upload response.data:', response.data);
-        
         // Clear the temporary custom background state since it's now saved
         setCustomBackgroundFile(null);
         setCustomBackgroundName('');
@@ -1283,8 +1235,6 @@ const App = () => {
         setTimeout(() => {
           setBackground(`saved-${response.data.backgroundId}`);
         }, 500);
-        
-        console.log('Background uploaded successfully:', response.data);
       }
     } catch (error) {
       console.error('Error uploading custom background:', error);
@@ -1294,26 +1244,18 @@ const App = () => {
 
   const fetchSavedCustomBackgrounds = async () => {
     if (!user?.id) {
-      console.log('fetchSavedCustomBackgrounds: No user ID');
       setBackgroundsLoading(false);
       return;
     }
     
-    console.log('fetchSavedCustomBackgrounds: Fetching for user', user.id);
     setBackgroundsLoading(true);
     
     try {
       const url = getFullUrl(`/api/meditation/custom-backgrounds/${user.id}`);
-      console.log('fetchSavedCustomBackgrounds: URL:', url);
-      
       const response = await axios.get(url);
-      console.log('fetchSavedCustomBackgrounds: Response:', response.data);
-      
       setSavedCustomBackgrounds(response.data.backgrounds || []);
-      console.log('fetchSavedCustomBackgrounds: Set backgrounds count:', response.data.backgrounds?.length || 0);
     } catch (error) {
       console.error('Error fetching saved custom backgrounds:', error);
-      console.error('Error details:', error.response?.data || error.message);
       // Set empty array on error to prevent infinite loading
       setSavedCustomBackgrounds([]);
     } finally {
@@ -1348,8 +1290,6 @@ const App = () => {
   };
 
   const handleBackgroundSelection = (backgroundValue, savedBackgroundData) => {
-    console.log('App handleBackgroundSelection:', backgroundValue, savedBackgroundData?.customName);
-    
     if (backgroundValue.startsWith('saved-') && savedBackgroundData) {
       // Handle saved background selection - use the specific backgroundValue, not 'custom'
       setBackground(backgroundValue); // This is crucial - use the specific saved ID
@@ -1358,7 +1298,6 @@ const App = () => {
         name: savedBackgroundData.filename,
         savedBackground: savedBackgroundData
       });
-      console.log('Selected saved background:', backgroundValue, savedBackgroundData);
     } else if (backgroundValue === 'custom' && savedBackgroundData) {
       // Handle current upload session
       setBackground('custom');
@@ -1498,7 +1437,6 @@ const App = () => {
                 unreadCount={unreadCount}
                 onProfileClick={(section = 'profile') => {
                   setActiveTab('profile');
-                  // Pass the section to ProfileContainer somehow
                   setProfileSection(section);
                 }}
                 onInboxClick={() => handleTabChange('inbox')}

@@ -16,7 +16,7 @@ const AICoachSchema = new mongoose.Schema({
   
   sessionType: {
     type: String,
-    enum: ['chat', 'analysis', 'intervention', 'check_in', 'insight'],
+    enum: ['chat', 'analysis', 'intervention', 'check_in', 'insight', 'enhanced_insights'],
     required: true
   },
   
@@ -24,13 +24,13 @@ const AICoachSchema = new mongoose.Schema({
   messages: [{
     role: {
       type: String,
-      enum: ['user', 'coach'],
+      enum: ['user', 'coach', 'assistant'],
       required: true
     },
     content: {
       type: String,
       required: true,
-      maxlength: 2000
+      maxlength: 10000
     },
     timestamp: {
       type: Date,
@@ -58,7 +58,10 @@ const AICoachSchema = new mongoose.Schema({
     triggersDetected: [{
       trigger: String,
       confidence: Number,
-      relatedAddiction: mongoose.Schema.Types.ObjectId,
+      relatedAddiction: {
+        type: mongoose.Schema.Types.Mixed,  // Accept both ObjectId and String
+        default: null
+      },
       context: String
     }],
     riskAssessment: {
