@@ -2927,9 +2927,11 @@ const handleSaveEntry = async () => {
               <button 
                 className="view-insights-btn"
                 onClick={() => {
+                  console.log('🔍 Bekijk Mijn Inzichten clicked!');
                   setCoachInitialMessage(null);
                   setCoachInitialTab('insights');
                   setShowCoachChat(true);
+                  console.log('✅ showCoachChat set to true, initialTab set to insights');
                 }}
               >
                 <span className="btn-icon">📊</span>
