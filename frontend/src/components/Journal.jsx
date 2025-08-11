@@ -9,7 +9,6 @@ import ConfirmDialog from './ConfirmDialog';
 import AICoachChat from './AICoachChat';
 import TriggerAlert from './TriggerAlert';
 import SpellingChecker from './GrammarChecker';
-import CalendarHeatmap from './CalendarHeatmap';
 import TriggerPatternChart from './TriggerPatternChart';
 
 const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
@@ -2238,10 +2237,6 @@ const handleSaveEntry = async () => {
         {/* Archive Tab (previously Browse) */}
         {activeTab === 'archive' && (
           <div className="archive-tab-content">
-            
-            {/* Calendar Heatmap */}
-            <CalendarHeatmap entries={entries} userId={user?.id} />
-
             {/* Entries Slider */}
             <div className="entries-slider-container">
               {entries.length === 0 ? (
@@ -3503,10 +3498,10 @@ const handleSaveEntry = async () => {
                               flex: 1
                             }}
                           >
-                            <option value="default">Sarah (Default)</option>
-                            <option value="EXAVITQu4vr4xnSDxMaL">Sarah - Calm</option>
-                            <option value="pNInz6obpgDQGcFmaJgB">Adam - Deep</option>
-                            <option value="21m00Tcm4TlvDq8ikWAM">Rachel - Warm</option>
+                            <option value="default">{t('sarahDefault', 'Sarah (Default)')}</option>
+                            <option value="EXAVITQu4vr4xnSDxMaL">{t('sarahCalm', 'Sarah - Calm')}</option>
+                            <option value="pNInz6obpgDQGcFmaJgB">{t('adamDeep', 'Adam - Deep')}</option>
+                            <option value="21m00Tcm4TlvDq8ikWAM">{t('rachelWarm', 'Rachel - Warm')}</option>
                             {userCustomVoices.map(voice => (
                               <option key={voice.voiceId} value={voice.voiceId}>
                                 {voice.name}

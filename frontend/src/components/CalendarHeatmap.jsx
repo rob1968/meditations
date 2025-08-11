@@ -212,36 +212,6 @@ const CalendarHeatmap = ({ entries, userId }) => {
           text-align: center;
         }
         
-        .calendar-stats {
-          display: flex;
-          gap: 20px;
-          margin-bottom: 20px;
-          flex-wrap: wrap;
-        }
-        
-        .stat-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 10px;
-          background: #f8f9fa;
-          border-radius: 8px;
-          flex: 1;
-          min-width: 100px;
-        }
-        
-        .stat-value {
-          font-size: 24px;
-          font-weight: 600;
-          color: #667eea;
-        }
-        
-        .stat-label {
-          font-size: 12px;
-          color: #666;
-          margin-top: 4px;
-        }
-        
         .weekdays {
           display: grid;
           grid-template-columns: repeat(7, 1fr);
@@ -353,15 +323,6 @@ const CalendarHeatmap = ({ entries, userId }) => {
         }
         
         @media (max-width: 768px) {
-          .calendar-stats {
-            flex-direction: column;
-          }
-          
-          .stat-item {
-            flex-direction: row;
-            justify-content: space-between;
-          }
-          
           .calendar-day {
             min-height: 40px;
           }
@@ -379,27 +340,6 @@ const CalendarHeatmap = ({ entries, userId }) => {
           <span className="month-year">{monthNames[selectedMonth]} {selectedYear}</span>
           <button className="nav-button" onClick={handleNextMonth}>›</button>
         </div>
-      </div>
-      
-      <div className="calendar-stats">
-        <div className="stat-item">
-          <span className="stat-value">{stats.totalEntries}</span>
-          <span className="stat-label">{t('totalEntries', 'Totaal notities')}</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-value">{stats.daysWritten}</span>
-          <span className="stat-label">{t('daysWritten', 'Dagen geschreven')}</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-value">{stats.totalWords}</span>
-          <span className="stat-label">{t('totalWords', 'Totaal woorden')}</span>
-        </div>
-        {stats.relapsedays > 0 && (
-          <div className="stat-item">
-            <span className="stat-value" style={{color: '#ef5350'}}>{stats.relapsedays}</span>
-            <span className="stat-label">{t('relapseDays', 'Terugval dagen')}</span>
-          </div>
-        )}
       </div>
       
       <div className="weekdays">
