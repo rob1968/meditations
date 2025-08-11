@@ -26,8 +26,8 @@ const SpellingChecker = forwardRef(({
   const [isChecking, setIsChecking] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(null);
   const [checkingEnabled, setCheckingEnabled] = useState(true);
-  const [checkTypes, setCheckTypes] = useState(['nonsense', 'spelling', 'grammar']); // Always check nonsense + spelling + grammar
-  const [enableGrammarCheck, setEnableGrammarCheck] = useState(true);
+  const [checkTypes, setCheckTypes] = useState(['spelling']); // Only check spelling, no grammar
+  const [enableGrammarCheck, setEnableGrammarCheck] = useState(true); // Keep for compatibility
   const textareaRef = useRef(null);
   const debounceRef = useRef(null);
   const overlayRef = useRef(null);
@@ -109,26 +109,54 @@ const SpellingChecker = forwardRef(({
     setIsChecking(true);
     try {
       const currentLang = getCurrentLanguage();
-      const response = await axios.post(getFullUrl(API_ENDPOINTS.AI_COACH + '/check-grammar'), {
+      // Use spelling-only endpoint since we only check spelling now
+      const response = await axios.post(getFullUrl(API_ENDPOINTS.AI_COACH + '/check-spelling'), {
         text: textToCheck,
-        language: currentLang,
-        checkTypes: checkTypes
+        language: currentLang
       });
 
       if (response.data.success) {
         const analysis = response.data.analysis;
         console.log('Raw analysis from backend:', analysis);
         
-        // Filter to only include grammar errors
+        // Convert backend format (spellingErrors only) to frontend format (suggestions)
+        const suggestions = [];
+        
+        // Add spelling errors with proper format (including nonsense words)
+        if (analysis.spellingErrors && Array.isArray(analysis.spellingErrors)) {
+          analysis.spellingErrors.forEach((error, index) => {
+            // Find the word in the original text to get start/end positions
+            const wordIndex = textToCheck.toLowerCase().indexOf(error.word.toLowerCase());
+            if (wordIndex !== -1) {
+              // Handle different types of suggestions
+              let suggestionText = error.suggestion;
+              let reasonText = '';
+              
+              if (suggestionText === 'N/A' || !suggestionText) {
+                reasonText = `"${error.word}" appears to be nonsense or gibberish`;
+                suggestionText = ''; // No suggestion for nonsense
+              } else {
+                reasonText = `Spelling: "${error.word}" → "${error.suggestion}"`;
+              }
+              
+              suggestions.push({
+                type: 'spelling',
+                error: error.word,
+                suggestion: suggestionText,
+                start: wordIndex,
+                end: wordIndex + error.word.length,
+                reason: reasonText,
+                isNonsense: suggestionText === '' || suggestionText === 'N/A'
+              });
+            }
+          });
+        }
+        
+        // Skip grammar errors - we only want spelling checks
+        
         const filteredAnalysis = {
           ...analysis,
-          suggestions: (analysis.errors || analysis.suggestions || []).filter(suggestion => {
-            const suggestionType = suggestion.type || suggestion.category;
-            // Only include grammar, grammatical and punctuation errors
-            return suggestionType === 'grammar' || 
-                   suggestionType === 'grammatical' ||
-                   suggestionType === 'punctuation';
-          })
+          suggestions: suggestions
         };
         
         console.log('Filtered analysis with suggestions:', filteredAnalysis);

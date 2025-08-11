@@ -539,6 +539,35 @@ router.get('/crisis-resources', async (req, res) => {
 });
 
 /**
+ * POST /api/ai-coach/check-spelling
+ * Check only spelling for text input (faster than grammar+spelling)
+ */
+router.post('/check-spelling', async (req, res) => {
+  try {
+    const { text, language = 'auto' } = req.body;
+    
+    if (!text || text.trim().length === 0) {
+      return res.status(400).json({ error: 'text is required' });
+    }
+    
+    console.log(`Checking spelling for text (${text.length} chars)`);
+    
+    // Check spelling only using optimized method
+    const analysis = await aiCoachService.checkSpellingOnly(text, language);
+    
+    res.json({
+      success: true,
+      analysis,
+      timestamp: new Date()
+    });
+    
+  } catch (error) {
+    console.error('Error checking spelling:', error);
+    res.status(500).json({ error: 'Failed to check spelling' });
+  }
+});
+
+/**
  * POST /api/ai-coach/check-grammar
  * Check grammar and spelling for text input
  */
@@ -552,14 +581,23 @@ router.post('/check-grammar', async (req, res) => {
     
     console.log(`Checking text with types: ${checkTypes.join(', ')}`);
     
-    // Check grammar and spelling using available method
-    const analysis = await aiCoachService.checkGrammarAndMood(text, language);
-    
-    res.json({
-      success: true,
-      analysis,
-      timestamp: new Date()
-    });
+    // Use spelling-only if only spelling requested
+    if (checkTypes.length === 1 && checkTypes[0] === 'spelling') {
+      const analysis = await aiCoachService.checkSpellingOnly(text, language);
+      res.json({
+        success: true,
+        analysis,
+        timestamp: new Date()
+      });
+    } else {
+      // Check grammar and spelling using full method
+      const analysis = await aiCoachService.checkGrammarAndMood(text, language);
+      res.json({
+        success: true,
+        analysis,
+        timestamp: new Date()
+      });
+    }
     
   } catch (error) {
     console.error('Error checking grammar:', error);

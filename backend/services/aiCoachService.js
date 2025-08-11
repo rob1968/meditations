@@ -306,6 +306,90 @@ class AICoachService {
   }
 
   /**
+   * Check only spelling errors (faster than full grammar+spelling check)
+   */
+  async checkSpellingOnly(text, language = 'en') {
+    try {
+      // First check for nonsense
+      const nonsenseCheck = await this.checkNonsenseOnly(text);
+      if (nonsenseCheck.isNonsense) {
+        return {
+          spellingErrors: [],
+          moods: ['neutral'],
+          overallSentiment: 'neutral',
+          isNonsense: true,
+          nonsenseReason: nonsenseCheck.reason
+        };
+      }
+
+      const prompt = `
+        You are a spelling checker. Analyze this text ONLY for spelling errors and mood.
+        Language: ${language}
+        Text: "${text}"
+        
+        Analyze for:
+        1. Spelling errors (misspelled words, nonsense words, gibberish)
+        2. Overall mood/sentiment of the text
+        
+        Return a JSON object:
+        {
+          "spellingErrors": [
+            {
+              "word": "misspelled or nonsense word",
+              "suggestion": "correct spelling or N/A for nonsense"
+            }
+          ],
+          "moods": ["detected mood keywords"],
+          "overallSentiment": "positive|neutral|negative",
+          "isNonsense": false,
+          "nonsenseReason": null,
+          "confidence": number_0_to_1,
+          "languageDetected": "${language}"
+        }
+        
+        For nonsense words like "lkjlkj", "asdfgh", random character sequences, use "N/A" as suggestion.
+        Only return the JSON, no other text.
+      `;
+      
+      const responseText = await this.callOpenAI(prompt, 0.3, 400);
+      
+      // Clean the response text
+      let cleanedText = responseText.trim();
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+      } else if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.replace(/^```\s*/, '').replace(/```\s*$/, '');
+      }
+      
+      const analysis = JSON.parse(cleanedText);
+      
+      // Ensure required fields exist
+      return {
+        spellingErrors: analysis.spellingErrors || [],
+        moods: analysis.moods || ['neutral'],
+        overallSentiment: analysis.overallSentiment || 'neutral',
+        isNonsense: false,
+        nonsenseReason: null,
+        confidence: analysis.confidence || 0.8,
+        languageDetected: analysis.languageDetected || language
+      };
+      
+    } catch (error) {
+      console.error('Error checking spelling:', error);
+      // Return a default response on error
+      return {
+        spellingErrors: [],
+        moods: ['neutral'],
+        overallSentiment: 'neutral',
+        isNonsense: false,
+        nonsenseReason: null,
+        confidence: 0.5,
+        languageDetected: language
+      };
+    }
+  }
+
+  /**
    * Check grammar, spelling and detect mood
    */
   async checkGrammarAndMood(text, language = 'en') {
@@ -532,32 +616,10 @@ class AICoachService {
         return { isNonsense: false, reason: null };
       }
 
-      const prompt = `
-        Analyze if the following text is nonsense, gibberish, or meaningless content:
-        
-        "${text}"
-        
-        Return only "true" if the text is nonsense/gibberish, or "false" if it contains meaningful content.
-        
-        Consider as nonsense:
-        - Random letters/characters: "asdf jklasdf", "xyzabc123", "qwerty"
-        - Keyboard mashing: "aaaaaaa", "12345", "asdasdasd"
-        - Completely incoherent text that makes no sense in any language
-        - Pure gibberish without any meaningful words
-        
-        Do NOT consider as nonsense:
-        - Short phrases or single words with meaning
-        - Emotional expressions: "argh", "hmm", "ugh"
-        - Misspelled words that are attempting to convey meaning
-        - Text in foreign languages you don't recognize
-        - Abbreviations, slang, or informal language
-        - Creative or poetic expressions
-        - Stream of consciousness writing
-        
-        Respond with only "true" or "false".
-      `;
+      // Quick nonsense detection prompt
+      const prompt = `Is this text nonsense/gibberish? "${text}" Answer: true/false`;
       
-      const responseText = await this.callOpenAI(prompt, 0.1, 50);
+      const responseText = await this.callOpenAI(prompt, 0.1, 20);
       const cleanedResponse = responseText.trim().toLowerCase();
       const isNonsense = cleanedResponse.includes('true');
       

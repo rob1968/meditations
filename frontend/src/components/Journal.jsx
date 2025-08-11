@@ -846,86 +846,86 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     return <span>{parts}</span>;
   };
 
-  // Function to perform nonsense text detection only before saving (grammar checking disabled)
+// Function to perform nonsense text detection using OpenAI backend
 const performPreSaveChecks = async () => {
-  console.log('=== PERFORMING NONSENSE TEXT DETECTION (NEW VERSION) ===');
+  console.log('=== PERFORMING OPENAI NONSENSE DETECTION ===');
   console.log('Is this an update?', !!editingEntry);
   console.log('Entry being edited:', editingEntry?._id);
   console.log('Form content:', formData.content.substring(0, 100) + '...');
-  console.log('API Base URL:', API_BASE_URL);
   
   if (!formData.content.trim()) {
     console.log('Empty content, skipping checks');
     return { passed: true };
   }
   
-  // Perform nonsense detection only (grammar checking disabled)
+  // Perform OpenAI nonsense detection with timeout
   try {
-    setIsPerformingGrammarCheck(true); // Keep UI state for loading indicator
+    setIsPerformingGrammarCheck(true); // Show loading indicator
     setError('');
     setHasGrammarErrors(false);
     
-    console.log('Making API call to check-nonsense endpoint...');
+    console.log('Making API call to OpenAI nonsense endpoint...');
     
-    // Simple nonsense detection without grammar checking
-    // Check directly with backend API for nonsense detection only
-    const apiUrl = `${API_BASE_URL}/api/ai-coach/check-nonsense`;
-    console.log('Full API URL:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text: formData.content.trim()
-      })
+    // Use axios with timeout for OpenAI nonsense detection
+    const response = await axios.post(getFullUrl('/api/ai-coach/check-nonsense'), {
+      text: formData.content.trim()
+    }, {
+      timeout: 15000 // 15 second timeout
     });
     
     console.log('API Response status:', response.status);
-    console.log('API Response ok:', response.ok);
+    console.log('API Response data:', response.data);
     
-    if (!response.ok) {
-      console.log('Nonsense check API failed, continuing with save');
-      setIsPerformingGrammarCheck(false);
-      return { passed: true };
-    }
-    
-    const checkResult = await response.json();
-    console.log('=== NONSENSE CHECK API RESULT ===');
+    const checkResult = response.data;
+    console.log('=== OPENAI NONSENSE CHECK RESULT ===');
     console.log('Full result:', JSON.stringify(checkResult, null, 2));
     
-    if (!checkResult) {
-      console.log('Invalid nonsense check result, continuing with save');
-      setIsPerformingGrammarCheck(false);
-      return { passed: true };
-    }
+    setIsPerformingGrammarCheck(false);
     
     // Check for nonsense text - this blocks saving (for both new and updates)
-    console.log('Checking isNonsense flag:', checkResult.isNonsense);
-    console.log('Type of isNonsense:', typeof checkResult.isNonsense);
-    
-    if (checkResult.isNonsense === true) {
-      console.log('=== NONSENSE DETECTED - BLOCKING SAVE ===');
+    if (checkResult && checkResult.isNonsense === true) {
+      console.log('=== NONSENSE DETECTED BY OPENAI - BLOCKING SAVE ===');
       console.log('Is update:', !!editingEntry);
-      setIsPerformingGrammarCheck(false);
       
       const errorMessage = editingEntry ? 
         t('nonsenseTextDetectedUpdate', 'Onzin tekst gedetecteerd. Wijzig je entry met betekenisvolle content.') :
         t('nonsenseTextDetected', 'Onzin tekst gedetecteerd. Schrijf een echte dagboekentry.');
       
       setError(errorMessage);
+      
+      // Auto-clear error message after 8 seconds
+      setTimeout(() => {
+        setError('');
+      }, 8000);
+      
       return { passed: false, reason: 'nonsense_text' };
     }
     
-    setIsPerformingGrammarCheck(false);
-    console.log('=== NONSENSE DETECTION COMPLETED - TEXT IS VALID ===');
+    console.log('=== OPENAI NONSENSE DETECTION COMPLETED - TEXT IS VALID ===');
     return { passed: true };
     
   } catch (error) {
-    console.error('=== NONSENSE DETECTION FAILED ===', error);
+    console.error('=== OPENAI NONSENSE DETECTION FAILED ===', error);
     setIsPerformingGrammarCheck(false);
-    return { passed: true }; // Continue with save even if nonsense detection fails
+    
+    // If timeout or network error, still block obvious nonsense patterns
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      console.log('OpenAI timeout, falling back to basic check');
+      
+      // Simple fallback for obvious keyboard mashing
+      const text = formData.content.trim().toLowerCase();
+      const isObviousNonsense = /^[lkjlkj\s]+$|^[asdfgh\s]+$|^[qwerty\s]+$|^[123456\s]+$/.test(text);
+      
+      if (isObviousNonsense) {
+        const errorMessage = t('nonsenseTextDetected', 'Onzin tekst gedetecteerd. Schrijf een echte dagboekentry.');
+        setError(errorMessage);
+        setTimeout(() => setError(''), 8000);
+        return { passed: false, reason: 'nonsense_text' };
+      }
+    }
+    
+    // Continue with save if OpenAI check fails completely
+    return { passed: true };
   }
 };
 
@@ -2173,10 +2173,26 @@ const handleSaveEntry = async () => {
                   <div className="new-entry-quick-start">
                     {/* Error Banner */}
                     {error && (
-                      <div className="error-banner">
-                        <span>⚠️</span>
+                      <div className="journal-error-message">
                         <span>{error}</span>
-                        <button onClick={() => setError('')}>✕</button>
+                        <button 
+                          onClick={() => setError('')}
+                          style={{
+                            background: 'rgba(255,255,255,0.2)',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '24px',
+                            height: '24px',
+                            color: 'white',
+                            cursor: 'pointer',
+                            marginLeft: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '16px',
+                            fontWeight: 'bold'
+                          }}
+                        >×</button>
                       </div>
                     )}
                     
@@ -3313,10 +3329,26 @@ const handleSaveEntry = async () => {
 
                 {/* Error Banner */}
                 {error && (
-                  <div className="error-banner">
-                    <span>⚠️</span>
+                  <div className="journal-error-message">
                     <span>{error}</span>
-                    <button onClick={() => setError('')}>✕</button>
+                    <button 
+                      onClick={() => setError('')}
+                      style={{
+                        background: 'rgba(255,255,255,0.2)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        color: 'white',
+                        cursor: 'pointer',
+                        marginLeft: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '16px',
+                        fontWeight: 'bold'
+                      }}
+                    >×</button>
                   </div>
                 )}
                 
