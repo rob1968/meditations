@@ -9,6 +9,8 @@ import ConfirmDialog from './ConfirmDialog';
 import AICoachChat from './AICoachChat';
 import TriggerAlert from './TriggerAlert';
 import SpellingChecker from './GrammarChecker';
+import CalendarHeatmap from './CalendarHeatmap';
+import TriggerPatternChart from './TriggerPatternChart';
 
 const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
   const [entries, setEntries] = useState([]);
@@ -2236,6 +2238,9 @@ const handleSaveEntry = async () => {
         {/* Archive Tab (previously Browse) */}
         {activeTab === 'archive' && (
           <div className="archive-tab-content">
+            
+            {/* Calendar Heatmap */}
+            <CalendarHeatmap entries={entries} userId={user?.id} />
 
             {/* Entries Slider */}
             <div className="entries-slider-container">
@@ -2848,6 +2853,12 @@ const handleSaveEntry = async () => {
                             <span className="date-value">{formatDate(addiction.quitDate)}</span>
                           </div>
                         )}
+                        {addiction.lastRelapse && (
+                          <div className="date-info">
+                            <span className="date-label">{t('lastRelapse', 'Teruggevallen')}:</span>
+                            <span className="date-value">{formatDate(addiction.lastRelapse)}</span>
+                          </div>
+                        )}
                       </div>
                       
                       {(addiction.status === 'recovering' || addiction.status === 'clean') && addiction.quitDate && (
@@ -2876,6 +2887,9 @@ const handleSaveEntry = async () => {
                   ))}
                 </div>
               )}
+              
+              {/* Trigger Pattern Analysis */}
+              <TriggerPatternChart entries={entries} addictions={addictions} />
             </div>
           </div>
         )}

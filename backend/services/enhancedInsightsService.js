@@ -10,9 +10,14 @@ const User = require('../models/User');
  */
 class EnhancedInsightsService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    if (process.env.OPENAI_API_KEY) {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      });
+    } else {
+      console.warn('OpenAI API key not found, Enhanced Insights service will return mock responses');
+      this.openai = null;
+    }
     // Using GPT-4o for better performance (GPT-5 has slow response times due to reasoning tokens)
     this.modelName = "gpt-4o";
     
@@ -35,6 +40,37 @@ class EnhancedInsightsService {
       ADVANCED: 'advanced',     // Predictive insights and complex analysis
       EXPERT: 'expert'          // Deep psychological insights and interventions
     };
+  }
+
+  /**
+   * Helper method to call OpenAI API with error handling
+   */
+  async callOpenAI(prompt, temperature = 0.7, maxTokens = 2000) {
+    if (!this.openai) {
+      console.warn('OpenAI not available, returning mock response');
+      return JSON.stringify({
+        summary: "Enhanced insights feature requires OpenAI API key",
+        mock: true,
+        content: "This would contain AI-generated insights"
+      });
+    }
+    
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: this.modelName,
+        messages: [{ role: "user", content: prompt }],
+        temperature: temperature,
+        max_tokens: maxTokens
+      });
+      return response.choices[0].message.content;
+    } catch (error) {
+      console.error('OpenAI API error in Enhanced Insights:', error);
+      return JSON.stringify({
+        error: "OpenAI API error", 
+        details: error.message,
+        mock: true
+      });
+    }
   }
 
   /**
@@ -216,14 +252,9 @@ Provide wellness trend insights in JSON format (language: ${userLanguage}):
   }
 }`;
 
-    const result = await this.openai.chat.completions.create({
-      model: this.modelName,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 2000
-    });
+    const resultText = await this.callOpenAI(prompt, 0.7, 2000);
 
-    return this.parseJsonResponse(result.choices[0].message.content);
+    return this.parseJsonResponse(resultText);
   }
 
   /**
@@ -301,14 +332,9 @@ Generate comprehensive predictive insights including addiction relapse risk (lan
   }
 }`;
 
-    const result = await this.openai.chat.completions.create({
-      model: this.modelName,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 2500
-    });
+    const resultText = await this.callOpenAI(prompt, 0.7, 2500);
 
-    return this.parseJsonResponse(result.choices[0].message.content);
+    return this.parseJsonResponse(resultText);
   }
 
   /**
@@ -361,14 +387,9 @@ Create a comprehensive action plan (language: ${userLanguage}):
   }
 }`;
 
-    const result = await this.openai.chat.completions.create({
-      model: this.modelName,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 2500
-    });
+    const resultText = await this.callOpenAI(prompt, 0.7, 2500);
 
-    return this.parseJsonResponse(result.choices[0].message.content);
+    return this.parseJsonResponse(resultText);
   }
 
   /**
@@ -642,14 +663,9 @@ IMPORTANT: Return ONLY valid JSON in the following exact structure. No markdown,
   }
 }`;
 
-    const result = await this.openai.chat.completions.create({
-      model: this.modelName,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 2500
-    });
+    const resultText = await this.callOpenAI(prompt, 0.7, 2500);
 
-    const aiResponse = this.parseJsonResponse(result.choices[0].message.content);
+    const aiResponse = this.parseJsonResponse(resultText);
     
     // If AI response failed, generate fallback recovery data from trigger analysis
     if (!aiResponse || aiResponse.isMarkdown) {
@@ -1280,4 +1296,6 @@ IMPORTANT: Return ONLY valid JSON in the following exact structure. No markdown,
   }
 }
 
-module.exports = EnhancedInsightsService;
+// Export singleton instance instead of class
+const enhancedInsightsService = new EnhancedInsightsService();
+module.exports = enhancedInsightsService;

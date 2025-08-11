@@ -34,10 +34,11 @@ class GooglePlacesService {
 
       // Check for API key
       const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
-      console.log('[GooglePlaces] API Key found:', apiKey ? 'Yes' : 'No');
+      console.log('[GooglePlaces] Checking API key:', apiKey ? 'Present' : 'Missing');
       
       if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY_HERE' || apiKey === 'YOUR_ACTUAL_API_KEY_HERE') {
-        console.error('[GooglePlaces] API key not configured properly');
+        console.log('[GooglePlaces] Google Maps API key not configured - location features disabled');
+        this.isLoaded = false; // Mark as failed to load
         reject(new Error('Google Maps API key not configured'));
         return;
       }
@@ -59,7 +60,8 @@ class GooglePlacesService {
             this.initializeServices();
             resolve(true);
           } else {
-            console.error('[GooglePlaces] Google Maps API objects not found after load');
+            console.log('[GooglePlaces] Google Maps API objects not available - location features disabled');
+            this.isLoaded = false; // Mark as failed to load
             reject(new Error('Google Maps API failed to load properly'));
           }
         }, 100);
@@ -160,7 +162,12 @@ class GooglePlacesService {
    * @returns {Promise<Array>} Array of place predictions
    */
   async getPlacePredictions(input, options = {}) {
-    await this.loadGoogleMapsAPI();
+    try {
+      await this.loadGoogleMapsAPI();
+    } catch (error) {
+      console.log('[GooglePlaces] API not available, returning empty results');
+      return [];
+    }
 
     if (!input || input.trim().length < 2) {
       return [];
@@ -270,7 +277,12 @@ class GooglePlacesService {
    * @returns {Promise<object>} Place details
    */
   async getPlaceDetails(placeId, fields = ['name', 'formatted_address', 'address_components', 'geometry', 'types']) {
-    await this.loadGoogleMapsAPI();
+    try {
+      await this.loadGoogleMapsAPI();
+    } catch (error) {
+      console.log('[GooglePlaces] API not available, cannot fetch place details');
+      throw new Error('Google Places API not available');
+    }
 
     // Try new API first if available, fallback to legacy on error
     if (this.useNewAPI) {
@@ -382,7 +394,28 @@ class GooglePlacesService {
    * @returns {Promise<Array>} Array of major cities in the country
    */
   async getCitiesForCountry(countryCode) {
-    await this.loadGoogleMapsAPI();
+    try {
+      await this.loadGoogleMapsAPI();
+    } catch (error) {
+      console.log('[GooglePlaces] API not available, using fallback cities');
+      // Return known cities as fallback when API isn't available
+      const fallbackCities = this.getKnownCitiesForCountry(countryCode).slice(0, 20).map((cityName, index) => ({
+        name: cityName,
+        placeId: `fallback-${index}`,
+        description: `${cityName}, ${countryCode}`,
+        isFallback: true
+      }));
+      
+      // Always include "Other" option
+      fallbackCities.push({
+        name: 'Other',
+        placeId: 'manual',
+        description: 'Enter city manually',
+        isManual: true
+      });
+      
+      return fallbackCities;
+    }
     
     try {
       console.log('[getCitiesForCountry] Getting cities for country:', countryCode);
@@ -688,7 +721,12 @@ class GooglePlacesService {
    * @returns {Promise<object>} Geocoded location data
    */
   async geocodeAddress(address) {
-    await this.loadGoogleMapsAPI();
+    try {
+      await this.loadGoogleMapsAPI();
+    } catch (error) {
+      console.log('[GooglePlaces] API not available, cannot geocode address');
+      throw new Error('Google Places API not available');
+    }
 
     return new Promise((resolve, reject) => {
       this.geocoder.geocode({ address }, (results, status) => {
@@ -709,7 +747,12 @@ class GooglePlacesService {
    * @returns {Promise<object>} Location data
    */
   async reverseGeocode(lat, lng) {
-    await this.loadGoogleMapsAPI();
+    try {
+      await this.loadGoogleMapsAPI();
+    } catch (error) {
+      console.log('[GooglePlaces] API not available, cannot reverse geocode');
+      throw new Error('Google Places API not available');
+    }
 
     const location = { lat, lng };
 
@@ -737,6 +780,20 @@ class GooglePlacesService {
    */
   getCurrentSessionToken() {
     return this.sessionToken;
+  }
+
+  /**
+   * Reset the service state (for debugging/troubleshooting)
+   */
+  resetService() {
+    console.log('[GooglePlaces] Resetting service state...');
+    this.isLoaded = false;
+    this.loadPromise = null;
+    this.placesService = null;
+    this.autocompleteService = null;
+    this.geocoder = null;
+    this.sessionToken = null;
+    this.useNewAPI = undefined;
   }
 }
 

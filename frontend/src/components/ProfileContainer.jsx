@@ -5,6 +5,7 @@ import { getFullUrl } from '../config/api';
 import ProfileInfo from './ProfileInfo';
 import Credits from './Credits';
 import Statistics from './Statistics';
+import EnhancedInsightsDashboard from './EnhancedInsightsDashboard';
 import Alert from './Alert';
 
 const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'profile', onUserUpdate }) => {
@@ -53,6 +54,8 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
         return <Credits user={user} />;
       case 'statistics':
         return <Statistics user={user} />;
+      case 'insights':
+        return <EnhancedInsightsDashboard user={user} />;
       default:
         return <ProfileInfo user={user} />;
     }

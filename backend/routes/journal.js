@@ -15,11 +15,652 @@ if (!fs.existsSync(journalsDir)) {
   fs.mkdirSync(journalsDir, { recursive: true });
 }
 
-// Helper function for automatic AI Coach analysis (DISABLED)
+// Helper function for automatic AI Coach analysis with relapse detection
 const triggerAICoachAnalysis = async (journalEntry) => {
-  // Disabled for now to focus on mood detection
-  console.log(`AI Coach analysis disabled for entry ${journalEntry._id}`);
-  return;
+  try {
+    console.log(`🔍 Analyzing journal entry ${journalEntry._id} for triggers and relapse detection...`);
+    
+    // Try AI analysis first
+    const analysis = await aiCoachService.analyzeJournalEntry(journalEntry.userId, journalEntry);
+    
+    // If AI analysis works, use it
+    if (analysis && analysis.triggersDetected && analysis.triggersDetected.length > 0) {
+      console.log(`⚠️  Triggers detected in journal entry:`, analysis.triggersDetected);
+      
+      // Check if any triggers indicate actual relapse (not just thoughts)
+      const relapseIndicators = analysis.triggersDetected.filter(trigger => 
+        trigger.confidence > 0.6 && 
+        (trigger.isActualRelapse === true || 
+         (trigger.context && (
+           trigger.context.toLowerCase().includes('actual relapse') ||
+           trigger.context.toLowerCase().includes('used') || 
+           trigger.context.toLowerCase().includes('drank') || 
+           trigger.context.toLowerCase().includes('gedronken') ||
+           trigger.context.toLowerCase().includes('heb gedronken') ||
+           trigger.context.toLowerCase().includes('wijn gedronken') ||
+           trigger.context.toLowerCase().includes('alcohol gedronken') ||
+           trigger.context.toLowerCase().includes('smoked') ||
+           trigger.context.toLowerCase().includes('gerookt') ||
+           trigger.context.toLowerCase().includes('heb gerookt') ||
+           trigger.context.toLowerCase().includes('gambled') ||
+           trigger.context.toLowerCase().includes('gegokt') ||
+           trigger.context.toLowerCase().includes('bought') ||
+           trigger.context.toLowerCase().includes('gekocht') ||
+           trigger.context.toLowerCase().includes('relapsed') ||
+           trigger.context.toLowerCase().includes('teruggevallen') ||
+           trigger.context.toLowerCase().includes('gave in') ||
+           trigger.context.toLowerCase().includes('toegegeven') ||
+           trigger.context.toLowerCase().includes('bezweken')
+         )))
+      );
+      
+      if (relapseIndicators.length > 0) {
+        console.log(`🚨 Relapse indicators found:`, relapseIndicators);
+        await handleAutomaticRelapseDetection(journalEntry.userId, relapseIndicators, journalEntry);
+      }
+    } else {
+      console.log('⚠️  No AI triggers detected or AI unavailable, falling back to keyword-based detection...');
+      
+      // Fallback: Keyword-based relapse detection
+      const keywordRelapseIndicators = await performKeywordBasedRelapseDetection(journalEntry);
+      
+      if (keywordRelapseIndicators.length > 0) {
+        console.log(`🚨 Keyword-based relapse indicators found:`, keywordRelapseIndicators);
+        await handleAutomaticRelapseDetection(journalEntry.userId, keywordRelapseIndicators, journalEntry);
+      }
+    }
+  } catch (error) {
+    console.error('Error in automatic AI Coach analysis:', error);
+    
+    // Even if AI fails, try keyword fallback
+    try {
+      console.log('🔄 AI failed, attempting keyword-based detection...');
+      const keywordRelapseIndicators = await performKeywordBasedRelapseDetection(journalEntry);
+      
+      if (keywordRelapseIndicators.length > 0) {
+        console.log(`🚨 Keyword-based relapse indicators found:`, keywordRelapseIndicators);
+        await handleAutomaticRelapseDetection(journalEntry.userId, keywordRelapseIndicators, journalEntry);
+      }
+    } catch (keywordError) {
+      console.error('Error in keyword-based relapse detection:', keywordError);
+    }
+  }
+};
+
+// Keyword-based relapse detection fallback when AI is unavailable
+const performKeywordBasedRelapseDetection = async (journalEntry) => {
+  try {
+    const Addiction = require('../models/Addiction');
+    
+    // Get user's addictions to know what to look for (include all statuses that could relapse)
+    const addictions = await Addiction.find({ 
+      userId: journalEntry.userId, 
+      status: { $in: ['active', 'recovering', 'clean'] } 
+    });
+    
+    const relapseIndicators = [];
+    const content = (journalEntry.content + ' ' + journalEntry.title).toLowerCase();
+    
+    // Define comprehensive relapse keywords by addiction type and language
+    const addictionKeywords = {
+      alcohol: {
+        keywords: {
+          'en': ['drank', 'drunk', 'wine', 'beer', 'alcohol', 'whisky', 'vodka', 'gin', 'champagne', 'cocktail', 'had drinks', 'drinking'],
+          'nl': ['gedronken', 'heb gedronken', 'wijn gedronken', 'alcohol gedronken', 'bier gedronken', 'wodka', 'gin', 'alcohol'],
+          'de': ['getrunken', 'hab getrunken', 'wein getrunken', 'bier getrunken', 'alkohol', 'whisky', 'wodka'],
+          'fr': ['bu', 'j\'ai bu', 'vin bu', 'bière bu', 'alcool', 'whisky', 'vodka', 'champagne'],
+          'es': ['bebido', 'he bebido', 'vino bebido', 'cerveza bebida', 'alcohol', 'whisky', 'vodka'],
+          'it': ['bevuto', 'ho bevuto', 'vino bevuto', 'birra bevuta', 'alcol', 'whisky', 'vodka'],
+          'pt': ['bebi', 'bebido', 'vinho bebido', 'cerveja bebida', 'álcool', 'whisky', 'vodka'],
+          'ru': ['пил', 'выпил', 'пьян', 'алкоголь', 'водка', 'пиво', 'вино', 'виски']
+        },
+        contextPhrases: {
+          'en': ['had alcohol', 'drank too much', 'got drunk', 'drinking again'],
+          'nl': ['heb alcohol', 'veel gedronken', 'weer gedronken', 'dronken geworden', 'te veel gedronken'],
+          'de': ['hab alkohol', 'viel getrunken', 'wieder getrunken', 'betrunken geworden'],
+          'fr': ['j\'ai de l\'alcool', 'trop bu', 'encore bu', 'saoul'],
+          'es': ['he bebido alcohol', 'bebido demasiado', 'bebido otra vez', 'borracho'],
+          'it': ['ho bevuto alcol', 'bevuto troppo', 'bevuto ancora', 'ubriaco'],
+          'pt': ['bebi álcool', 'bebi demais', 'bebi novamente', 'bêbado'],
+          'ru': ['выпил алкоголь', 'много выпил', 'снова пил', 'пьян']
+        }
+      },
+      smoking: {
+        keywords: {
+          'en': ['smoked', 'cigarette', 'tobacco', 'vaping', 'e-cigarette', 'nicotine', 'lighter'],
+          'nl': ['gerookt', 'heb gerookt', 'sigaret gerookt', 'sigaretten gekocht', 'sigaret', 'tabak', 'roken'],
+          'de': ['geraucht', 'hab geraucht', 'zigarette', 'tabak', 'rauchen', 'nikotine'],
+          'fr': ['fumé', 'j\'ai fumé', 'cigarette', 'tabac', 'fumer', 'nicotine'],
+          'es': ['fumado', 'he fumado', 'cigarrillo', 'tabaco', 'fumar', 'nicotina'],
+          'it': ['fumato', 'ho fumato', 'sigaretta', 'tabacco', 'fumare', 'nicotina'],
+          'pt': ['fumei', 'fumado', 'cigarro', 'tabaco', 'fumar', 'nicotina'],
+          'ru': ['курил', 'покурил', 'сигарета', 'табак', 'никотин']
+        },
+        contextPhrases: {
+          'en': ['smoked again', 'bought cigarettes', 'lit cigarette', 'smoking break'],
+          'nl': ['heb gerookt', 'weer gerookt', 'sigaret opgestoken', 'pakje gekocht'],
+          'de': ['wieder geraucht', 'zigaretten gekauft', 'zigarette angezündet'],
+          'fr': ['fumé encore', 'acheté cigarettes', 'allumé cigarette'],
+          'es': ['fumado otra vez', 'comprado cigarrillos', 'encendido cigarrillo'],
+          'it': ['fumato ancora', 'comprato sigarette', 'acceso sigaretta'],
+          'pt': ['fumei novamente', 'comprei cigarros', 'acendi cigarro'],
+          'ru': ['снова курил', 'купил сигареты', 'закурил']
+        }
+      },
+      gambling: {
+        keywords: {
+          'en': ['gambled', 'casino', 'lottery', 'poker', 'bet', 'betting', 'slot machine'],
+          'nl': ['gegokt', 'heb gegokt', 'casino bezocht', 'geld verloren aan gokken', 'weddenschap', 'pokeren'],
+          'de': ['gespielt', 'hab gespielt', 'kasino', 'lotterie', 'poker', 'wette'],
+          'fr': ['joué', 'j\'ai joué', 'casino', 'loterie', 'poker', 'pari'],
+          'es': ['apostado', 'he apostado', 'casino', 'lotería', 'póker', 'apuesta'],
+          'it': ['scommesso', 'ho scommesso', 'casinò', 'lotteria', 'poker', 'scommessa'],
+          'pt': ['apostei', 'apostado', 'casino', 'loteria', 'poker', 'aposta'],
+          'ru': ['играл', 'сыграл', 'казино', 'лотерея', 'покер', 'ставка']
+        },
+        contextPhrases: {
+          'en': ['lost money gambling', 'went to casino', 'placed bet', 'gambling again'],
+          'nl': ['heb gegokt', 'geld verspeeld', 'weer gegokt', 'casino gegaan'],
+          'de': ['geld verspielt', 'wieder gespielt', 'kasino gegangen'],
+          'fr': ['perdu argent', 'encore joué', 'casino allé'],
+          'es': ['perdido dinero', 'apostado otra vez', 'casino ido'],
+          'it': ['perso soldi', 'scommesso ancora', 'casinò andato'],
+          'pt': ['perdi dinheiro', 'apostei novamente', 'casino fui'],
+          'ru': ['потерял деньги', 'снова играл', 'в казино ходил']
+        }
+      },
+      shopping: {
+        keywords: {
+          'en': ['bought', 'shopping spree', 'impulse buy', 'purchased', 'credit card', 'spent money'],
+          'nl': ['gekocht', 'teveel gekocht', 'shopping gedaan', 'geld uitgegeven', 'winkelen'],
+          'de': ['gekauft', 'zu viel gekauft', 'shopping gemacht', 'geld ausgegeben'],
+          'fr': ['acheté', 'trop acheté', 'shopping fait', 'argent dépensé'],
+          'es': ['comprado', 'demasiado comprado', 'shopping hecho', 'dinero gastado'],
+          'it': ['comprato', 'troppo comprato', 'shopping fatto', 'soldi spesi'],
+          'pt': ['comprei', 'comprado demais', 'shopping feito', 'dinheiro gasto'],
+          'ru': ['купил', 'много купил', 'шоппинг', 'потратил деньги']
+        },
+        contextPhrases: {
+          'en': ['impulse bought', 'shopping addiction', 'spent too much', 'maxed credit card'],
+          'nl': ['teveel gekocht', 'geld weggegooid', 'impulsief gekocht', 'weer winkelen'],
+          'de': ['zu viel gekauft', 'geld verschwendet', 'impulsiv gekauft'],
+          'fr': ['trop acheté', 'argent gaspillé', 'acheté impulsivement'],
+          'es': ['comprado demasiado', 'dinero desperdiciado', 'comprado impulsivamente'],
+          'it': ['comprato troppo', 'soldi sprecati', 'comprato impulsivamente'],
+          'pt': ['comprei demais', 'dinheiro desperdiçado', 'comprei impulsivamente'],
+          'ru': ['купил много', 'потратил деньги', 'импульсивно купил']
+        }
+      },
+      drugs: {
+        keywords: {
+          'en': ['used drugs', 'cocaine', 'marijuana', 'weed', 'pills', 'heroin', 'meth', 'high'],
+          'nl': ['drugs gebruikt', 'cocaïne', 'marihuana', 'wiet', 'pillen', 'heroïne', 'high'],
+          'de': ['drogen genommen', 'kokain', 'marihuana', 'pillen', 'heroin', 'high'],
+          'fr': ['drogues pris', 'cocaïne', 'marijuana', 'pilules', 'héroïne', 'high'],
+          'es': ['drogas usado', 'cocaína', 'marihuana', 'pastillas', 'heroína', 'high'],
+          'it': ['droghe usato', 'cocaina', 'marijuana', 'pillole', 'eroina', 'high'],
+          'pt': ['drogas usei', 'cocaína', 'maconha', 'pílulas', 'heroína', 'chapado'],
+          'ru': ['наркотики', 'кокаин', 'марихуана', 'таблетки', 'героин', 'кайф']
+        },
+        contextPhrases: {
+          'en': ['used again', 'got high', 'relapsed drugs', 'bought drugs'],
+          'nl': ['weer gebruikt', 'high geworden', 'terugval drugs', 'drugs gekocht'],
+          'de': ['wieder genommen', 'high geworden', 'rückfall drogen'],
+          'fr': ['pris encore', 'high devenu', 'rechute drogues'],
+          'es': ['usado otra vez', 'high quedado', 'recaída drogas'],
+          'it': ['usato ancora', 'high diventato', 'ricaduta droghe'],
+          'pt': ['usei novamente', 'chapei', 'recaída drogas'],
+          'ru': ['снова употребил', 'накурился', 'рецидив наркотики']
+        }
+      },
+      social_media: {
+        keywords: {
+          'en': ['scrolled', 'instagram', 'facebook', 'tiktok', 'twitter', 'social media', 'phone addiction'],
+          'nl': ['gescrold', 'instagram', 'facebook', 'tiktok', 'twitter', 'sociale media', 'telefoon verslaving'],
+          'de': ['gescrollt', 'instagram', 'facebook', 'tiktok', 'twitter', 'soziale medien'],
+          'fr': ['scrollé', 'instagram', 'facebook', 'tiktok', 'twitter', 'médias sociaux'],
+          'es': ['navegado', 'instagram', 'facebook', 'tiktok', 'twitter', 'redes sociales'],
+          'it': ['scrollato', 'instagram', 'facebook', 'tiktok', 'twitter', 'social media'],
+          'pt': ['rolei', 'instagram', 'facebook', 'tiktok', 'twitter', 'redes sociais'],
+          'ru': ['скроллил', 'инстаграм', 'фейсбук', 'тикток', 'твиттер', 'соц сети']
+        },
+        contextPhrases: {
+          'en': ['scrolled for hours', 'endless scrolling', 'social media binge', 'phone all day'],
+          'nl': ['uren gescrold', 'eindeloos scrollen', 'sociale media binge', 'hele dag telefoon'],
+          'de': ['stunden gescrollt', 'endlos gescrollt', 'soziale medien sucht'],
+          'fr': ['scrollé heures', 'scroll infini', 'binge médias sociaux'],
+          'es': ['navegado horas', 'scroll infinito', 'atracón redes sociales'],
+          'it': ['scrollato ore', 'scroll infinito', 'binge social media'],
+          'pt': ['rolei horas', 'scroll infinito', 'vício redes sociais'],
+          'ru': ['скроллил часы', 'бесконечный скролл', 'зависание в соцсетях']
+        }
+      },
+      gaming: {
+        keywords: {
+          'en': ['played games', 'gaming', 'xbox', 'playstation', 'computer games', 'video games', 'online gaming'],
+          'nl': ['games gespeeld', 'gamen', 'xbox', 'playstation', 'computergames', 'videogames', 'online gamen'],
+          'de': ['spiele gespielt', 'gaming', 'xbox', 'playstation', 'computerspiele', 'videospiele'],
+          'fr': ['joué jeux', 'gaming', 'xbox', 'playstation', 'jeux ordinateur', 'jeux vidéo'],
+          'es': ['jugado juegos', 'gaming', 'xbox', 'playstation', 'juegos ordenador', 'videojuegos'],
+          'it': ['giocato giochi', 'gaming', 'xbox', 'playstation', 'giochi computer', 'videogame'],
+          'pt': ['joguei jogos', 'gaming', 'xbox', 'playstation', 'jogos computador', 'videogame'],
+          'ru': ['играл игры', 'гейминг', 'иксбокс', 'плейстейшн', 'компьютерные игры', 'видеоигры']
+        },
+        contextPhrases: {
+          'en': ['gamed all night', 'gaming binge', 'played for hours', 'gaming relapse'],
+          'nl': ['hele nacht gamed', 'gaming binge', 'uren gespeeld', 'game terugval'],
+          'de': ['ganze nacht gespielt', 'gaming binge', 'stunden gespielt'],
+          'fr': ['joué toute nuit', 'gaming binge', 'joué heures'],
+          'es': ['jugado toda noche', 'gaming atracón', 'jugado horas'],
+          'it': ['giocato tutta notte', 'gaming binge', 'giocato ore'],
+          'pt': ['joguei toda noite', 'gaming vício', 'joguei horas'],
+          'ru': ['играл всю ночь', 'игровой запой', 'играл часами']
+        }
+      },
+      food: {
+        keywords: {
+          'en': ['overate', 'binge eating', 'fast food', 'junk food', 'emotional eating', 'food addiction'],
+          'nl': ['teveel gegeten', 'binge eten', 'fastfood', 'junkfood', 'emotioneel eten', 'eetverslaving'],
+          'de': ['zu viel gegessen', 'binge essen', 'fastfood', 'junkfood', 'emotional essen'],
+          'fr': ['trop mangé', 'binge alimentaire', 'fastfood', 'junkfood', 'manger émotionnel'],
+          'es': ['comido demasiado', 'atracón comida', 'comida rápida', 'comida basura', 'comer emocional'],
+          'it': ['mangiato troppo', 'binge alimentare', 'fastfood', 'junkfood', 'mangiare emotivo'],
+          'pt': ['comi demais', 'compulsão alimentar', 'fastfood', 'junkfood', 'comer emocional'],
+          'ru': ['переел', 'пищевой запой', 'фастфуд', 'вредная еда', 'эмоциональное питание']
+        },
+        contextPhrases: {
+          'en': ['ate too much', 'food binge', 'comfort eating', 'emotional eating episode'],
+          'nl': ['te veel gegeten', 'eet binge', 'troost eten', 'emotioneel eet episode'],
+          'de': ['zu viel gegessen', 'ess binge', 'trost essen'],
+          'fr': ['trop mangé', 'binge alimentaire', 'manger réconfort'],
+          'es': ['comido mucho', 'atracón comida', 'comer consuelo'],
+          'it': ['mangiato molto', 'binge cibo', 'mangiare conforto'],
+          'pt': ['comi muito', 'compulsão comer', 'comer consolação'],
+          'ru': ['много ел', 'пищевой срыв', 'заедание стресса']
+        }
+      },
+      caffeine: {
+        keywords: {
+          'en': ['coffee', 'caffeine', 'energy drinks', 'red bull', 'monster', 'espresso', 'latte', 'cappuccino', 'cola', 'tea'],
+          'nl': ['koffie', 'cafeïne', 'energiedranken', 'red bull', 'monster', 'espresso', 'latte', 'cappuccino', 'cola', 'thee'],
+          'de': ['kaffee', 'koffein', 'energydrinks', 'red bull', 'monster', 'espresso', 'latte', 'cappuccino', 'cola', 'tee'],
+          'fr': ['café', 'caféine', 'boissons énergisantes', 'red bull', 'monster', 'espresso', 'latte', 'cappuccino', 'cola', 'thé'],
+          'es': ['café', 'cafeína', 'bebidas energéticas', 'red bull', 'monster', 'espresso', 'latte', 'cappuccino', 'cola', 'té'],
+          'it': ['caffè', 'caffeina', 'energy drink', 'red bull', 'monster', 'espresso', 'latte', 'cappuccino', 'cola', 'tè'],
+          'pt': ['café', 'cafeína', 'energéticos', 'red bull', 'monster', 'espresso', 'latte', 'cappuccino', 'cola', 'chá'],
+          'ru': ['кофе', 'кофеин', 'энергетики', 'ред булл', 'монстер', 'эспрессо', 'латте', 'капучино', 'кола', 'чай'],
+          'ja': ['コーヒー', 'カフェイン', 'エナジードリンク', 'レッドブル', 'モンスター', 'エスプレッソ', 'ラテ', 'カプチーノ', 'コーラ', '茶'],
+          'ko': ['커피', '카페인', '에너지드링크', '레드불', '몬스터', '에스프레소', '라테', '카푸치노', '콜라', '차'],
+          'zh': ['咖啡', '咖啡因', '能量饮料', '红牛', '怪物', '意式浓缩', '拿铁', '卡布奇诺', '可乐', '茶'],
+          'ar': ['قهوة', 'كافيين', 'مشروبات الطاقة', 'ريد بول', 'مونستر', 'إسبريسو', 'لاتيه', 'كابتشينو', 'كولا', 'شاي'],
+          'hi': ['कॉफी', 'कैफीन', 'एनर्जी ड्रिंक', 'रेड बुल', 'मॉन्स्टर', 'एस्प्रेसो', 'लट्टे', 'कैप्पुचिनो', 'कोला', 'चाय']
+        },
+        contextPhrases: {
+          'en': ['too much coffee', 'caffeine overdose', 'can\'t function without coffee', 'coffee addiction', 'multiple cups', 'caffeine crash'],
+          'nl': ['te veel koffie', 'cafeïne overdosis', 'kan niet functioneren zonder koffie', 'koffie verslaving', 'meerdere kopjes', 'cafeïne crash'],
+          'de': ['zu viel kaffee', 'koffein überdosis', 'kann nicht ohne kaffee funktionieren', 'kaffee sucht', 'mehrere tassen', 'koffein crash'],
+          'fr': ['trop de café', 'overdose caféine', 'ne peux pas fonctionner sans café', 'addiction café', 'plusieurs tasses', 'crash caféine'],
+          'es': ['demasiado café', 'sobredosis cafeína', 'no puedo funcionar sin café', 'adicción café', 'múltiples tazas', 'bajón cafeína'],
+          'it': ['troppo caffè', 'overdose caffeina', 'non posso funzionare senza caffè', 'dipendenza caffè', 'multiple tazze', 'crash caffeina'],
+          'pt': ['muito café', 'overdose cafeína', 'não consigo funcionar sem café', 'vício café', 'múltiplas xícaras', 'crash cafeína'],
+          'ru': ['слишком много кофе', 'передозировка кофеина', 'не могу без кофе', 'кофейная зависимость', 'много чашек', 'кофейный краш'],
+          'ja': ['コーヒー飲み過ぎ', 'カフェイン過剰摂取', 'コーヒーなしでは機能できない', 'コーヒー依存症', '何杯も', 'カフェインクラッシュ'],
+          'ko': ['커피 너무 많이', '카페인 과다복용', '커피 없으면 안 됨', '커피 중독', '여러 잔', '카페인 크래시'],
+          'zh': ['咖啡喝太多', '咖啡因过量', '没咖啡无法工作', '咖啡成瘾', '多杯', '咖啡因崩溃'],
+          'ar': ['قهوة كثيرة جداً', 'جرعة زائدة كافيين', 'لا أستطيع العمل بدون قهوة', 'إدمان القهوة', 'عدة أكواب', 'انهيار الكافيين'],
+          'hi': ['बहुत कॉफी', 'कैफीन ओवरडोज़', 'कॉफी के बिना काम नहीं कर सकता', 'कॉफी की लत', 'कई कप', 'कैफीन क्रैश']
+        }
+      },
+      sugar: {
+        keywords: {
+          'en': ['sugar', 'candy', 'chocolate', 'sweets', 'dessert', 'cake', 'cookies', 'ice cream', 'donuts', 'soda'],
+          'nl': ['suiker', 'snoep', 'chocolade', 'zoetigheden', 'dessert', 'taart', 'koekjes', 'ijs', 'donuts', 'frisdrank'],
+          'de': ['zucker', 'süßigkeiten', 'schokolade', 'süßes', 'nachtisch', 'kuchen', 'kekse', 'eis', 'donuts', 'limonade'],
+          'fr': ['sucre', 'bonbons', 'chocolat', 'sucreries', 'dessert', 'gâteau', 'biscuits', 'glace', 'donuts', 'soda'],
+          'es': ['azúcar', 'dulces', 'chocolate', 'golosinas', 'postre', 'pastel', 'galletas', 'helado', 'rosquillas', 'refresco'],
+          'it': ['zucchero', 'caramelle', 'cioccolato', 'dolci', 'dessert', 'torta', 'biscotti', 'gelato', 'ciambelle', 'bibita'],
+          'pt': ['açúcar', 'doces', 'chocolate', 'guloseimas', 'sobremesa', 'bolo', 'biscoitos', 'sorvete', 'rosquinhas', 'refrigerante'],
+          'ru': ['сахар', 'конфеты', 'шоколад', 'сладости', 'десерт', 'торт', 'печенье', 'мороженое', 'пончики', 'газировка'],
+          'ja': ['砂糖', 'お菓子', 'チョコレート', 'スイーツ', 'デザート', 'ケーキ', 'クッキー', 'アイスクリーム', 'ドーナツ', 'ソーダ'],
+          'ko': ['설탕', '사탕', '초콜릿', '단것', '디저트', '케이크', '쿠키', '아이스크림', '도넛', '탄산음료'],
+          'zh': ['糖', '糖果', '巧克力', '甜食', '甜点', '蛋糕', '饼干', '冰淇淋', '甜甜圈', '汽水'],
+          'ar': ['سكر', 'حلويات', 'شوكولاتة', 'حلوى', 'حلى', 'كعكة', 'بسكويت', 'آيس كريم', 'دونات', 'صودا'],
+          'hi': ['चीनी', 'कैंडी', 'चॉकलेट', 'मिठाई', 'डेसर्ट', 'केक', 'कुकीज़', 'आइसक्रीम', 'डोनट्स', 'सोडा']
+        },
+        contextPhrases: {
+          'en': ['sugar craving', 'ate too much sugar', 'sugar binge', 'couldn\'t resist sweets', 'sugar addiction', 'sugar rush'],
+          'nl': ['suiker trek', 'te veel suiker gegeten', 'suiker binge', 'kon zoetigheden niet weerstaan', 'suiker verslaving', 'suiker rush'],
+          'de': ['zucker verlangen', 'zu viel zucker gegessen', 'zucker binge', 'konnte süßem nicht widerstehen', 'zucker sucht', 'zucker rausch'],
+          'fr': ['envie de sucre', 'trop de sucre mangé', 'binge sucre', 'n\'ai pas pu résister aux sucreries', 'addiction sucre', 'rush sucre'],
+          'es': ['antojo azúcar', 'comido mucho azúcar', 'atracón azúcar', 'no pude resistir dulces', 'adicción azúcar', 'subidón azúcar'],
+          'it': ['voglia zucchero', 'mangiato troppo zucchero', 'binge zucchero', 'non ho resistito ai dolci', 'dipendenza zucchero', 'rush zucchero'],
+          'pt': ['vontade açúcar', 'comi muito açúcar', 'compulsão açúcar', 'não resisti aos doces', 'vício açúcar', 'rush açúcar'],
+          'ru': ['тяга к сахару', 'съел много сахара', 'сахарный запой', 'не смог устоять перед сладким', 'сахарная зависимость', 'сахарный рывок'],
+          'ja': ['砂糖への渇望', '砂糖摂り過ぎ', 'シュガーバイニング', '甘いものに抵抗できなかった', '砂糖依存症', 'シュガーラッシュ'],
+          'ko': ['설탕 갈망', '설탕 너무 많이 먹음', '설탕 폭식', '단것을 참을 수 없었다', '설탕 중독', '슈가러시'],
+          'zh': ['糖瘾发作', '吃太多糖', '糖分暴食', '无法抗拒甜食', '糖分成瘾', '糖分激增'],
+          'ar': ['رغبة في السكر', 'أكلت سكر كثير', 'نهم السكر', 'لم أستطع مقاومة الحلويات', 'إدمان السكر', 'نشوة السكر'],
+          'hi': ['चीनी की लालसा', 'बहुत चीनी खाई', 'शुगर बिंज', 'मिठाई का विरोध नहीं कर सका', 'चीनी की लत', 'शुगर रश']
+        }
+      },
+      porn: {
+        keywords: {
+          'en': ['porn', 'pornography', 'adult content', 'explicit material', 'xxx', 'sexual content', 'adult videos', 'watched porn'],
+          'nl': ['porno', 'pornografie', 'volwassen inhoud', 'expliciet materiaal', 'xxx', 'seksuele inhoud', 'volwassen video\'s', 'porno gekeken'],
+          'de': ['porno', 'pornografie', 'erwachseneninhalt', 'explizites material', 'xxx', 'sexueller inhalt', 'erwachsenenvideos', 'porno geschaut'],
+          'fr': ['porno', 'pornographie', 'contenu adulte', 'matériel explicite', 'xxx', 'contenu sexuel', 'vidéos adultes', 'regardé porno'],
+          'es': ['porno', 'pornografía', 'contenido adulto', 'material explícito', 'xxx', 'contenido sexual', 'videos adultos', 'visto porno'],
+          'it': ['porno', 'pornografia', 'contenuto adulto', 'materiale esplicito', 'xxx', 'contenuto sessuale', 'video adulti', 'guardato porno'],
+          'pt': ['porno', 'pornografia', 'conteúdo adulto', 'material explícito', 'xxx', 'conteúdo sexual', 'vídeos adultos', 'assistiu porno'],
+          'ru': ['порно', 'порнография', 'контент для взрослых', 'откровенный материал', 'xxx', 'сексуальный контент', 'видео для взрослых', 'смотрел порно'],
+          'ja': ['ポルノ', 'ポルノグラフィー', 'アダルトコンテンツ', '露骨な素材', 'xxx', '性的コンテンツ', 'アダルトビデオ', 'ポルノ見た'],
+          'ko': ['포르노', '포르노그래피', '성인 콘텐츠', '노골적 자료', 'xxx', '성적 콘텐츠', '성인 비디오', '포르노 봤다'],
+          'zh': ['色情', '色情作品', '成人内容', '露骨材料', 'xxx', '性内容', '成人视频', '看色情'],
+          'ar': ['إباحية', 'مواد إباحية', 'محتوى للبالغين', 'مواد صريحة', 'xxx', 'محتوى جنسي', 'فيديوهات للبالغين', 'شاهد إباحية'],
+          'hi': ['पोर्न', 'अश्लीलता', 'वयस्क सामग्री', 'स्पष्ट सामग्री', 'xxx', 'यौन सामग्री', 'वयस्क वीडियो', 'पोर्न देखा']
+        },
+        contextPhrases: {
+          'en': ['watched pornography', 'adult content relapse', 'couldn\'t resist porn', 'porn addiction relapse', 'explicit material'],
+          'nl': ['pornografie gekeken', 'volwassen inhoud terugval', 'kon porno niet weerstaan', 'porno verslaving terugval', 'expliciet materiaal'],
+          'de': ['pornografie geschaut', 'erwachseneninhalt rückfall', 'konnte porno nicht widerstehen', 'porno sucht rückfall', 'explizites material'],
+          'fr': ['regardé pornographie', 'rechute contenu adulte', 'n\'ai pas pu résister porno', 'rechute addiction porno', 'matériel explicite'],
+          'es': ['visto pornografía', 'recaída contenido adulto', 'no pude resistir porno', 'recaída adicción porno', 'material explícito'],
+          'it': ['guardato pornografia', 'ricaduta contenuto adulto', 'non ho resistito porno', 'ricaduta dipendenza porno', 'materiale esplicito'],
+          'pt': ['assistiu pornografia', 'recaída conteúdo adulto', 'não resisti porno', 'recaída vício porno', 'material explícito'],
+          'ru': ['смотрел порнографию', 'рецидив контента для взрослых', 'не смог устоять перед порно', 'рецидив порно зависимости', 'откровенный материал'],
+          'ja': ['ポルノ見た', 'アダルトコンテンツ再発', 'ポルノに抵抗できなかった', 'ポルノ依存症再発', '露骨な素材'],
+          'ko': ['포르노 봤다', '성인 콘텐츠 재발', '포르노를 참을 수 없었다', '포르노 중독 재발', '노골적 자료'],
+          'zh': ['看了色情', '成人内容复发', '无法抗拒色情', '色情成瘾复发', '露骨材料'],
+          'ar': ['شاهد إباحية', 'انتكاس المحتوى للبالغين', 'لم أستطع مقاومة الإباحية', 'انتكاس إدمان الإباحية', 'مواد صريحة'],
+          'hi': ['पोर्न देखा', 'वयस्क सामग्री रिलैप्स', 'पोर्न का विरोध नहीं कर सका', 'पोर्न एडिक्शन रिलैप्स', 'स्पष्ट सामग्री']
+        }
+      },
+      sex: {
+        keywords: {
+          'en': ['sex addiction', 'sexual behavior', 'hookup', 'sexual urges', 'sexual compulsion', 'sexual acting out'],
+          'nl': ['seks verslaving', 'seksueel gedrag', 'hookup', 'seksuele drang', 'seksuele dwang', 'seksueel uitageren'],
+          'de': ['sex sucht', 'sexuelles verhalten', 'hookup', 'sexuelle triebe', 'sexueller zwang', 'sexuelles ausagieren'],
+          'fr': ['addiction sexuelle', 'comportement sexuel', 'plan cul', 'pulsions sexuelles', 'compulsion sexuelle', 'passage à l\'acte sexuel'],
+          'es': ['adicción sexual', 'comportamiento sexual', 'ligue', 'impulsos sexuales', 'compulsión sexual', 'actuación sexual'],
+          'it': ['dipendenza sessuale', 'comportamento sessuale', 'avventura', 'impulsi sessuali', 'compulsione sessuale', 'acting out sessuale'],
+          'pt': ['vício sexual', 'comportamento sexual', 'caso', 'impulsos sexuais', 'compulsão sexual', 'atuação sexual'],
+          'ru': ['сексуальная зависимость', 'сексуальное поведение', 'случайная связь', 'сексуальные влечения', 'сексуальная компульсия', 'сексуальное отыгрывание'],
+          'ja': ['性依存症', '性的行動', 'ワンナイトスタンド', '性的衝動', '性的強迫', '性的逸脱行為'],
+          'ko': ['성중독', '성적 행동', '원나잇', '성적 충동', '성적 강박', '성적 일탈'],
+          'zh': ['性瘾', '性行为', '一夜情', '性冲动', '性强迫', '性行为失控'],
+          'ar': ['إدمان جنسي', 'سلوك جنسي', 'علاقة عابرة', 'دوافع جنسية', 'إجبار جنسي', 'تصرف جنسي'],
+          'hi': ['यौन लत', 'यौन व्यवहार', 'हुकअप', 'यौन इच्छाएं', 'यौन बाध्यता', 'यौन अभिनय']
+        },
+        contextPhrases: {
+          'en': ['sexual relapse', 'acting out sexually', 'compulsive sexual behavior', 'sexual addiction episode', 'inappropriate sexual contact'],
+          'nl': ['seksuele terugval', 'seksueel uitageren', 'dwangmatig seksueel gedrag', 'seksuele verslaving episode', 'ongepast seksueel contact'],
+          'de': ['sexueller rückfall', 'sexuell ausagieren', 'zwanghaftes sexuelles verhalten', 'sexuelle sucht episode', 'unangemessener sexueller kontakt'],
+          'fr': ['rechute sexuelle', 'passage à l\'acte sexuel', 'comportement sexuel compulsif', 'épisode addiction sexuelle', 'contact sexuel inapproprié'],
+          'es': ['recaída sexual', 'actuación sexual', 'comportamiento sexual compulsivo', 'episodio adicción sexual', 'contacto sexual inapropiado'],
+          'it': ['ricaduta sessuale', 'acting out sessuale', 'comportamento sessuale compulsivo', 'episodio dipendenza sessuale', 'contatto sessuale inappropriato'],
+          'pt': ['recaída sexual', 'atuação sexual', 'comportamento sexual compulsivo', 'episódio vício sexual', 'contato sexual inadequado'],
+          'ru': ['сексуальный рецидив', 'сексуальное отыгрывание', 'компульсивное сексуальное поведение', 'эпизод сексуальной зависимости', 'неподобающий сексуальный контакт'],
+          'ja': ['性的再発', '性的逸脱行為', '強迫的性行動', '性依存症エピソード', '不適切な性的接触'],
+          'ko': ['성적 재발', '성적 일탈', '강박적 성행동', '성중독 에피소드', '부적절한 성적 접촉'],
+          'zh': ['性行为复发', '性行为失控', '强迫性行为', '性瘾发作', '不当性接触'],
+          'ar': ['انتكاس جنسي', 'تصرف جنسي', 'سلوك جنسي قهري', 'نوبة إدمان جنسي', 'اتصال جنسي غير مناسب'],
+          'hi': ['यौन रिलैप्स', 'यौन अभिनय', 'बाध्यकारी यौन व्यवहार', 'यौन लत एपिसोड', 'अनुचित यौन संपर्क']
+        }
+      },
+      work: {
+        keywords: {
+          'en': ['workaholic', 'overwork', 'work addiction', 'can\'t stop working', 'work obsession', 'burnout'],
+          'nl': ['workaholic', 'overwerken', 'werk verslaving', 'kan niet stoppen met werken', 'werk obsessie', 'burn-out'],
+          'de': ['workaholic', 'überarbeitung', 'arbeits sucht', 'kann nicht aufhören zu arbeiten', 'arbeits obsession', 'burnout'],
+          'fr': ['workaholic', 'surmenage', 'addiction travail', 'ne peux pas arrêter travailler', 'obsession travail', 'burnout'],
+          'es': ['workaholic', 'exceso trabajo', 'adicción trabajo', 'no puedo parar trabajar', 'obsesión trabajo', 'burnout'],
+          'it': ['workaholic', 'superlavoro', 'dipendenza lavoro', 'non riesco smettere lavorare', 'ossessione lavoro', 'burnout'],
+          'pt': ['workaholic', 'excesso trabalho', 'vício trabalho', 'não consigo parar trabalhar', 'obsessão trabalho', 'burnout'],
+          'ru': ['трудоголик', 'переработка', 'трудовая зависимость', 'не могу перестать работать', 'одержимость работой', 'выгорание'],
+          'ja': ['ワーカホリック', '過労', '仕事中毒', '働くのをやめられない', '仕事への執着', '燃え尽き症候群'],
+          'ko': ['워커홀릭', '과로', '일 중독', '일을 멈출 수 없다', '일 강박', '번아웃'],
+          'zh': ['工作狂', '过度工作', '工作成瘾', '停不下来工作', '工作强迫症', '职业倦怠'],
+          'ar': ['مدمن عمل', 'إفراط عمل', 'إدمان العمل', 'لا أستطيع التوقف عن العمل', 'هوس العمل', 'احتراق وظيفي'],
+          'hi': ['वर्कहॉलिक', 'अधिक काम', 'काम की लत', 'काम बंद नहीं कर सकता', 'काम का जुनून', 'बर्नआउट']
+        },
+        contextPhrases: {
+          'en': ['worked too much', 'couldn\'t stop working', 'work addiction relapse', 'overworking again', 'work obsession episode'],
+          'nl': ['te veel gewerkt', 'kon niet stoppen met werken', 'werk verslaving terugval', 'weer overwerken', 'werk obsessie episode'],
+          'de': ['zu viel gearbeitet', 'konnte nicht aufhören zu arbeiten', 'arbeits sucht rückfall', 'wieder überarbeitung', 'arbeits obsession episode'],
+          'fr': ['trop travaillé', 'n\'ai pas pu arrêter travailler', 'rechute addiction travail', 'surmenage encore', 'épisode obsession travail'],
+          'es': ['trabajado demasiado', 'no pude parar trabajar', 'recaída adicción trabajo', 'exceso trabajo otra vez', 'episodio obsesión trabajo'],
+          'it': ['lavorato troppo', 'non riuscivo smettere lavorare', 'ricaduta dipendenza lavoro', 'superlavoro ancora', 'episodio ossessione lavoro'],
+          'pt': ['trabalhei demais', 'não consegui parar trabalhar', 'recaída vício trabalho', 'excesso trabalho novamente', 'episódio obsessão trabalho'],
+          'ru': ['слишком много работал', 'не мог перестать работать', 'рецидив трудовой зависимости', 'снова переработка', 'эпизод одержимости работой'],
+          'ja': ['働き過ぎた', '働くのをやめられなかった', '仕事中毒再発', 'また過労', '仕事への執着エピソード'],
+          'ko': ['너무 많이 일했다', '일을 멈출 수 없었다', '일 중독 재발', '다시 과로', '일 강박 에피소드'],
+          'zh': ['工作太多', '停不下来工作', '工作成瘾复发', '又过度工作', '工作强迫症发作'],
+          'ar': ['عملت كثيراً', 'لم أستطع التوقف عن العمل', 'انتكاس إدمان العمل', 'إفراط عمل مرة أخرى', 'نوبة هوس العمل'],
+          'hi': ['बहुत काम किया', 'काम बंद नहीं कर सका', 'काम की लत रिलैप्स', 'फिर से अधिक काम', 'काम के जुनून का एपिसोड']
+        }
+      },
+      exercise: {
+        keywords: {
+          'en': ['exercise addiction', 'overtraining', 'compulsive exercise', 'gym addiction', 'workout obsession', 'fitness obsession'],
+          'nl': ['sport verslaving', 'overtraining', 'dwangmatige sport', 'gym verslaving', 'workout obsessie', 'fitness obsessie'],
+          'de': ['sport sucht', 'übertraining', 'zwanghafter sport', 'fitnessstudio sucht', 'workout obsession', 'fitness obsession'],
+          'fr': ['addiction exercice', 'surentraînement', 'exercice compulsif', 'addiction gym', 'obsession entraînement', 'obsession fitness'],
+          'es': ['adicción ejercicio', 'sobreentrenamiento', 'ejercicio compulsivo', 'adicción gym', 'obsesión entrenamiento', 'obsesión fitness'],
+          'it': ['dipendenza esercizio', 'sovrallenamento', 'esercizio compulsivo', 'dipendenza palestra', 'ossessione allenamento', 'ossessione fitness'],
+          'pt': ['vício exercício', 'overtraining', 'exercício compulsivo', 'vício academia', 'obsessão treino', 'obsessão fitness'],
+          'ru': ['зависимость от упражнений', 'перетренированность', 'компульсивные упражнения', 'зависимость от спортзала', 'одержимость тренировками', 'одержимость фитнесом'],
+          'ja': ['運動依存症', 'オーバートレーニング', '強迫的運動', 'ジム依存症', 'ワークアウト依存', 'フィットネス依存'],
+          'ko': ['운동 중독', '과훈련', '강박적 운동', '헬스장 중독', '운동 강박', '피트니스 강박'],
+          'zh': ['运动成瘾', '过度训练', '强迫性运动', '健身房成瘾', '锻炼强迫症', '健身强迫症'],
+          'ar': ['إدمان التمارين', 'إفراط تدريب', 'تمارين قهرية', 'إدمان الجيم', 'هوس التدريب', 'هوس اللياقة'],
+          'hi': ['व्यायाम की लत', 'अधिक प्रशिक्षण', 'बाध्यकारी व्यायाम', 'जिम की लत', 'वर्कआउट का जुनून', 'फिटनेस का जुनून']
+        },
+        contextPhrases: {
+          'en': ['exercised excessively', 'couldn\'t skip workout', 'exercise addiction relapse', 'overtraining episode', 'compulsive gym session'],
+          'nl': ['excessief gesport', 'kon training niet overslaan', 'sport verslaving terugval', 'overtraining episode', 'dwangmatige gym sessie'],
+          'de': ['excessiv trainiert', 'konnte training nicht auslassen', 'sport sucht rückfall', 'übertraining episode', 'zwanghafte gym session'],
+          'fr': ['exercice excessif', 'n\'ai pas pu rater entraînement', 'rechute addiction exercice', 'épisode surentraînement', 'séance gym compulsive'],
+          'es': ['ejercicio excesivo', 'no pude faltar entrenamiento', 'recaída adicción ejercicio', 'episodio sobreentrenamiento', 'sesión gym compulsiva'],
+          'it': ['esercizio eccessivo', 'non potevo saltare allenamento', 'ricaduta dipendenza esercizio', 'episodio sovrallenamento', 'sessione palestra compulsiva'],
+          'pt': ['exercício excessivo', 'não pude pular treino', 'recaída vício exercício', 'episódio overtraining', 'sessão academia compulsiva'],
+          'ru': ['чрезмерные упражнения', 'не мог пропустить тренировку', 'рецидив зависимости от упражнений', 'эпизод перетренированности', 'компульсивная тренировка'],
+          'ja': ['過度な運動', 'ワークアウトをスキップできなかった', '運動依存症再発', 'オーバートレーニングエピソード', '強迫的ジムセッション'],
+          'ko': ['과도한 운동', '운동을 빼먹을 수 없었다', '운동 중독 재발', '과훈련 에피소드', '강박적 헬스장 세션'],
+          'zh': ['过度运动', '不能跳过锻炼', '运动成瘾复发', '过度训练发作', '强迫性健身房训练'],
+          'ar': ['تمارين مفرطة', 'لم أستطع تفويت التمرين', 'انتكاس إدمان التمارين', 'نوبة إفراط تدريب', 'جلسة جيم قهرية'],
+          'hi': ['अत्यधिक व्यायाम', 'वर्कआउट नहीं छोड़ सकता था', 'व्यायाम की लत रिलैप्स', 'अधिक प्रशिक्षण एपिसोड', 'बाध्यकारी जिम सेशन']
+        }
+      },
+      phone: {
+        keywords: {
+          'en': ['phone addiction', 'smartphone', 'screen time', 'mobile addiction', 'can\'t put phone down', 'phone checking'],
+          'nl': ['telefoon verslaving', 'smartphone', 'schermtijd', 'mobiele verslaving', 'kan telefoon niet wegleggen', 'telefoon checken'],
+          'de': ['handy sucht', 'smartphone', 'bildschirmzeit', 'mobile sucht', 'kann handy nicht weglegen', 'handy checken'],
+          'fr': ['addiction téléphone', 'smartphone', 'temps écran', 'addiction mobile', 'ne peux pas lâcher téléphone', 'vérifier téléphone'],
+          'es': ['adicción teléfono', 'smartphone', 'tiempo pantalla', 'adicción móvil', 'no puedo soltar teléfono', 'revisar teléfono'],
+          'it': ['dipendenza telefono', 'smartphone', 'tempo schermo', 'dipendenza mobile', 'non riesco lasciare telefono', 'controllare telefono'],
+          'pt': ['vício telefone', 'smartphone', 'tempo tela', 'vício móvel', 'não consigo largar telefone', 'checar telefone'],
+          'ru': ['зависимость от телефона', 'смартфон', 'экранное время', 'мобильная зависимость', 'не могу отложить телефон', 'проверка телефона'],
+          'ja': ['スマホ依存症', 'スマートフォン', 'スクリーンタイム', 'モバイル依存症', 'スマホを手放せない', 'スマホチェック'],
+          'ko': ['폰 중독', '스마트폰', '화면 시간', '모바일 중독', '폰을 내려놓을 수 없다', '폰 체크'],
+          'zh': ['手机成瘾', '智能手机', '屏幕时间', '移动设备成瘾', '放不下手机', '检查手机'],
+          'ar': ['إدمان الهاتف', 'هاتف ذكي', 'وقت الشاشة', 'إدمان الجوال', 'لا أستطيع ترك الهاتف', 'فحص الهاتف'],
+          'hi': ['फोन की लत', 'स्मार्टफोन', 'स्क्रीन टाइम', 'मोबाइल लत', 'फोन नहीं छोड़ सकता', 'फोन चेकिंग']
+        },
+        contextPhrases: {
+          'en': ['hours on phone', 'couldn\'t put phone down', 'phone addiction relapse', 'excessive screen time', 'compulsive phone checking'],
+          'nl': ['uren op telefoon', 'kon telefoon niet wegleggen', 'telefoon verslaving terugval', 'excessieve schermtijd', 'dwangmatig telefoon checken'],
+          'de': ['stunden am handy', 'konnte handy nicht weglegen', 'handy sucht rückfall', 'exzessive bildschirmzeit', 'zwanghaftes handy checken'],
+          'fr': ['heures sur téléphone', 'n\'ai pas pu lâcher téléphone', 'rechute addiction téléphone', 'temps écran excessif', 'vérification téléphone compulsive'],
+          'es': ['horas en teléfono', 'no pude soltar teléfono', 'recaída adicción teléfono', 'tiempo pantalla excesivo', 'revisión teléfono compulsiva'],
+          'it': ['ore al telefono', 'non riuscivo lasciare telefono', 'ricaduta dipendenza telefono', 'tempo schermo eccessivo', 'controllo telefono compulsivo'],
+          'pt': ['horas no telefone', 'não consegui largar telefone', 'recaída vício telefone', 'tempo tela excessivo', 'checagem telefone compulsiva'],
+          'ru': ['часы в телефоне', 'не мог отложить телефон', 'рецидив зависимости от телефона', 'чрезмерное экранное время', 'компульсивная проверка телефона'],
+          'ja': ['何時間もスマホ', 'スマホを手放せなかった', 'スマホ依存症再発', '過度なスクリーンタイム', '強迫的スマホチェック'],
+          'ko': ['몇 시간 폰 사용', '폰을 내려놓을 수 없었다', '폰 중독 재발', '과도한 화면 시간', '강박적 폰 체크'],
+          'zh': ['几小时玩手机', '放不下手机', '手机成瘾复发', '过度屏幕时间', '强迫性检查手机'],
+          'ar': ['ساعات على الهاتف', 'لم أستطع ترك الهاتف', 'انتكاس إدمان الهاتف', 'وقت شاشة مفرط', 'فحص الهاتف القهري'],
+          'hi': ['घंटों फोन पर', 'फोन नहीं छोड़ सका', 'फोन की लत रिलैप्स', 'अत्यधिक स्क्रीन टाइम', 'बाध्यकारी फोन चेकिंग']
+        }
+      },
+      internet: {
+        keywords: {
+          'en': ['internet addiction', 'endless browsing', 'web surfing', 'online obsession', 'can\'t stop browsing', 'internet binge'],
+          'nl': ['internet verslaving', 'eindeloos browsen', 'web surfen', 'online obsessie', 'kan niet stoppen browsen', 'internet binge'],
+          'de': ['internet sucht', 'endloses browsen', 'web surfen', 'online obsession', 'kann nicht aufhören browsen', 'internet binge'],
+          'fr': ['addiction internet', 'navigation infinie', 'surf web', 'obsession en ligne', 'ne peux pas arrêter naviguer', 'binge internet'],
+          'es': ['adicción internet', 'navegación infinita', 'surf web', 'obsesión online', 'no puedo parar navegar', 'atracón internet'],
+          'it': ['dipendenza internet', 'navigazione infinita', 'surf web', 'ossessione online', 'non riesco smettere navigare', 'binge internet'],
+          'pt': ['vício internet', 'navegação infinita', 'surf web', 'obsessão online', 'não consigo parar navegar', 'compulsão internet'],
+          'ru': ['интернет-зависимость', 'бесконечный браузинг', 'веб-серфинг', 'онлайн-одержимость', 'не могу перестать браузить', 'интернет-запой'],
+          'ja': ['ネット依存症', '無限ブラウジング', 'ウェブサーフィン', 'オンライン依存', 'ブラウジングをやめられない', 'ネット依存'],
+          'ko': ['인터넷 중독', '무한 브라우징', '웹 서핑', '온라인 강박', '브라우징을 멈출 수 없다', '인터넷 폭식'],
+          'zh': ['网络成瘾', '无限浏览', '网上冲浪', '在线强迫症', '停不下来浏览', '网络暴食'],
+          'ar': ['إدمان الإنترنت', 'تصفح لا نهائي', 'تصفح الويب', 'هوس أونلاين', 'لا أستطيع التوقف عن التصفح', 'نهم إنترنت'],
+          'hi': ['इंटरनेट की लत', 'अंतहीन ब्राउज़िंग', 'वेब सर्फिंग', 'ऑनलाइन जुनून', 'ब्राउज़िंग बंद नहीं कर सकता', 'इंटरनेट बिंज']
+        },
+        contextPhrases: {
+          'en': ['browsed for hours', 'internet addiction relapse', 'couldn\'t stop browsing', 'endless web surfing', 'online binge session'],
+          'nl': ['uren gebrowst', 'internet verslaving terugval', 'kon niet stoppen browsen', 'eindeloos web surfen', 'online binge sessie'],
+          'de': ['stunden gebrowst', 'internet sucht rückfall', 'konnte nicht aufhören browsen', 'endloses web surfen', 'online binge session'],
+          'fr': ['navigué heures', 'rechute addiction internet', 'n\'ai pas pu arrêter naviguer', 'surf web sans fin', 'session binge en ligne'],
+          'es': ['navegado horas', 'recaída adicción internet', 'no pude parar navegar', 'surf web infinito', 'sesión atracón online'],
+          'it': ['navigato ore', 'ricaduta dipendenza internet', 'non riuscivo smettere navigare', 'surf web infinito', 'sessione binge online'],
+          'pt': ['naveguei horas', 'recaída vício internet', 'não consegui parar navegar', 'surf web infinito', 'sessão compulsão online'],
+          'ru': ['браузил часами', 'рецидив интернет-зависимости', 'не мог перестать браузить', 'бесконечный веб-серфинг', 'сеанс интернет-запоя'],
+          'ja': ['何時間もブラウジング', 'ネット依存症再発', 'ブラウジングをやめられなかった', '無限ウェブサーフィン', 'オンライン依存セッション'],
+          'ko': ['몇 시간 브라우징', '인터넷 중독 재발', '브라우징을 멈출 수 없었다', '무한 웹 서핑', '온라인 폭식 세션'],
+          'zh': ['浏览了几个小时', '网络成瘾复发', '停不下来浏览', '无限网上冲浪', '在线暴食会话'],
+          'ar': ['تصفحت ساعات', 'انتكاس إدمان الإنترنت', 'لم أستطع التوقف عن التصفح', 'تصفح ويب لا نهائي', 'جلسة نهم أونلاين'],
+          'hi': ['घंटों ब्राउज़िंग', 'इंटरनेट की लत रिलैप्स', 'ब्राउज़िंग बंद नहीं कर सका', 'अनंत वेब सर्फिंग', 'ऑनलाइन बिंज सेशन']
+        }
+      },
+      other: {
+        keywords: {
+          'en': ['addiction', 'compulsive behavior', 'can\'t stop', 'addicted to', 'relapse', 'craving', 'urge', 'compulsion'],
+          'nl': ['verslaving', 'dwangmatig gedrag', 'kan niet stoppen', 'verslaafd aan', 'terugval', 'trek', 'drang', 'dwang'],
+          'de': ['sucht', 'zwanghaftes verhalten', 'kann nicht aufhören', 'süchtig nach', 'rückfall', 'verlangen', 'drang', 'zwang'],
+          'fr': ['addiction', 'comportement compulsif', 'ne peux pas arrêter', 'accro à', 'rechute', 'envie', 'pulsion', 'compulsion'],
+          'es': ['adicción', 'comportamiento compulsivo', 'no puedo parar', 'adicto a', 'recaída', 'antojo', 'impulso', 'compulsión'],
+          'it': ['dipendenza', 'comportamento compulsivo', 'non riesco smettere', 'dipendente da', 'ricaduta', 'voglia', 'impulso', 'compulsione'],
+          'pt': ['vício', 'comportamento compulsivo', 'não consigo parar', 'viciado em', 'recaída', 'vontade', 'impulso', 'compulsão'],
+          'ru': ['зависимость', 'компульсивное поведение', 'не могу остановиться', 'зависим от', 'рецидив', 'тяга', 'влечение', 'компульсия'],
+          'ja': ['依存症', '強迫的行動', 'やめられない', '依存している', '再発', '渇望', '衝動', '強迫'],
+          'ko': ['중독', '강박적 행동', '멈출 수 없다', '중독된', '재발', '갈망', '충동', '강박'],
+          'zh': ['成瘾', '强迫行为', '停不下来', '上瘾了', '复发', '渴望', '冲动', '强迫'],
+          'ar': ['إدمان', 'سلوك قهري', 'لا أستطيع التوقف', 'مدمن على', 'انتكاس', 'رغبة شديدة', 'دافع', 'إجبار'],
+          'hi': ['लत', 'बाध्यकारी व्यवहार', 'रोक नहीं सकता', 'आदी', 'फिर से शुरुआत', 'लालसा', 'इच्छा', 'बाध्यता']
+        },
+        contextPhrases: {
+          'en': ['addiction relapse', 'compulsive behavior episode', 'couldn\'t control urge', 'gave in to craving', 'lost control'],
+          'nl': ['verslaving terugval', 'dwangmatig gedrag episode', 'kon drang niet controleren', 'bezweken voor trek', 'controle verloren'],
+          'de': ['sucht rückfall', 'zwanghaftes verhalten episode', 'konnte drang nicht kontrollieren', 'dem verlangen nachgegeben', 'kontrolle verloren'],
+          'fr': ['rechute addiction', 'épisode comportement compulsif', 'n\'ai pas pu contrôler pulsion', 'cédé à l\'envie', 'perdu contrôle'],
+          'es': ['recaída adicción', 'episodio comportamiento compulsivo', 'no pude controlar impulso', 'cedí al antojo', 'perdí control'],
+          'it': ['ricaduta dipendenza', 'episodio comportamento compulsivo', 'non riuscivo controllare impulso', 'ceduto alla voglia', 'perso controllo'],
+          'pt': ['recaída vício', 'episódio comportamento compulsivo', 'não consegui controlar impulso', 'cedi à vontade', 'perdi controle'],
+          'ru': ['рецидив зависимости', 'эпизод компульсивного поведения', 'не мог контролировать влечение', 'поддался тяге', 'потерял контроль'],
+          'ja': ['依存症再発', '強迫的行動エピソード', '衝動をコントロールできなかった', '渇望に屈した', 'コントロールを失った'],
+          'ko': ['중독 재발', '강박적 행동 에피소드', '충동을 통제할 수 없었다', '갈망에 굴복했다', '통제력을 잃었다'],
+          'zh': ['成瘾复发', '强迫行为发作', '无法控制冲动', '屈服于渴望', '失去控制'],
+          'ar': ['انتكاس الإدمان', 'نوبة سلوك قهري', 'لم أستطع السيطرة على الدافع', 'استسلمت للرغبة', 'فقدت السيطرة'],
+          'hi': ['लत का रिलैप्स', 'बाध्यकारी व्यवहार एपिसोड', 'इच्छा को नियंत्रित नहीं कर सका', 'लालसा के आगे हार गया', 'नियंत्रण खो दिया']
+        }
+      }
+    };
+    
+    // Check each addiction type
+    for (const addiction of addictions) {
+      const keywordSet = addictionKeywords[addiction.type];
+      if (!keywordSet) continue;
+      
+      // Get user's preferred language for better keyword matching
+      const User = require('../models/User');
+      const user = await User.findById(journalEntry.userId);
+      const preferredLanguage = user?.preferredLanguage || 'en';
+      
+      // Check keywords for user's preferred language first, then fallback to all languages
+      const languageKeywords = keywordSet.keywords[preferredLanguage] || [];
+      const languagePhrases = keywordSet.contextPhrases[preferredLanguage] || [];
+      
+      // Check for direct keywords in user's language
+      let foundKeywords = languageKeywords.filter(keyword => content.includes(keyword));
+      
+      // Check for context phrases in user's language (stronger indicators)
+      let foundPhrases = languagePhrases.filter(phrase => content.includes(phrase));
+      
+      // If nothing found in preferred language, check all languages
+      if (foundKeywords.length === 0 && foundPhrases.length === 0) {
+        for (const [lang, keywords] of Object.entries(keywordSet.keywords)) {
+          if (lang !== preferredLanguage) {
+            const langKeywords = keywords.filter(keyword => content.includes(keyword));
+            foundKeywords = foundKeywords.concat(langKeywords);
+          }
+        }
+        
+        for (const [lang, phrases] of Object.entries(keywordSet.contextPhrases)) {
+          if (lang !== preferredLanguage) {
+            const langPhrases = phrases.filter(phrase => content.includes(phrase));
+            foundPhrases = foundPhrases.concat(langPhrases);
+          }
+        }
+      }
+      
+      if (foundKeywords.length > 0 || foundPhrases.length > 0) {
+        const trigger = foundPhrases[0] || foundKeywords[0];
+        const confidence = foundPhrases.length > 0 ? 0.8 : 0.7; // Higher confidence for phrases
+        
+        relapseIndicators.push({
+          trigger: `Keyword detection: ${trigger}`,
+          confidence: confidence,
+          context: `Found in journal: "${content.substring(0, 200)}..."`,
+          isActualRelapse: true,
+          relatedAddiction: addiction.type,
+          detectionMethod: 'keyword-based'
+        });
+        
+        console.log(`🔍 Keyword match for ${addiction.type}: "${trigger}" (confidence: ${confidence})`);
+      }
+    }
+    
+    return relapseIndicators;
+  } catch (error) {
+    console.error('Error in keyword-based detection:', error);
+    return [];
+  }
+};
+
+// Handle automatic relapse detection and update addiction status
+const handleAutomaticRelapseDetection = async (userId, relapseIndicators, journalEntry) => {
+  try {
+    const Addiction = require('../models/Addiction');
+    
+    for (const indicator of relapseIndicators) {
+      if (indicator.relatedAddiction) {
+        console.log(`🔄 Updating addiction status for ${indicator.relatedAddiction} - detected relapse`);
+        
+        // Find the user's addiction of this type (include clean status as it can relapse)
+        const addiction = await Addiction.findOne({ 
+          userId: userId, 
+          type: indicator.relatedAddiction,
+          status: { $in: ['recovering', 'active', 'clean'] }
+        });
+        
+        if (addiction) {
+          // Use the new method to record automatic relapse with journal entry date
+          await addiction.recordAutomaticRelapse(indicator.trigger, journalEntry._id, journalEntry.date);
+          
+          console.log(`✅ Addiction ${indicator.relatedAddiction} status updated to relapsed via automatic detection (date: ${journalEntry.date?.toLocaleDateString('nl-NL') || 'today'})`);
+          
+          // TODO: Optionally send notification or trigger intervention
+        } else {
+          console.log(`⚠️  No active addiction found for type ${indicator.relatedAddiction}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error handling automatic relapse detection:', error);
+  }
 };
 
 // Set up multer for file uploads
@@ -267,6 +908,26 @@ router.post('/create', async (req, res) => {
       });
     }
     
+    // Check for nonsense text before processing
+    try {
+      console.log('🔍 Checking content for nonsense text:', content.substring(0, 50) + '...');
+      const aiService = require('../services/aiCoachService');
+      const nonsenseCheck = await aiService.checkNonsenseOnly(content);
+      if (nonsenseCheck.isNonsense) {
+        console.log('❌ Nonsense text detected, rejecting journal entry:', nonsenseCheck.reason);
+        return res.status(400).json({
+          success: false,
+          error: 'De tekst bevat onzin of betekenisloze inhoud en kan niet worden opgeslagen.',
+          isNonsense: true,
+          reason: nonsenseCheck.reason
+        });
+      }
+      console.log('✅ Content passed nonsense check');
+    } catch (error) {
+      console.error('Error checking for nonsense text:', error);
+      // Continue without blocking if nonsense check fails
+    }
+    
     const entryDate = date ? new Date(date) : new Date();
     // Normalize to start of day for consistent comparison
     const normalizedDate = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
@@ -297,6 +958,26 @@ router.post('/create', async (req, res) => {
     
     if (existingEntry) {
       console.log('Found existing entry for date, updating it');
+      
+      // Check for nonsense text before appending to existing entry
+      try {
+        console.log('🔍 Checking new content for nonsense text before appending:', content.substring(0, 50) + '...');
+        const aiService = require('../services/aiCoachService');
+        const nonsenseCheck = await aiService.checkNonsenseOnly(content);
+        if (nonsenseCheck.isNonsense) {
+          console.log('❌ Nonsense text detected in append, rejecting:', nonsenseCheck.reason);
+          return res.status(400).json({
+            success: false,
+            error: 'De tekst bevat onzin of betekenisloze inhoud en kan niet worden opgeslagen.',
+            isNonsense: true,
+            reason: nonsenseCheck.reason
+          });
+        }
+        console.log('✅ Content passed nonsense check for append');
+      } catch (error) {
+        console.error('Error checking for nonsense text in append:', error);
+        // Continue without blocking if nonsense check fails
+      }
       
       // Update existing entry - append content
       existingEntry.content = existingEntry.content + '\n\n' + content.trim();
@@ -437,6 +1118,30 @@ router.put('/:entryId', async (req, res) => {
       tags: entry.tags
     });
     
+    // Check for nonsense text before updating content
+    if (content !== undefined) {
+      try {
+        console.log('🔍 Checking updated content for nonsense text:', content.substring(0, 50) + '...');
+        const aiCoachService = require('../services/aiCoachService');
+        const nonsenseCheck = await aiCoachService.checkNonsenseOnly(content);
+        console.log('🔍 Nonsense check result for update:', nonsenseCheck);
+        if (nonsenseCheck.isNonsense) {
+          console.log('❌ Nonsense text detected in update, rejecting:', nonsenseCheck.reason);
+          return res.status(400).json({
+            success: false,
+            error: 'De tekst bevat onzin of betekenisloze inhoud en kan niet worden opgeslagen.',
+            isNonsense: true,
+            reason: nonsenseCheck.reason
+          });
+        }
+        console.log('✅ Updated content passed nonsense check');
+      } catch (error) {
+        console.error('❌ Error checking updated content for nonsense text:', error);
+        // Don't continue silently - this might be why updates aren't being blocked
+        console.log('⚠️ Nonsense check failed, but continuing with update due to error');
+      }
+    }
+
     // Update fields
     if (title !== undefined) entry.title = title.trim();
     if (content !== undefined) {

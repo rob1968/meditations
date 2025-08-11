@@ -118,6 +118,39 @@ const AddictionSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+
+  // Relapse tracking
+  lastRelapse: {
+    type: Date
+  },
+  
+  relapseCount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  
+  // Additional notes and automatic detection logs
+  notes: [{
+    date: {
+      type: Date,
+      default: Date.now
+    },
+    note: {
+      type: String,
+      trim: true,
+      maxlength: 1000
+    },
+    type: {
+      type: String,
+      enum: ['manual', 'automatic_relapse_detection', 'milestone', 'general'],
+      default: 'general'
+    },
+    journalEntryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'JournalEntry'
+    }
+  }],
   
   createdAt: {
     type: Date,
@@ -175,6 +208,38 @@ AddictionSchema.methods.addMilestone = function(type, description, daysClean = n
   };
   
   this.milestones.push(milestone);
+  return this.save();
+};
+
+// Record automatic relapse detection
+AddictionSchema.methods.recordAutomaticRelapse = function(trigger, journalEntryId, relapseDate = null) {
+  // Use provided relapse date or current date as fallback
+  const actualRelapseDate = relapseDate || new Date();
+  
+  // Update status and counts
+  this.status = 'relapsed';
+  this.lastRelapse = actualRelapseDate;
+  this.relapseCount = (this.relapseCount || 0) + 1;
+  
+  // Add milestone with actual relapse date
+  const daysClean = this.getDaysClean();
+  const milestone = {
+    date: actualRelapseDate,
+    type: 'relapse',
+    description: `Automatische detectie: ${trigger}`,
+    daysClean: daysClean
+  };
+  this.milestones.push(milestone);
+  
+  // Add note with detection timestamp but reference actual relapse date
+  const note = {
+    date: new Date(), // When the detection happened
+    note: `Automatische terugval detectie via dagboek op ${actualRelapseDate.toLocaleDateString('nl-NL')}: "${trigger}"`,
+    type: 'automatic_relapse_detection',
+    journalEntryId: journalEntryId
+  };
+  this.notes.push(note);
+  
   return this.save();
 };
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const aiCoachService = require('../services/aiCoachService');
+const enhancedInsightsService = require('../services/enhancedInsightsService');
 const AICoach = require('../models/AICoach');
 const JournalEntry = require('../models/JournalEntry');
 const Addiction = require('../models/Addiction');
@@ -378,17 +379,26 @@ router.get('/insights/:userId', checkAICoachEnabled, async (req, res) => {
     }).sort({ createdAt: 1 });
     
     // Get addictions data
+    console.log('🔍 Getting user addictions data...');
     const User = require('../models/User');
     const user = await User.findById(userId);
     const addictions = user?.addictions || [];
+    console.log('📊 Data for insights:', {
+      journalEntriesCount: journalEntries.length,
+      coachSessionsCount: coachSessions.length,
+      addictionsCount: addictions.length,
+      timeframe: daysAgo
+    });
     
     // Calculate insights
+    console.log('🤖 Calling aiCoachService.generateProgressInsights...');
     const insights = await aiCoachService.generateProgressInsights(userId, {
       journalEntries,
       coachSessions,
       addictions,
       timeframe: daysAgo
     });
+    console.log('✅ Insights generated successfully:', insights);
     
     res.json({
       success: true,
@@ -541,8 +551,8 @@ router.post('/check-grammar', async (req, res) => {
     
     console.log(`Checking text with types: ${checkTypes.join(', ')}`);
     
-    // Check grammar and spelling
-    const analysis = await aiCoachService.checkGrammarAndSpelling(text, language, checkTypes);
+    // Check grammar and spelling using available method
+    const analysis = await aiCoachService.checkGrammarAndMood(text, language);
     
     res.json({
       success: true,
@@ -697,6 +707,66 @@ router.get('/check-triggers/:userId', checkAICoachEnabled, async (req, res) => {
   } catch (error) {
     console.error('Error checking for triggers:', error);
     res.status(500).json({ error: 'Failed to check for triggers' });
+  }
+});
+
+/**
+ * GET /api/ai-coach/enhanced-insights/:userId
+ * Get enhanced AI-powered insights for a user
+ */
+router.get('/enhanced-insights/:userId', checkAICoachEnabled, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { 
+      timeframe = 30, 
+      sophisticationLevel = 'intermediate',
+      categories,
+      includeComparisons = true,
+      includePredictions = true 
+    } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    // Parse categories if provided as string
+    let parsedCategories;
+    if (categories) {
+      try {
+        parsedCategories = Array.isArray(categories) ? categories : JSON.parse(categories);
+      } catch (error) {
+        parsedCategories = undefined;
+      }
+    }
+
+    const options = {
+      timeframe: parseInt(timeframe),
+      sophisticationLevel,
+      categories: parsedCategories,
+      includeComparisons: includeComparisons === 'true',
+      includePredictions: includePredictions === 'true'
+    };
+
+    console.log('Generating enhanced insights for user:', userId, 'with options:', options);
+    console.log('enhancedInsightsService type:', typeof enhancedInsightsService);
+    console.log('generateEnhancedInsights method type:', typeof enhancedInsightsService.generateEnhancedInsights);
+    console.log('Available methods:', Object.getOwnPropertyNames(enhancedInsightsService).filter(name => typeof enhancedInsightsService[name] === 'function'));
+    
+    const insights = await enhancedInsightsService.generateEnhancedInsights(userId, options);
+    
+    res.json({
+      success: true,
+      insights,
+      generatedAt: new Date(),
+      options
+    });
+    
+  } catch (error) {
+    console.error('Error generating enhanced insights:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate enhanced insights',
+      details: error.message 
+    });
   }
 });
 

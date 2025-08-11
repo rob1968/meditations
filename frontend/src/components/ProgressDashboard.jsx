@@ -35,7 +35,12 @@ const ProgressDashboard = ({ user, onStartCoaching }) => {
       const response = await axios.get(getFullUrl(`/api/ai-coach/insights/${user.id}?timeframe=${timeframe}`));
       
       if (response.data.success) {
-        setInsights(response.data.insights);
+        // Store both insights and metadata
+        const insightsData = {
+          ...response.data.insights,
+          metadata: response.data.metadata
+        };
+        setInsights(insightsData);
       } else {
         setError(t('failedToLoadInsights', 'Failed to load insights'));
       }
@@ -130,7 +135,7 @@ const ProgressDashboard = ({ user, onStartCoaching }) => {
         <div className="header-title">
           <h2>📊 {t('progressInsights', 'Progress Insights')}</h2>
           <p className="timeframe-info">
-            {t('last', 'Last')} {insights.overview.timeframe}
+            {t('last', 'Last')} {insights.metadata?.timeframe || timeframe} {t('days', 'days')}
           </p>
         </div>
         
@@ -152,7 +157,7 @@ const ProgressDashboard = ({ user, onStartCoaching }) => {
         <div className="overview-card">
           <div className="card-icon">📝</div>
           <div className="card-content">
-            <h3>{insights.overview.totalJournalEntries}</h3>
+            <h3>{insights.metadata?.journalEntriesCount || 0}</h3>
             <p>{t('journalEntries', 'Journal Entries')}</p>
           </div>
         </div>
@@ -160,7 +165,7 @@ const ProgressDashboard = ({ user, onStartCoaching }) => {
         <div className="overview-card">
           <div className="card-icon">💬</div>
           <div className="card-content">
-            <h3>{insights.overview.totalCoachSessions}</h3>
+            <h3>{insights.metadata?.coachSessionsCount || 0}</h3>
             <p>{t('coachSessions', 'Coach Sessions')}</p>
           </div>
         </div>
@@ -168,7 +173,7 @@ const ProgressDashboard = ({ user, onStartCoaching }) => {
         <div className="overview-card">
           <div className="card-icon">🎯</div>
           <div className="card-content">
-            <h3>{insights.overview.activeAddictions}</h3>
+            <h3>{insights.metadata?.addictionsCount || 0}</h3>
             <p>{t('activeRecovery', 'Active Recovery')}</p>
           </div>
         </div>

@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Meditation = require('../models/Meditation');
+const JournalEntry = require('../models/JournalEntry');
+const AICoach = require('../models/AICoach');
+const SharedMeditation = require('../models/SharedMeditation');
+const Addiction = require('../models/Addiction');
+const Notification = require('../models/Notification');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -1131,24 +1136,13 @@ router.delete('/delete-account/:userId', async (req, res) => {
       });
     }
 
-    // Delete user's meditations
-    const deletedMeditations = await Meditation.deleteMany({ userId: userId });
-    console.log('[Auth] Deleted', deletedMeditations.deletedCount, 'meditations for user:', user.username);
-
-    // TODO: Delete user's custom backgrounds, voice clones, journal entries, etc.
-    // This would require implementing deletion in other models as well
-
-    // Delete the user
-    await User.findByIdAndDelete(userId);
-
-    console.log('[Auth] Account deleted successfully for user:', user.username);
+    // Comprehensive user data deletion
+    const deletionResults = await deleteAllUserData(userId, user.username);
 
     res.json({
       success: true,
-      message: 'Account deleted successfully',
-      deletedData: {
-        meditations: deletedMeditations.deletedCount
-      }
+      message: 'Account and all associated data deleted successfully',
+      deletedData: deletionResults
     });
 
   } catch (error) {
@@ -1276,5 +1270,125 @@ router.post('/complete-pi-registration', async (req, res) => {
     });
   }
 });
+
+/**
+ * Complete user data cleanup function
+ * Removes all traces of user from database and filesystem
+ */
+async function deleteAllUserData(userId, username) {
+  const results = {
+    username: username,
+    deletedMeditations: 0,
+    deletedJournalEntries: 0,
+    deletedAICoachSessions: 0,
+    deletedSharedMeditations: 0,
+    deletedAddictions: 0,
+    deletedNotifications: 0,
+    deletedCustomBackgrounds: 0,
+    deletedVoiceClones: 0,
+    deletedJournalAudio: 0,
+    deletedUserMeditations: 0,
+    removedLikes: 0,
+    deletedUserRecord: false
+  };
+  
+  console.log(`🗑️ Starting comprehensive deletion for user ${username} (${userId})`);
+  
+  try {
+    // 1. Delete all user's meditations (Meditation model uses 'user' field)
+    const deletedMeditations = await Meditation.deleteMany({ user: userId });
+    results.deletedMeditations = deletedMeditations.deletedCount;
+    console.log(`✅ Deleted ${results.deletedMeditations} meditations`);
+    
+    // 2. Delete all journal entries
+    const deletedJournalEntries = await JournalEntry.deleteMany({ userId });
+    results.deletedJournalEntries = deletedJournalEntries.deletedCount;
+    console.log(`✅ Deleted ${results.deletedJournalEntries} journal entries`);
+    
+    // 3. Delete all AI Coach sessions
+    const deletedAICoachSessions = await AICoach.deleteMany({ userId });
+    results.deletedAICoachSessions = deletedAICoachSessions.deletedCount;
+    console.log(`✅ Deleted ${results.deletedAICoachSessions} AI Coach sessions`);
+    
+    // 4. Delete all shared meditations by this user
+    const deletedSharedMeditations = await SharedMeditation.deleteMany({ creatorId: userId });
+    results.deletedSharedMeditations = deletedSharedMeditations.deletedCount;
+    console.log(`✅ Deleted ${results.deletedSharedMeditations} shared meditations`);
+    
+    // 5. Remove user from likes in other shared meditations
+    const updatedSharedMeditations = await SharedMeditation.updateMany(
+      { 'likes.userId': userId },
+      { $pull: { likes: { userId } } }
+    );
+    
+    // 6. Remove user from likes in journal entries
+    const updatedJournalEntries = await JournalEntry.updateMany(
+      { 'likes.userId': userId },
+      { $pull: { likes: { userId } } }
+    );
+    results.removedLikes = updatedSharedMeditations.modifiedCount + updatedJournalEntries.modifiedCount;
+    console.log(`✅ Removed user likes from ${results.removedLikes} posts`);
+    
+    // 7. Delete all addictions
+    const deletedAddictions = await Addiction.deleteMany({ userId });
+    results.deletedAddictions = deletedAddictions.deletedCount;
+    console.log(`✅ Deleted ${results.deletedAddictions} addiction records`);
+    
+    // 8. Delete all notifications
+    const deletedNotifications = await Notification.deleteMany({ userId });
+    results.deletedNotifications = deletedNotifications.deletedCount;
+    console.log(`✅ Deleted ${results.deletedNotifications} notifications`);
+    
+    // 9. Delete custom background files from filesystem
+    const customBackgroundsPath = path.join(__dirname, '../custom-backgrounds', userId.toString());
+    if (fs.existsSync(customBackgroundsPath)) {
+      const files = fs.readdirSync(customBackgroundsPath);
+      results.deletedCustomBackgrounds = files.length;
+      fs.rmSync(customBackgroundsPath, { recursive: true, force: true });
+      console.log(`✅ Deleted ${results.deletedCustomBackgrounds} custom background files`);
+    }
+    
+    // 10. Delete user meditation files from filesystem
+    const userMeditationsPath = path.join(__dirname, '../user-meditations', userId.toString());
+    if (fs.existsSync(userMeditationsPath)) {
+      const files = fs.readdirSync(userMeditationsPath);
+      results.deletedUserMeditations = files.length;
+      fs.rmSync(userMeditationsPath, { recursive: true, force: true });
+      console.log(`✅ Deleted ${results.deletedUserMeditations} user meditation files`);
+    }
+    
+    // 11. Delete voice clone files if they exist
+    const voiceClonesPath = path.join(__dirname, '../voice-clones', userId.toString());
+    if (fs.existsSync(voiceClonesPath)) {
+      const files = fs.readdirSync(voiceClonesPath);
+      results.deletedVoiceClones = files.length;
+      fs.rmSync(voiceClonesPath, { recursive: true, force: true });
+      console.log(`✅ Deleted ${results.deletedVoiceClones} voice clone files`);
+    }
+    
+    // 12. Delete journal audio files
+    const journalAudioPath = path.join(__dirname, '../../assets/audio/journals', userId.toString());
+    if (fs.existsSync(journalAudioPath)) {
+      const files = fs.readdirSync(journalAudioPath);
+      results.deletedJournalAudio = files.length;
+      fs.rmSync(journalAudioPath, { recursive: true, force: true });
+      console.log(`✅ Deleted ${results.deletedJournalAudio} journal audio files`);
+    }
+    
+    // 13. Finally, delete the user record itself
+    const deletedUser = await User.findByIdAndDelete(userId);
+    results.deletedUserRecord = !!deletedUser;
+    console.log(`✅ Deleted user account record: ${results.deletedUserRecord}`);
+    
+    console.log(`🎉 Complete account deletion successful for user ${username}`);
+    console.log('📊 Final deletion summary:', results);
+    
+    return results;
+    
+  } catch (error) {
+    console.error('❌ Error during user data deletion:', error);
+    throw error;
+  }
+}
 
 module.exports = router;
