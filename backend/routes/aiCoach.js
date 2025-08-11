@@ -68,7 +68,7 @@ router.post('/chat', checkAICoachEnabled, async (req, res) => {
     }
     
     // Generate coach response
-    const response = await aiCoachService.generateChatResponse(userId, message, context);
+    const response = await aiCoachService.generateCoachingResponse(userId, message, context);
     
     res.json({
       success: true,
@@ -381,8 +381,9 @@ router.get('/insights/:userId', checkAICoachEnabled, async (req, res) => {
     // Get addictions data
     console.log('🔍 Getting user addictions data...');
     const User = require('../models/User');
+    const Addiction = require('../models/Addiction');
     const user = await User.findById(userId);
-    const addictions = user?.addictions || [];
+    const addictions = await Addiction.find({ userId }).sort({ createdAt: -1 });
     console.log('📊 Data for insights:', {
       journalEntriesCount: journalEntries.length,
       coachSessionsCount: coachSessions.length,
@@ -765,6 +766,86 @@ router.get('/enhanced-insights/:userId', checkAICoachEnabled, async (req, res) =
     console.error('Error generating enhanced insights:', error);
     res.status(500).json({ 
       error: 'Failed to generate enhanced insights',
+      details: error.message 
+    });
+  }
+});
+
+/**
+ * GET /api/ai-coach/trigger-patterns/:userId
+ * Get all trigger analysis data for trigger pattern visualization
+ */
+router.get('/trigger-patterns/:userId', checkAICoachEnabled, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { timeframe = 90 } = req.query; // Default 90 days
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    console.log(`📊 Fetching trigger patterns for user ${userId} (${timeframe} days)`);
+
+    // Get date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(timeframe));
+
+    // Find all AI Coach analyses with trigger data within timeframe
+    const analysisData = await AICoach.find({
+      userId,
+      sessionType: 'journal_analysis',
+      createdAt: { $gte: startDate, $lte: endDate },
+      'messages.content': { $exists: true }
+    }).sort({ createdAt: -1 });
+
+    console.log(`Found ${analysisData.length} analysis sessions`);
+
+    const triggerEntries = [];
+    
+    // Extract trigger data from each analysis
+    for (const analysis of analysisData) {
+      try {
+        // Get analysis results from messages
+        if (analysis.messages && analysis.messages.length > 0) {
+          const analysisResult = JSON.parse(analysis.messages[0].content);
+          
+          if (analysisResult.triggersDetected && analysisResult.triggersDetected.length > 0) {
+            // Create pseudo journal entry with trigger data
+            triggerEntries.push({
+              _id: analysis.messages[0].metadata?.journalEntryId || analysis._id,
+              date: analysis.createdAt,
+              triggers: analysisResult.triggersDetected.map(trigger => ({
+                trigger: trigger.trigger,
+                severity: trigger.confidence > 0.8 ? 'high' : 
+                         trigger.confidence > 0.5 ? 'medium' : 'low',
+                relatedAddiction: trigger.relatedAddiction || 'unknown',
+                confidence: trigger.confidence,
+                context: trigger.context,
+                isActualRelapse: trigger.isActualRelapse || false
+              }))
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing analysis result:', error);
+      }
+    }
+
+    console.log(`Extracted ${triggerEntries.length} entries with triggers`);
+
+    res.json({
+      success: true,
+      entries: triggerEntries,
+      totalAnalyses: analysisData.length,
+      timeframe: parseInt(timeframe),
+      generatedAt: new Date()
+    });
+
+  } catch (error) {
+    console.error('Error fetching trigger patterns:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch trigger patterns',
       details: error.message 
     });
   }

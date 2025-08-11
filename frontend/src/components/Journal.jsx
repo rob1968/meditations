@@ -653,7 +653,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       let errorMessage = t('microphoneAccessDenied', 'Microphone access denied. Please allow microphone access.');
       
       if (error.name === 'NotFoundError') {
-        errorMessage = t('microphoneNotFound', 'Geen microfoon gevonden. Controleer of je apparaat een microfoon heeft.');
+        errorMessage = t('microphoneNotFound', 'No microphone found. Please check if your device has a microphone.');
       } else if (error.name === 'NotAllowedError') {
         errorMessage = t('microphoneAccessDenied', 'Microfoon toegang geweigerd. Sta microfoon toegang toe in je browser.');
       } else if (error.name === 'NotSupportedError' || error.message.includes('not supported')) {
@@ -1409,7 +1409,7 @@ const handleSaveEntry = async () => {
       let errorMessage = t('microphoneAccessDenied', 'Microphone access denied. Please allow microphone access.');
       
       if (error.name === 'NotFoundError') {
-        errorMessage = t('microphoneNotFound', 'Geen microfoon gevonden. Controleer of je apparaat een microfoon heeft.');
+        errorMessage = t('microphoneNotFound', 'No microphone found. Please check if your device has a microphone.');
       } else if (error.name === 'NotAllowedError') {
         errorMessage = t('microphoneAccessDenied', 'Microfoon toegang geweigerd. Sta microfoon toegang toe in je browser.');
       } else if (error.name === 'NotSupportedError' || error.message.includes('not supported')) {
@@ -1531,7 +1531,7 @@ const handleSaveEntry = async () => {
           
           setError('');
         } else {
-          setError(t('noSpeechDetectedRetry', 'Geen spraak gedetecteerd. Probeer opnieuw te spreken.'));
+          setError(t('noSpeechDetectedRetry', 'No speech detected. Please try speaking again.'));
         }
       } else {
         setError(t('transcriptionFailed', 'Speech transcription failed. Please try again.'));
@@ -2184,9 +2184,9 @@ const handleSaveEntry = async () => {
                       ref={writeTabGrammarCheckerRef}
                       text={formData.content}
                       onTextChange={(newText) => setFormData({...formData, content: newText})}
-                      placeholder={voiceRecordingState === 'recording' ? t('voiceRecordingActive', '🎙️ Spraak wordt opgenomen...') : 
-                                 voiceRecordingState === 'processing' ? t('voiceProcessing', '⏳ Spraak wordt verwerkt...') :
-                                 t('quickWritePlaceholder', 'Begin hier te schrijven over je dag, gedachten of gevoelens...')}
+                      placeholder={voiceRecordingState === 'recording' ? t('voiceRecordingActive', '🎙️ Voice is being recorded...') : 
+                                 voiceRecordingState === 'processing' ? t('voiceProcessing', '⏳ Voice is being processed...') :
+                                 t('quickWritePlaceholder', 'Start writing here about your day, thoughts or feelings...')}
                       className={`quick-write-textarea ${(voiceRecordingState === 'recording' || voiceRecordingState === 'processing') ? 'voice-active' : ''}`}
                       rows={4}
                       maxLength={200}
@@ -2764,9 +2764,9 @@ const handleSaveEntry = async () => {
                           console.log('Grammar suggestion applied in addiction form, forcing state update');
                           setAddictionForm(prev => ({...prev, description: newText}));
                         }}
-                        placeholder={voiceRecordingState === 'recording' ? t('voiceRecordingActive', '🎙️ Spraak wordt opgenomen...') : 
-                                   voiceRecordingState === 'processing' ? t('voiceProcessing', '⏳ Spraak wordt verwerkt...') :
-                                   t('addictionDescription', 'Beschrijf je verslaving, triggers, of andere details...')}
+                        placeholder={voiceRecordingState === 'recording' ? t('voiceRecordingActive', '🎙️ Voice is being recorded...') : 
+                                   voiceRecordingState === 'processing' ? t('voiceProcessing', '⏳ Voice is being processed...') :
+                                   t('addictionDescription', 'Describe your addiction, triggers, or other details...')}
                         className={`${(voiceRecordingState === 'recording' || voiceRecordingState === 'processing') ? 'voice-active' : ''}`}
                         rows={3}
                         enabled={voiceRecordingState !== 'recording' && voiceRecordingState !== 'processing'}
@@ -2814,7 +2814,7 @@ const handleSaveEntry = async () => {
               {addictions.length === 0 ? (
                 <div className="no-addictions">
                   <div className="no-addictions-icon">🌱</div>
-                  <h3>{t('noAddictions', 'Geen verslavingen bijgehouden')}</h3>
+                  <h3>{t('noAddictions', 'No addictions tracked')}</h3>
                   <p>{t('addFirstAddiction', 'Voeg je eerste verslaving toe om je voortgang bij te houden')}</p>
                 </div>
               ) : (
@@ -2882,9 +2882,6 @@ const handleSaveEntry = async () => {
                   ))}
                 </div>
               )}
-              
-              {/* Trigger Pattern Analysis */}
-              <TriggerPatternChart entries={entries} addictions={addictions} />
             </div>
           </div>
         )}
@@ -2919,6 +2916,9 @@ const handleSaveEntry = async () => {
                 <p>{t('progressTrackingDesc', 'Together we\'ll track your recovery progress and celebrate your achievements.')}</p>
               </div>
             </div>
+
+            {/* Trigger Pattern Analysis */}
+            <TriggerPatternChart user={user} addictions={addictions} />
 
             <div className="coach-cta">
               <button 
@@ -3139,7 +3139,7 @@ const handleSaveEntry = async () => {
                         {moods.find(m => m.value === showMoodDescription.mood)?.label || showMoodDescription.mood}
                       </div>
                       <div style={{ lineHeight: '1.4' }}>
-                        {showMoodDescription.description || t('noDescription', 'Geen beschrijving beschikbaar')}
+                        {showMoodDescription.description || t('noDescription', 'No description available')}
                       </div>
                       <div style={{
                         position: 'absolute',
@@ -3326,10 +3326,10 @@ const handleSaveEntry = async () => {
                   onTextChange={(newText) => {
                     setFormData({...formData, content: newText});
                   }}
-                  placeholder={voiceRecordingState === 'recording' ? t('voiceRecordingActive', '🎙️ Spraak wordt opgenomen...') : 
-                             voiceRecordingState === 'processing' ? t('voiceProcessing', '⏳ Spraak wordt verwerkt...') :
-                             isSavingEntry ? t('generatingMoods', 'Mood wordt gegenereerd...') : 
-                             t('startWriting', 'Begin met schrijven... Wat houd je vandaag bezig?')}
+                  placeholder={voiceRecordingState === 'recording' ? t('voiceRecordingActive', '🎙️ Voice is being recorded...') : 
+                             voiceRecordingState === 'processing' ? t('voiceProcessing', '⏳ Voice is being processed...') :
+                             isSavingEntry ? t('generatingMoods', 'Mood is being generated...') : 
+                             t('startWriting', 'Start writing... What is on your mind today?')}
                   className={`expanded-writing-textarea ${isSavingEntry ? 'processing' : ''} ${(voiceRecordingState === 'recording' || voiceRecordingState === 'processing') ? 'voice-active' : ''}`}
                   rows={7}
                   maxLength={1500}

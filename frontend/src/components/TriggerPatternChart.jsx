@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
+import { getFullUrl } from '../config/api';
 
-const TriggerPatternChart = ({ entries, addictions }) => {
+const TriggerPatternChart = ({ user, addictions }) => {
   const { t } = useTranslation();
   const [triggerData, setTriggerData] = useState({
     patterns: [],
@@ -9,12 +11,45 @@ const TriggerPatternChart = ({ entries, addictions }) => {
     severityBreakdown: {},
     commonWords: []
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   
   useEffect(() => {
-    analyzeTriggerPatterns();
-  }, [entries, addictions]);
+    if (user?.id) {
+      fetchTriggerPatterns();
+    }
+  }, [user?.id, addictions]);
   
-  const analyzeTriggerPatterns = () => {
+  const fetchTriggerPatterns = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const response = await axios.get(getFullUrl(`/api/ai-coach/trigger-patterns/${user.id}`));
+      
+      if (response.data.success) {
+        const entries = response.data.entries;
+        console.log('📊 Received trigger data:', entries);
+        analyzeTriggerPatterns(entries);
+      } else {
+        setError('Failed to load trigger patterns');
+      }
+    } catch (error) {
+      console.error('Error fetching trigger patterns:', error);
+      setError('Failed to load trigger patterns');
+      // Fallback to empty data
+      setTriggerData({
+        patterns: [],
+        timeDistribution: { morning: 0, afternoon: 0, evening: 0, night: 0 },
+        severityBreakdown: { low: 0, medium: 0, high: 0 },
+        commonWords: []
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const analyzeTriggerPatterns = (entries) => {
     const patterns = {};
     const timeDistribution = {
       morning: 0,
@@ -88,17 +123,17 @@ const TriggerPatternChart = ({ entries, addictions }) => {
   const getAddictionLabel = (type) => {
     const labels = {
       alcohol: t('alcohol', 'Alcohol'),
-      smoking: t('smoking', 'Roken'),
+      smoking: t('smoking', 'Smoking'),
       drugs: t('drugs', 'Drugs'),
-      gambling: t('gambling', 'Gokken'),
-      gaming: t('gaming', 'Gamen'),
-      shopping: t('shopping', 'Winkelen'),
+      gambling: t('gambling', 'Gambling'),
+      gaming: t('gaming', 'Gaming'),
+      shopping: t('shopping', 'Shopping'),
       food: t('food', 'Eten'),
       sex: t('sex', 'Seks'),
       work: t('work', 'Werk'),
       social_media: t('socialMedia', 'Social Media'),
-      caffeine: t('caffeine', 'Cafeïne'),
-      sugar: t('sugar', 'Suiker'),
+      caffeine: t('caffeine', 'Caffeine'),
+      sugar: t('sugar', 'Sugar'),
       exercise: t('exercise', 'Sport'),
       porn: t('porn', 'Porno'),
       internet: t('internet', 'Internet'),
@@ -110,10 +145,10 @@ const TriggerPatternChart = ({ entries, addictions }) => {
   
   const getTimeLabel = (time) => {
     const labels = {
-      morning: t('morning', 'Ochtend'),
-      afternoon: t('afternoon', 'Middag'),
-      evening: t('evening', 'Avond'),
-      night: t('night', 'Nacht')
+      morning: t('morning', 'Morning'),
+      afternoon: t('afternoon', 'Afternoon'),
+      evening: t('evening', 'Evening'),
+      night: t('night', 'Night')
     };
     return labels[time] || time;
   };
@@ -150,19 +185,22 @@ const TriggerPatternChart = ({ entries, addictions }) => {
         }
         
         .chart-title {
-          font-size: 18px;
-          font-weight: 600;
+          font-size: 20px;
+          font-weight: 700;
           display: flex;
           align-items: center;
           gap: 8px;
+          color: #1a1a1a;
         }
         
         .total-triggers {
-          background: #f0f2f5;
+          background: #667eea;
+          color: white;
           padding: 8px 16px;
           border-radius: 20px;
           font-size: 14px;
-          font-weight: 500;
+          font-weight: 600;
+          box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
         }
         
         .charts-grid {
@@ -173,16 +211,20 @@ const TriggerPatternChart = ({ entries, addictions }) => {
         }
         
         .chart-section {
-          background: #f8f9fa;
-          border-radius: 8px;
-          padding: 15px;
+          background: #ffffff;
+          border: 1px solid #e1e5e9;
+          border-radius: 10px;
+          padding: 18px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
         .section-title {
-          font-size: 14px;
-          font-weight: 600;
-          margin-bottom: 12px;
-          color: #333;
+          font-size: 16px;
+          font-weight: 700;
+          margin-bottom: 16px;
+          color: #2d3748;
+          border-bottom: 2px solid #667eea;
+          padding-bottom: 6px;
         }
         
         .addiction-patterns {
@@ -192,12 +234,20 @@ const TriggerPatternChart = ({ entries, addictions }) => {
         }
         
         .pattern-item {
-          background: white;
-          border-radius: 6px;
-          padding: 10px;
+          background: #f7fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 14px;
           display: flex;
           justify-content: space-between;
           align-items: center;
+          transition: all 0.2s ease;
+        }
+        
+        .pattern-item:hover {
+          background: #edf2f7;
+          border-color: #667eea;
+          transform: translateY(-1px);
         }
         
         .pattern-info {
@@ -205,8 +255,10 @@ const TriggerPatternChart = ({ entries, addictions }) => {
         }
         
         .pattern-name {
-          font-weight: 500;
-          margin-bottom: 4px;
+          font-weight: 600;
+          margin-bottom: 6px;
+          font-size: 15px;
+          color: #2d3748;
         }
         
         .pattern-severity {
@@ -222,118 +274,168 @@ const TriggerPatternChart = ({ entries, addictions }) => {
         }
         
         .pattern-count {
-          font-size: 20px;
-          font-weight: 600;
+          font-size: 24px;
+          font-weight: 700;
           color: #667eea;
+          background: #edf2f7;
+          padding: 8px 12px;
+          border-radius: 20px;
+          min-width: 45px;
+          text-align: center;
         }
         
         .time-distribution {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 12px;
         }
         
         .time-bar {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
+          background: #f7fafc;
+          padding: 8px;
+          border-radius: 6px;
         }
         
         .time-label {
-          width: 80px;
-          font-size: 13px;
+          width: 90px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #4a5568;
         }
         
         .bar-container {
           flex: 1;
-          height: 24px;
-          background: #e0e0e0;
-          border-radius: 4px;
+          height: 28px;
+          background: #e2e8f0;
+          border-radius: 8px;
           position: relative;
           overflow: hidden;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
         }
         
         .bar-fill {
           height: 100%;
-          background: linear-gradient(90deg, #667eea, #764ba2);
-          border-radius: 4px;
-          transition: width 0.5s ease;
+          background: linear-gradient(90deg, #667eea, #5a67d8);
+          border-radius: 8px;
+          transition: width 0.6s ease-out;
           display: flex;
           align-items: center;
           justify-content: flex-end;
-          padding-right: 6px;
+          padding-right: 8px;
+          box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
         }
         
         .bar-value {
           color: white;
-          font-size: 11px;
-          font-weight: 500;
+          font-size: 12px;
+          font-weight: 600;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
         
         .severity-breakdown {
           display: flex;
           justify-content: space-around;
-          padding: 10px 0;
+          padding: 16px 0;
+          gap: 10px;
         }
         
         .severity-item {
           text-align: center;
+          flex: 1;
         }
         
         .severity-circle {
-          width: 60px;
-          height: 60px;
+          width: 70px;
+          height: 70px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
-          font-size: 18px;
-          font-weight: 600;
-          margin: 0 auto 8px;
+          font-size: 20px;
+          font-weight: 700;
+          margin: 0 auto 10px;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+          transition: transform 0.2s ease;
+        }
+        
+        .severity-circle:hover {
+          transform: scale(1.05);
         }
         
         .severity-label {
-          font-size: 12px;
-          color: #666;
+          font-size: 13px;
+          font-weight: 600;
+          color: #4a5568;
         }
         
         .word-cloud {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
-          padding: 10px 0;
+          gap: 10px;
+          padding: 16px 0;
         }
         
         .word-tag {
-          background: white;
-          border: 1px solid #e0e0e0;
-          border-radius: 16px;
-          padding: 6px 12px;
-          font-size: 13px;
+          background: #f7fafc;
+          border: 2px solid #e2e8f0;
+          border-radius: 20px;
+          padding: 8px 14px;
+          font-size: 14px;
+          font-weight: 500;
           display: flex;
           align-items: center;
-          gap: 4px;
+          gap: 6px;
+          transition: all 0.2s ease;
+          color: #2d3748;
+        }
+        
+        .word-tag:hover {
+          background: #edf2f7;
+          border-color: #667eea;
+          transform: translateY(-1px);
         }
         
         .word-count {
           background: #667eea;
           color: white;
-          border-radius: 10px;
-          padding: 2px 6px;
-          font-size: 11px;
-          font-weight: 500;
+          border-radius: 12px;
+          padding: 4px 8px;
+          font-size: 12px;
+          font-weight: 600;
+          min-width: 20px;
+          text-align: center;
+          box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
         }
         
         .empty-state {
           text-align: center;
-          padding: 40px;
-          color: #999;
+          padding: 60px 40px;
+          color: #718096;
+          background: #f7fafc;
+          border-radius: 12px;
+          border: 2px dashed #cbd5e0;
         }
         
         .empty-icon {
-          font-size: 48px;
-          margin-bottom: 10px;
+          font-size: 64px;
+          margin-bottom: 16px;
+          animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        
+        .empty-state p {
+          font-size: 16px;
+          font-weight: 500;
+          margin: 0;
+          color: #4a5568;
         }
         
         @media (max-width: 768px) {
@@ -341,28 +443,61 @@ const TriggerPatternChart = ({ entries, addictions }) => {
             grid-template-columns: 1fr;
           }
           
+          .chart-section {
+            padding: 14px;
+          }
+          
           .time-label {
+            width: 70px;
+            font-size: 13px;
+          }
+          
+          .severity-circle {
             width: 60px;
-            font-size: 12px;
+            height: 60px;
+            font-size: 18px;
+          }
+          
+          .pattern-count {
+            font-size: 20px;
+            padding: 6px 10px;
+          }
+          
+          .empty-state {
+            padding: 40px 20px;
+          }
+          
+          .empty-icon {
+            font-size: 48px;
           }
         }
       `}</style>
       
       <div className="chart-header">
         <h3 className="chart-title">
-          📊 {t('triggerPatterns', 'Trigger Patronen')}
+          📊 {t('triggerPatterns', 'Trigger Patterns')}
         </h3>
         {totalTriggers > 0 && (
           <span className="total-triggers">
-            {totalTriggers} {t('totalTriggers', 'totaal triggers')}
+            {totalTriggers} {t('totalTriggers', 'total triggers')}
           </span>
         )}
       </div>
       
-      {totalTriggers === 0 ? (
+      {loading ? (
+        <div className="empty-state">
+          <div className="empty-icon">⏳</div>
+          <p>{t('loadingTriggerPatterns', 'Loading trigger patterns...')}</p>
+        </div>
+      ) : error ? (
+        <div className="empty-state">
+          <div className="empty-icon">❌</div>
+          <p>{error}</p>
+        </div>
+      ) : totalTriggers === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">🎯</div>
-          <p>{t('noTriggersFound', 'Nog geen triggers gedetecteerd')}</p>
+          <p>{t('noTriggersFound', 'No triggers detected yet')}</p>
         </div>
       ) : (
         <>
@@ -370,7 +505,7 @@ const TriggerPatternChart = ({ entries, addictions }) => {
             {/* Addiction Patterns */}
             {triggerData.patterns.length > 0 && (
               <div className="chart-section">
-                <h4 className="section-title">{t('byAddiction', 'Per Verslaving')}</h4>
+                <h4 className="section-title">{t('byAddiction', 'By Addiction')}</h4>
                 <div className="addiction-patterns">
                   {triggerData.patterns.slice(0, 5).map(pattern => (
                     <div key={pattern.name} className="pattern-item">
@@ -399,7 +534,7 @@ const TriggerPatternChart = ({ entries, addictions }) => {
             
             {/* Time Distribution */}
             <div className="chart-section">
-              <h4 className="section-title">{t('timeDistribution', 'Tijd Verdeling')}</h4>
+              <h4 className="section-title">{t('timeDistribution', 'Time Distribution')}</h4>
               <div className="time-distribution">
                 {Object.entries(triggerData.timeDistribution).map(([time, count]) => (
                   <div key={time} className="time-bar">
@@ -419,7 +554,7 @@ const TriggerPatternChart = ({ entries, addictions }) => {
             
             {/* Severity Breakdown */}
             <div className="chart-section">
-              <h4 className="section-title">{t('severityLevels', 'Ernst Niveaus')}</h4>
+              <h4 className="section-title">{t('severityLevels', 'Severity Levels')}</h4>
               <div className="severity-breakdown">
                 {Object.entries(triggerData.severityBreakdown).map(([severity, count]) => (
                   <div key={severity} className="severity-item">
@@ -430,9 +565,9 @@ const TriggerPatternChart = ({ entries, addictions }) => {
                       {count}
                     </div>
                     <span className="severity-label">
-                      {severity === 'low' ? t('low', 'Laag') : 
-                       severity === 'medium' ? t('medium', 'Gemiddeld') : 
-                       t('high', 'Hoog')}
+                      {severity === 'low' ? t('low', 'Low') : 
+                       severity === 'medium' ? t('medium', 'Medium') : 
+                       t('high', 'High')}
                     </span>
                   </div>
                 ))}
@@ -443,7 +578,7 @@ const TriggerPatternChart = ({ entries, addictions }) => {
           {/* Common Trigger Words */}
           {triggerData.commonWords.length > 0 && (
             <div className="chart-section">
-              <h4 className="section-title">{t('commonTriggerWords', 'Veelvoorkomende Trigger Woorden')}</h4>
+              <h4 className="section-title">{t('commonTriggerWords', 'Common Trigger Words')}</h4>
               <div className="word-cloud">
                 {triggerData.commonWords.map(({ word, count }) => (
                   <span key={word} className="word-tag">

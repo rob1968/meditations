@@ -14,7 +14,7 @@ class AICoachService {
       console.warn('OpenAI API key not found, service will return mock responses');
       this.openai = null;
     }
-    this.modelName = "gpt-4o"; // Change to "gpt-5" if you have access
+    this.modelName = "gpt-4o"; // GPT-5 gives empty responses, using GPT-4o
     
     // Coach persona configuration
     this.coachPersona = {
@@ -97,12 +97,23 @@ class AICoachService {
     }
     
     try {
-      const response = await this.openai.chat.completions.create({
+      // GPT-5 uses max_completion_tokens instead of max_tokens
+      // GPT-5 only supports temperature: 1 (default)
+      const requestParams = {
         model: this.modelName,
-        messages: [{ role: "user", content: prompt }],
-        temperature: temperature,
-        max_tokens: maxTokens
-      });
+        messages: [{ role: "user", content: prompt }]
+      };
+      
+      if (this.modelName === 'gpt-5') {
+        requestParams.max_completion_tokens = maxTokens;
+        // GPT-5 only supports default temperature (1)
+        requestParams.temperature = 1;
+      } else {
+        requestParams.max_tokens = maxTokens;
+        requestParams.temperature = temperature;
+      }
+      
+      const response = await this.openai.chat.completions.create(requestParams);
       return response.choices[0].message.content;
     } catch (error) {
       console.error('OpenAI API error:', error);
@@ -189,7 +200,7 @@ class AICoachService {
   async analyzeJournalEntry(userId, journalEntry) {
     try {
       // Get user's addictions for context
-      const addictions = await Addiction.find({ userId, status: { $in: ['active', 'recovering'] } });
+      const addictions = await Addiction.find({ userId });
       const user = await User.findById(userId);
       
       // Build personalized user context
@@ -408,7 +419,7 @@ class AICoachService {
       if (userId) {
         try {
           const user = await User.findById(userId);
-          const addictions = await Addiction.find({ userId, status: { $in: ['active', 'recovering'] } });
+          const addictions = await Addiction.find({ userId });
           userContextInfo = `User context: ${this.buildPersonalizedContext(user, addictions)}`;
         } catch (error) {
           console.log('Could not fetch user context for mood analysis:', error.message);
@@ -593,7 +604,7 @@ class AICoachService {
   async generateCoachingResponse(userId, message, context = {}) {
     try {
       const user = await User.findById(userId);
-      const addictions = await Addiction.find({ userId, status: { $in: ['active', 'recovering'] } });
+      const addictions = await Addiction.find({ userId });
       
       const userContext = this.buildPersonalizedContext(user, addictions);
       
@@ -630,17 +641,33 @@ class AICoachService {
       const response = await this.callOpenAI(prompt, 0.8, 300);
       
       // Save the coaching session
+      const sessionId = `chat_${userId}_${Date.now()}`;
       const aiCoach = new AICoach({
         userId,
-        sessionType: 'coaching_response',
-        userMessage: message,
-        coachResponse: response,
-        context
+        sessionId,
+        sessionType: 'chat',
+        messages: [
+          {
+            role: 'user',
+            content: message,
+            timestamp: new Date()
+          },
+          {
+            role: 'coach',
+            content: response,
+            timestamp: new Date()
+          }
+        ],
+        analysisResults: {},
+        interventions: []
       });
       
       await aiCoach.save();
       
-      return response;
+      return {
+        response: response,
+        sessionId: sessionId
+      };
     } catch (error) {
       console.error('Error generating coaching response:', error);
       throw error;
@@ -752,6 +779,75 @@ class AICoachService {
       
     } catch (error) {
       console.error('Error generating progress insights:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate chat response - alias for generateCoachingResponse
+   */
+  async generateChatResponse(userId, message, context = {}) {
+    return await this.generateCoachingResponse(userId, message, context);
+  }
+
+  /**
+   * Generate emergency intervention response
+   */
+  async generateIntervention(userId, triggerType, urgencyLevel = 'medium') {
+    try {
+      const User = require('../models/User');
+      const Addiction = require('../models/Addiction');
+      
+      const user = await User.findById(userId);
+      const addictions = await Addiction.find({ userId });
+
+      const prompt = `
+        You are an emergency intervention specialist. Generate an immediate, supportive response for someone experiencing a ${triggerType} trigger with ${urgencyLevel} urgency.
+
+        User context: ${this.buildPersonalizedContext(user, addictions)}
+
+        Provide:
+        1. Immediate coping strategy
+        2. Grounding technique
+        3. Emergency resources if needed
+        4. Encouraging message
+
+        Respond with JSON:
+        {
+          "message": "Supportive intervention message",
+          "copingStrategy": "Immediate action to take",
+          "groundingTechnique": "Quick grounding method",
+          "urgencyLevel": "${urgencyLevel}",
+          "resources": ["emergency contact suggestions"],
+          "followUpAction": "Next steps to take"
+        }
+      `;
+
+      const response = await this.callOpenAI(prompt, 0.5, 600);
+      
+      try {
+        let cleanResponse = response.trim();
+        if (cleanResponse.startsWith('```json')) {
+          cleanResponse = cleanResponse.replace(/```json\s*/g, '');
+        }
+        if (cleanResponse.endsWith('```')) {
+          cleanResponse = cleanResponse.replace(/```\s*$/g, '');
+        }
+        
+        return JSON.parse(cleanResponse);
+      } catch (parseError) {
+        // Fallback intervention
+        return {
+          message: "I'm here to support you through this difficult moment. Take a deep breath.",
+          copingStrategy: "Try the 4-7-8 breathing technique: inhale for 4, hold for 7, exhale for 8.",
+          groundingTechnique: "Name 5 things you can see, 4 you can touch, 3 you can hear, 2 you can smell, 1 you can taste.",
+          urgencyLevel,
+          resources: ["Crisis helpline: 988", "Text HOME to 741741"],
+          followUpAction: "Reach out to a trusted friend or family member"
+        };
+      }
+    } catch (error) {
+      console.error('Error generating intervention:', error);
       throw error;
     }
   }
