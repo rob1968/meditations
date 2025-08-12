@@ -648,68 +648,100 @@
   opacity: 0.9;
 }
 
-/* Warning and Error Message Styles - Yellow for better visibility on dark background */
-.error-banner,
-.error-message {
-  color: #FFD700 !important;
-  background: rgba(255, 215, 0, 0.1) !important;
-  border: 1px solid rgba(255, 215, 0, 0.3) !important;
+/* Warning and Error Message Styles - Red for better visibility */
+.error-banner {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: white !important;
+  border: 2px solid #ef4444 !important;
   backdrop-filter: blur(10px);
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin: 8px 0;
-  font-weight: 500;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  font-weight: 600;
+  font-size: 16px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+  animation: shake 0.5s ease-in-out;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
 .warning-text,
 .min-warning {
-  color: #FFD700 !important;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: white !important;
+  border: 2px solid #ef4444 !important;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 8px 0;
   font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+  animation: shake 0.5s ease-in-out;
+  display: inline-block;
 }
 
 .credits-warning {
-  color: #FFD700 !important;
-  background: rgba(255, 215, 0, 0.1) !important;
-  border: 1px solid rgba(255, 215, 0, 0.3) !important;
-  padding: 8px 12px;
-  border-radius: 6px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: white !important;
+  border: 2px solid #ef4444 !important;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 8px 0;
+  font-weight: 600;
   font-size: 14px;
-  font-weight: 500;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+  animation: shake 0.5s ease-in-out;
 }
 
 .upload-error,
 .upload-error-display {
-  color: #FFD700 !important;
-  background: rgba(255, 215, 0, 0.1) !important;
-  border: 1px solid rgba(255, 215, 0, 0.3) !important;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: white !important;
+  border: 2px solid #ef4444 !important;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 8px 0;
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+  animation: shake 0.5s ease-in-out;
 }
 
 .word-count.warning {
-  color: #FFD700 !important;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: white !important;
+  border: 2px solid #ef4444 !important;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-weight: 600;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
-/* All Warning and Error Message Styles - Yellow for better visibility on dark background */
-.error-banner,
-.error-message,
+/* All Warning Styles - Consistent Red Styling */
 .save-message.error,
 .emergency-error,
 .city-autocomplete-error,
 .city-selector-error,
 .location-selector-error,
 .error-text,
-.tts-tier-info.error,
-.warning-text,
-.min-warning {
-  color: #FFD700 !important;
-  background: rgba(255, 215, 0, 0.1) !important;
-  border: 1px solid rgba(255, 215, 0, 0.3) !important;
-  padding: 8px 12px;
-  border-radius: 6px;
+.tts-tier-info.error {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: white !important;
+  border: 2px solid #ef4444 !important;
+  padding: 12px 16px;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+  animation: shake 0.5s ease-in-out;
 }
 
 /* Auto-fade animation for warnings */
@@ -2154,31 +2186,26 @@
   }
 }
 
-/* Nonsense text detection error styling - bright red warning */
+/* Nonsense text detection error styling - bright red warning - UPDATED */
 .nonsense-error-message,
 .journal-error-message {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  color: white;
-  padding: 16px 20px;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  text-align: center;
-  margin: 16px 0;
-  border: 2px solid #f87171;
-  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.3);
-  animation: shake 0.5s ease-in-out;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: #ffffff !important;
+  padding: 16px 24px !important;
+  border-radius: 12px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  margin: 16px 0 !important;
+  border: 2px solid #ef4444 !important;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4) !important;
+  animation: shake 0.5s ease-in-out !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-.nonsense-error-message::before,
-.journal-error-message::before {
-  content: "⚠️ ";
-  font-size: 20px;
-  margin-right: 8px;
-}
+/* Remove the CSS-generated emoji since we're now including it in the text */
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }

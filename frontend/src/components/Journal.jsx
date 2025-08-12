@@ -884,7 +884,7 @@ const performPreSaveChecks = async () => {
     
     // Check for nonsense text - this blocks saving (for both new and updates)
     if (checkResult && checkResult.isNonsense === true) {
-      console.log('=== NONSENSE DETECTED BY OPENAI - BLOCKING SAVE ===');
+      console.log('=== NONSENSE DETECTED BY OPENAI - BLOCKING SAVE - v2 ===');
       console.log('Is update:', !!editingEntry);
       
       const errorMessage = editingEntry ? 
