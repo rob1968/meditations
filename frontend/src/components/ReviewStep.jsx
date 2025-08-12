@@ -42,7 +42,7 @@ const ReviewStep = ({ wizardData, voices, savedCustomBackgrounds }) => {
     
     return {
       icon: '🚫',
-      name: t('noBackground', 'Geen muziek')
+      name: t('noBackground', 'No music')
     };
   };
 

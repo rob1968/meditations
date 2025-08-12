@@ -124,8 +124,8 @@ const BackgroundSlider = forwardRef(({
   const noMusicCard = {
     value: 'none',
     icon: '🔇',
-    label: t('noMusic', 'Geen muziek'),
-    description: t('noMusicDesc', 'Meditatie zonder achtergrondmuziek'),
+    label: t('noMusic', 'No music'),
+    description: t('noMusicDesc', 'Meditation without background music'),
     color: '#64748b'
   };
 

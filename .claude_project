@@ -1,0 +1,25 @@
+{
+  "name": "Meditation App - meditations.pihappy.me",
+  "description": "Full-stack meditation and wellness application with AI-powered features",
+  "directories": [
+    "backend",
+    "frontend", 
+    "assets"
+  ],
+  "primaryLanguages": ["javascript", "jsx"],
+  "framework": "React + Node.js/Express",
+  "deployment": {
+    "build": "npm run build",
+    "deploy": "./deploy.sh",
+    "logs": "npm run logs",
+    "status": "npm run status"
+  },
+  "key_files": [
+    "CLAUDE.md",
+    "package.json", 
+    "backend/server.js",
+    "frontend/src/App.jsx",
+    "frontend/src/components/UnifiedDashboard.jsx"
+  ],
+  "current_focus": "Community features with like/play functionality implemented and working"
+}

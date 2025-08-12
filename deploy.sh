@@ -64,16 +64,22 @@ cp -r "$FRONTEND_DIR/build/"* "$DEPLOY_DIR/"
 
 print_status "Build files deployed to $DEPLOY_DIR"
 
-# Restart systemd service
-print_status "Restarting backend service..."
-systemctl --user restart meditations-backend
+# Restart backend process
+print_status "Restarting backend process..."
+pkill -f "meditations.pihappy.me/backend" || true
+sleep 2
+cd "$PROJECT_ROOT/backend"
+nohup npm start > ../backend.log 2>&1 &
+BACKEND_PID=$!
 
-if [ $? -eq 0 ]; then
-    print_status "Backend service restarted successfully"
-    print_status "Service status:"
-    systemctl --user status meditations-backend --no-pager -l
+print_status "Backend process started with PID: $BACKEND_PID"
+sleep 3
+
+# Check if backend is running
+if ps -p $BACKEND_PID > /dev/null 2>&1; then
+    print_status "Backend service started successfully"
 else
-    print_warning "Service restart had issues, but deployment completed"
+    print_warning "Backend might have issues, check logs with: tail -f backend.log"
 fi
 
 # Show deployment info

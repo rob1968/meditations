@@ -267,7 +267,13 @@ router.get('/user/:userId/stats', async (req, res) => {
           uniqueLanguages: 0,
           totalAudioFiles: 0,
           meditationTypes: {},
-          favoriteType: 'sleep'
+          favoriteType: 'sleep',
+          addictionStats: {
+            active: 0,
+            recovering: 0,
+            clean: 0,
+            total: 0
+          }
         });
       }
       
@@ -299,6 +305,16 @@ router.get('/user/:userId/stats', async (req, res) => {
         return total + (meditation.audioFiles ? meditation.audioFiles.length : 0);
       }, 0);
       
+      // Calculate addiction statistics
+      const Addiction = require('../models/Addiction');
+      const addictions = await Addiction.find({ user: userId });
+      const addictionStats = {
+        active: addictions.filter(a => a.status === 'active').length,
+        recovering: addictions.filter(a => a.status === 'recovering').length,
+        clean: addictions.filter(a => a.status === 'clean').length,
+        total: addictions.length
+      };
+      
       res.json({
         totalMeditations,
         totalTime,
@@ -307,7 +323,8 @@ router.get('/user/:userId/stats', async (req, res) => {
         meditationTypes,
         favoriteType: Object.keys(meditationTypes).reduce((a, b) => 
           meditationTypes[a] > meditationTypes[b] ? a : b, 'sleep'
-        )
+        ),
+        addictionStats
       });
     } catch (dbError) {
       // Database connection failed, return default stats
@@ -318,7 +335,13 @@ router.get('/user/:userId/stats', async (req, res) => {
         uniqueLanguages: 0,
         totalAudioFiles: 0,
         meditationTypes: {},
-        favoriteType: 'sleep'
+        favoriteType: 'sleep',
+        addictionStats: {
+          active: 0,
+          recovering: 0,
+          clean: 0,
+          total: 0
+        }
       });
     }
   } catch (error) {

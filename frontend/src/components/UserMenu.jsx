@@ -139,7 +139,7 @@ const UserMenu = ({
       <button 
         className={`user-menu-trigger ${isOpen ? 'open' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
-        title={user?.username || 'User Menu'}
+        title={user?.username || t('userMenu', 'User Menu')}
       >
         <div className="user-avatar">👤</div>
         <span className="user-name">{user?.username}</span>

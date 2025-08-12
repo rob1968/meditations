@@ -2232,3 +2232,2112 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ================================================
+   UNIFIED DASHBOARD STYLES - Mobile First Design
+   ================================================ */
+
+.unified-dashboard {
+  position: relative;
+  min-height: 100vh;
+  background: var(--gradient-background);
+  color: var(--text-primary);
+}
+
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+  padding: var(--space-xl) var(--space-lg);
+  text-align: center;
+  border-radius: 0 0 24px 24px;
+  margin-bottom: var(--space-lg);
+}
+
+.hero-content {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.hero-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: var(--space-sm);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xl);
+  line-height: 1.5;
+}
+
+.hero-cta {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 16px 32px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+  min-height: 56px;
+}
+
+.hero-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+}
+
+.hero-cta:active {
+  transform: scale(0.98);
+}
+
+.cta-icon {
+  font-size: 24px;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  background: var(--glass-light);
+  border-radius: 16px;
+  padding: 6px;
+  margin: 0 var(--space-lg) var(--space-lg) var(--space-lg);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tab-button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 64px;
+}
+
+.tab-button.active {
+  background: var(--glass-medium);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+}
+
+.tab-button:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.tab-icon {
+  font-size: 20px;
+}
+
+/* Tab Content */
+.tab-content {
+  padding: 0 var(--space-lg) var(--space-xl) var(--space-lg);
+  min-height: 400px;
+}
+
+/* Filter Chips */
+.filter-chips {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  padding: var(--space-sm) 0;
+  margin-bottom: var(--space-lg);
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-chip {
+  background: var(--glass-light);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 8px 16px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+}
+
+.filter-chip.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+  transform: scale(1.05);
+}
+
+.filter-chip:hover:not(.active) {
+  background: var(--glass-medium);
+  color: var(--text-primary);
+}
+
+.filter-chip-icon {
+  font-size: 16px;
+}
+
+/* Mine Tab Styles */
+.mine-tab {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+.meditations-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+}
+
+@media (min-width: 768px) {
+  .meditations-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.meditation-card {
+  background: var(--glass-light);
+  border-radius: 16px;
+  padding: var(--space-lg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.meditation-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.meditation-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+}
+
+.meditation-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.3;
+  flex: 1;
+  margin-right: var(--space-sm);
+}
+
+.meditation-type {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+
+.meditation-card-content {
+  margin-bottom: var(--space-lg);
+}
+
+.meditation-preview {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.meditation-card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.play-button {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.play-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.play-button.playing {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.play-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.meditation-card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.meditation-date {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+/* Community Tab Styles */
+.community-tab {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+.community-meditations {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.community-meditation-card {
+  background: var(--glass-light);
+  border-radius: 16px;
+  padding: var(--space-lg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.community-meditation-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.community-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+}
+
+.community-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.community-author {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.community-type {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.community-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.like-count, .play-count {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.community-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm) 0;
+  line-height: 1.3;
+}
+
+.community-preview {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 var(--space-lg) 0;
+}
+
+.community-card-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.like-button {
+  background: var(--glass-medium);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--text-primary);
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+}
+
+.like-button:hover {
+  background: var(--glass-light);
+  transform: translateY(-1px);
+}
+
+/* Create Tab Styles */
+.create-tab {
+  animation: fadeInUp 0.4s ease-out;
+  padding-top: var(--space-xl); /* Add extra space at top to prevent wizard overlap */
+}
+
+/* Wizard container in create tab needs extra top spacing */
+.create-tab .wizard-container {
+  padding-top: var(--space-2xl); /* 32px instead of default 20px */
+}
+
+/* Mobile improvements for wizard in create tab */
+@media (max-width: 768px) {
+  .create-tab {
+    padding-top: var(--space-md); /* Reduce top padding on mobile */
+  }
+  
+  .create-tab .wizard-container {
+    padding: var(--space-md); /* Smaller padding on mobile */
+    padding-top: var(--space-xl); /* Still keep top spacing for step indicators */
+    margin-top: var(--space-md); /* Add margin for better spacing */
+  }
+  
+  .create-tab .step-indicator {
+    margin-bottom: var(--space-md); /* Reduce spacing on mobile */
+    width: 100%;
+    display: block;
+  }
+  
+  .create-tab .step-items {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 6px; /* Smaller gaps between step items */
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .create-tab .step-item {
+    padding: 6px; /* Smaller padding for step items */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+  }
+  
+  .create-tab .step-number {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .create-tab .wizard-container {
+    padding: var(--space-sm);
+    padding-top: var(--space-lg);
+  }
+  
+  .create-tab .step-number {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+  
+  .create-tab .step-title {
+    font-size: 9px;
+  }
+}
+
+.quick-create-header {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+}
+
+.quick-create-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.quick-create-header p {
+  color: var(--text-secondary);
+  font-size: 16px;
+  margin: 0;
+}
+
+.quick-create-wizard {
+  background: var(--glass-light);
+  border-radius: 20px;
+  padding: var(--space-xl);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.step-indicators {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.step-indicator {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--glass-medium);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.step-indicator.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  transform: scale(1.1);
+}
+
+.step-content {
+  min-height: 200px;
+  margin-bottom: var(--space-xl);
+}
+
+.step-content h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  margin: 0 0 var(--space-lg) 0;
+}
+
+.type-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: var(--space-md);
+}
+
+.type-button {
+  background: var(--glass-medium);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  color: var(--text-primary);
+  padding: var(--space-lg);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 100px;
+}
+
+.type-button.selected {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+  transform: scale(1.05);
+}
+
+.type-button:hover:not(.selected) {
+  background: var(--glass-light);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.type-icon {
+  font-size: 24px;
+}
+
+.quick-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.quick-option {
+  background: var(--glass-medium);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  color: var(--text-primary);
+  padding: var(--space-lg);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  min-height: 64px;
+}
+
+.quick-option:hover {
+  background: var(--glass-light);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.option-icon {
+  font-size: 24px;
+  width: 40px;
+  text-align: center;
+}
+
+.option-text {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.creation-summary {
+  background: var(--glass-medium);
+  border-radius: 12px;
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.creation-summary p {
+  margin: 0 0 var(--space-sm) 0;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.creation-summary p:last-child {
+  margin-bottom: 0;
+}
+
+.create-button {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  min-height: 56px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.create-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.create-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.wizard-navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.nav-button {
+  background: var(--glass-medium);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--text-primary);
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 44px;
+}
+
+.nav-button:hover {
+  background: var(--glass-light);
+  transform: translateY(-1px);
+}
+
+.nav-button.next {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+}
+
+/* Empty States */
+.empty-state {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--text-secondary);
+}
+
+.empty-state-icon {
+  font-size: 64px;
+  margin-bottom: var(--space-lg);
+  opacity: 0.6;
+}
+
+.empty-state h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.empty-state p {
+  font-size: 16px;
+  margin: 0 0 var(--space-lg) 0;
+  line-height: 1.5;
+}
+
+.create-first-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 48px;
+}
+
+.create-first-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* Loading and Error States */
+.loading-state, .error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  text-align: center;
+  min-height: 200px;
+}
+
+.error-state p {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+.error-state button {
+  background: var(--glass-light);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--text-primary);
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Floating Action Button */
+.fab {
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom) + 20px);
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* ================================================
+   ORIGINAL MEDITATION CARD STYLES - For Mine and Community tabs
+   ================================================ */
+
+/* Original MyAudio/Community card list styling */
+.meditations-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.meditation-card {
+  background: var(--glass-light);
+  border-radius: 16px;
+  padding: var(--space-md);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  display: flex;
+  gap: var(--space-md);
+  position: relative;
+}
+
+.meditation-card:hover {
+  background: var(--glass-medium);
+  transform: translateY(-2px);
+}
+
+.meditation-thumbnail {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.meditation-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Thumbnail controls - play button and duration */
+.thumbnail-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+}
+
+.thumbnail-play-button {
+  background: rgba(0, 0, 0, 0.8);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  color: white;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.thumbnail-play-button:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+.thumbnail-play-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.thumbnail-duration {
+  font-size: 12px;
+  color: white;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.meditation-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.meditation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-xs);
+}
+
+.meditation-type {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.meditation-date {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.meditation-info {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xs);
+}
+
+.meditation-duration, .meditation-language {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meditation-text {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.meditation-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.meditation-action-button {
+  background: var(--glass-medium);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meditation-action-button:hover {
+  background: var(--glass-light);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.meditation-action-button.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+}
+
+.meditation-action-button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.meditation-action-button.danger {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.meditation-action-button.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+}
+
+/* Community card specific styles */
+.meditation-card.community-card {
+  /* Community cards use same base styling as meditation-card */
+}
+
+.meditation-card.community-card .meditation-author {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.meditation-card.community-card .meditation-stats {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-xs);
+}
+
+.meditation-card.community-card .meditation-stat {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================================================
+   MOBILE FIRST UX OPTIMIZATIONS - Touch-Friendly Design
+   ================================================ */
+
+/* Base mobile styles (320px and up) */
+@media (max-width: 768px) {
+  /* Container and spacing improvements */
+  .unified-dashboard {
+    padding: 0;
+  }
+  
+  .hero-section {
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+  }
+  
+  .hero-title {
+    font-size: 24px; /* Smaller but readable */
+    line-height: 1.3;
+  }
+  
+  .hero-subtitle {
+    font-size: 14px;
+    margin-bottom: var(--space-md);
+  }
+  
+  /* Tab navigation - larger touch targets */
+  .tab-navigation {
+    margin: 0 var(--space-sm) var(--space-md) var(--space-sm);
+    padding: 4px;
+  }
+  
+  .tab-button {
+    min-height: 56px; /* Apple's recommended 44px + padding */
+    padding: var(--space-sm);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  
+  .tab-icon {
+    font-size: 18px;
+    margin-bottom: 2px;
+  }
+  
+  /* Tab content with better spacing */
+  .tab-content {
+    padding: 0 var(--space-sm) var(--space-xl) var(--space-sm);
+  }
+  
+  /* Filter chips - better scrolling */
+  .filter-chips {
+    margin: 0 -var(--space-sm) var(--space-md) -var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    gap: var(--space-xs);
+  }
+  
+  .filter-chip {
+    min-height: 44px; /* Touch-friendly */
+    padding: var(--space-sm) var(--space-md);
+    font-size: 13px;
+    white-space: nowrap;
+    border-radius: 22px;
+  }
+  
+  /* Mobile-optimized meditation cards */
+  .meditation-card, .community-meditation-card {
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+    border-radius: 16px;
+    /* Stack vertically on very small screens */
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  /* Mine tab specific mobile optimization */
+  .meditations-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+  
+  .meditation-card.expanded {
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+    border-radius: 16px;
+    background: var(--glass-light);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .meditation-image-container {
+    width: 100%;
+    height: 180px;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: var(--space-sm);
+  }
+  
+  .meditation-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .meditation-content {
+    text-align: left;
+  }
+  
+  .meditation-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
+    line-height: 1.3;
+  }
+  
+  .meditation-type-label {
+    display: inline-block;
+    background: var(--glass-medium);
+    color: var(--text-primary);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: var(--space-sm);
+  }
+  
+  .meditation-meta {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+    flex-wrap: wrap;
+  }
+  
+  .meditation-date, .meditation-language, .meditation-duration {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--glass-medium);
+    padding: 4px 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .meditation-text-preview {
+    font-size: 14px;
+    color: var(--text-tertiary);
+    line-height: 1.5;
+    margin-bottom: var(--space-sm);
+  }
+  
+  .audio-player-section {
+    margin: var(--space-sm) 0;
+  }
+  
+  .audio-player-section audio {
+    width: 100%;
+    height: 40px;
+    border-radius: 8px;
+  }
+  
+  .meditation-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    margin-top: var(--space-sm);
+  }
+  
+  .action-btn {
+    background: var(--glass-medium);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: var(--text-primary);
+    padding: var(--space-sm) var(--space-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    flex: 1;
+    justify-content: center;
+    min-width: 100px;
+  }
+  
+  .action-btn:hover {
+    background: var(--glass-light);
+    transform: translateY(-1px);
+  }
+  
+  .action-btn.share-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-color: #10b981;
+  }
+  
+  .action-btn.delete-btn {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border-color: #ef4444;
+  }
+  
+  .action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  /* Image actions mobile optimization */
+  .image-actions {
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--space-sm);
+  }
+  
+  .image-action-button {
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+  }
+  
+  .image-action-button:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
+  }
+  
+  /* Image options menu mobile styling */
+  .image-options-menu {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    background: var(--glass-dark);
+    backdrop-filter: blur(20px);
+    border-radius: 12px;
+    padding: var(--space-sm);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
+    min-width: 200px;
+  }
+  
+  .image-options-menu button {
+    width: 100%;
+    background: var(--glass-medium);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-primary);
+    padding: var(--space-sm);
+    margin-bottom: var(--space-xs);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 13px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-xs);
+  }
+  
+  .image-options-menu button:hover {
+    background: var(--glass-light);
+    transform: translateY(-1px);
+  }
+  
+  .image-options-menu button:last-child {
+    margin-bottom: 0;
+  }
+  
+  .delete-image-btn {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+    color: #ef4444 !important;
+  }
+  
+  .delete-image-btn:hover {
+    background: rgba(239, 68, 68, 0.3) !important;
+  }
+  
+  /* Shared badge styling */
+  .shared-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: var(--space-xs);
+  }
+  
+  /* Upload overlay styling */
+  .upload-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+  }
+  
+  .upload-spinner {
+    font-size: 24px;
+    margin-bottom: var(--space-sm);
+    animation: spin 1s linear infinite;
+  }
+  
+  .upload-overlay p {
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0;
+  }
+  
+  .meditation-thumbnail {
+    width: 100%;
+    height: 160px; /* Wider aspect ratio for mobile */
+    margin-bottom: var(--space-sm);
+    border-radius: 12px;
+  }
+  
+  .meditation-details {
+    text-align: left;
+  }
+  
+  .meditation-type {
+    font-size: 18px; /* Larger for readability */
+    line-height: 1.3;
+    margin-bottom: var(--space-xs);
+  }
+  
+  .meditation-info {
+    margin-bottom: var(--space-sm);
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+  
+  .meditation-duration, .meditation-language {
+    font-size: 13px; /* Larger text */
+    padding: 4px 8px;
+    background: var(--glass-medium);
+    border-radius: 12px;
+  }
+  
+  .meditation-text {
+    font-size: 14px; /* More readable */
+    line-height: 1.5;
+    -webkit-line-clamp: 3; /* More lines on mobile */
+    margin-bottom: var(--space-sm);
+  }
+  
+  /* Touch-friendly action buttons */
+  .meditation-actions {
+    gap: var(--space-sm);
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  
+  .meditation-action-button {
+    min-height: 44px; /* Touch target */
+    padding: var(--space-sm) var(--space-md);
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 12px;
+    flex: 1;
+    min-width: 80px;
+    justify-content: center;
+  }
+  
+  /* Create wizard improvements */
+  .quick-create-wizard {
+    padding: var(--space-md);
+    margin: var(--space-sm);
+    border-radius: 16px;
+  }
+  
+  .create-tab .wizard-container {
+    padding: var(--space-sm);
+    padding-top: var(--space-md);
+    margin-top: 0;
+  }
+  
+  .create-tab .step-indicator {
+    margin-bottom: var(--space-sm);
+    width: 100%;
+    display: block;
+  }
+  
+  .create-tab .step-items {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 4px;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .create-tab .step-item {
+    padding: 2px;
+    flex: 1;
+    min-width: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .create-tab .step-number {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  
+  .create-tab .step-title {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  
+  /* Empty states */
+  .empty-state {
+    padding: var(--space-xl) var(--space-md);
+  }
+  
+  .empty-state-icon {
+    font-size: 48px;
+    margin-bottom: var(--space-md);
+  }
+  
+  .empty-state h3 {
+    font-size: 18px;
+    margin-bottom: var(--space-sm);
+  }
+  
+  .empty-state p {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  /* FAB positioning */
+  .fab {
+    bottom: calc(80px + var(--space-md));
+    right: var(--space-md);
+    width: 56px;
+    height: 56px;
+  }
+}
+
+/* Extra small screens (iPhone SE, etc.) */
+@media (max-width: 375px) {
+  .hero-title {
+    font-size: 22px;
+  }
+  
+  .tab-button {
+    min-height: 52px;
+    font-size: 12px;
+  }
+  
+  .tab-icon {
+    font-size: 16px;
+  }
+  
+  .meditation-card, .community-meditation-card {
+    padding: var(--space-sm);
+  }
+  
+  .meditation-card.expanded {
+    padding: var(--space-sm);
+  }
+  
+  .meditation-image-container {
+    height: 160px;
+  }
+  
+  .meditation-thumbnail {
+    height: 140px;
+  }
+  
+  .meditation-action-button {
+    min-width: 70px;
+    padding: 8px 12px;
+  }
+  
+  .action-btn {
+    min-width: 90px;
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 40px;
+  }
+  
+  .meditation-title {
+    font-size: 16px;
+  }
+  
+  .meditation-type-label {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+  
+  .image-action-button {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+  
+  .create-tab .step-number {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+  
+  .create-tab .step-title {
+    font-size: 9px;
+  }
+}
+
+/* ================================================
+   BOTTOM NAVIGATION - Mobile-First Design
+   ================================================ */
+
+.bottom-navigation {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 414px;
+  width: 100%;
+  background: var(--glass-dark);
+  backdrop-filter: blur(20px);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 999;
+  min-height: 70px;
+  /* iOS Safari safe area support */
+  padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom));
+  /* Ensure it stays above content */
+  box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-tab {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-sm);
+  border-radius: 12px;
+  min-width: 60px;
+  min-height: 56px; /* Touch-friendly */
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.nav-tab.active {
+  color: var(--text-primary);
+  background: var(--glass-medium);
+  transform: translateY(-2px);
+}
+
+.nav-tab:hover:not(.active) {
+  color: var(--text-secondary);
+  background: var(--glass-light);
+}
+
+.nav-tab-icon {
+  font-size: 22px;
+  margin-bottom: 2px;
+  transition: transform 0.3s ease;
+}
+
+.nav-tab.active .nav-tab-icon {
+  transform: scale(1.1);
+}
+
+.nav-tab-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  line-height: 1;
+}
+
+/* Notification badge */
+.nav-tab-badge {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  background: #ef4444;
+  color: white;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile bottom navigation optimizations */
+@media (max-width: 768px) {
+  .bottom-navigation {
+    padding: var(--space-xs) var(--space-sm);
+    min-height: 64px;
+  }
+  
+  .nav-tab {
+    min-width: 55px;
+    min-height: 52px;
+    padding: 6px 8px;
+  }
+  
+  .nav-tab-icon {
+    font-size: 20px;
+  }
+  
+  .nav-tab-label {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 375px) {
+  .bottom-navigation {
+    padding: var(--space-xs);
+    min-height: 60px;
+  }
+  
+  .nav-tab {
+    min-width: 50px;
+    min-height: 48px;
+    padding: 4px 6px;
+  }
+  
+  .nav-tab-icon {
+    font-size: 18px;
+  }
+  
+  .nav-tab-label {
+    font-size: 9px;
+  }
+}
+
+/* Touch-friendly interactions */
+@media (hover: none) {
+  .meditation-card:hover,
+  .community-meditation-card:hover,
+  .tab-button:hover,
+  .filter-chip:hover,
+  .play-button:hover {
+    transform: none;
+  }
+  
+  .meditation-card:active,
+  .community-meditation-card:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Camera Interface Styles */
+.camera-interface {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-lg);
+}
+
+.camera-video {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  margin-bottom: var(--space-lg);
+  object-fit: cover;
+}
+
+.camera-controls {
+  display: flex;
+  gap: var(--space-lg);
+  align-items: center;
+  justify-content: center;
+}
+
+.capture-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.capture-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.capture-btn:active {
+  transform: scale(0.95);
+}
+
+.cancel-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: var(--space-sm) var(--space-lg);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+  min-height: 44px;
+}
+
+.cancel-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+.cancel-btn:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 768px) {
+  .camera-interface {
+    padding: var(--space-md);
+  }
+  
+  .camera-video {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+  
+  .camera-controls {
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+  }
+  
+  .capture-btn {
+    width: 56px;
+    height: 56px;
+    font-size: 18px;
+  }
+  
+  .cancel-btn {
+    padding: var(--space-xs) var(--space-md);
+    font-size: 13px;
+  }
+}
+
+/* Enhanced Community Cards Styling - FORCED TEST */
+.community-meditation-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
+  border-radius: 30px !important;
+  padding: 30px !important;
+  margin-bottom: 25px !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2) !important;
+}
+
+.community-meditation-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+  background-size: 200% 100%;
+  animation: gradientShift 4s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.community-meditation-card:hover {
+  transform: translateY(-12px) scale(1.03) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
+}
+
+.community-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+}
+
+.community-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.community-author {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.community-author::before {
+  content: '👤';
+  font-size: 12px;
+}
+
+.community-type {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  display: inline-block;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.community-stats {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.like-count,
+.play-count {
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.community-card-content {
+  margin-bottom: var(--space-lg);
+}
+
+.community-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  line-height: 1.2;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 50%, #e9ecef 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.community-preview {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: var(--space-md);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.community-card-actions {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.community-card-actions .play-button {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 50% !important;
+  width: 56px !important;
+  height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 20px !important;
+  cursor: pointer !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+  min-height: 44px !important;
+  min-width: 44px !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.play-button:hover {
+  transform: scale(1.15);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.6);
+}
+
+.play-button.playing {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+  animation: pulse 2s infinite;
+}
+
+.play-button.playing:hover {
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+.community-card-actions .like-button {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 16px !important;
+  padding: 12px 20px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+  min-height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+}
+
+.like-button:hover {
+  background: linear-gradient(135deg, #ec4899, #db2777);
+  color: white;
+  border-color: rgba(236, 72, 153, 0.6);
+  transform: translateY(-3px) scale(1.08);
+  box-shadow: 0 8px 25px rgba(236, 72, 153, 0.5);
+}
+
+
+/* Community Audio Player */
+.community-audio-player-section {
+  margin: var(--space-lg) 0;
+}
+
+.community-audio-player-section audio {
+  width: 100% !important;
+  height: 50px !important;
+  border-radius: 12px !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Enhanced Mobile optimizations for community cards */
+@media (max-width: 768px) {
+  .community-meditation-card {
+    padding: 20px !important;
+    margin-bottom: 16px !important;
+    border-radius: 20px !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%) !important;
+  }
+  
+  .community-card-header {
+    flex-direction: column !important;
+    gap: 12px !important;
+    align-items: flex-start !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .community-card-meta {
+    width: 100% !important;
+  }
+  
+  .community-author {
+    font-size: 13px !important;
+    margin-bottom: 6px !important;
+  }
+  
+  .community-type {
+    font-size: 10px !important;
+    padding: 4px 12px !important;
+  }
+  
+  .community-stats {
+    align-self: flex-end !important;
+    margin-top: -30px !important;
+  }
+  
+  .like-count,
+  .play-count {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+  }
+  
+  .community-card-content {
+    margin-bottom: 16px !important;
+  }
+  
+  .community-title {
+    font-size: 17px !important;
+    margin-bottom: 10px !important;
+    line-height: 1.3 !important;
+  }
+  
+  .community-preview {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+    -webkit-line-clamp: 3 !important;
+  }
+  
+  .community-audio-player-section {
+    margin: 16px 0 !important;
+  }
+  
+  .community-audio-player-section audio {
+    height: 45px !important;
+    border-radius: 10px !important;
+  }
+  
+  .community-card-actions {
+    gap: 12px !important;
+    justify-content: center !important;
+    margin-top: 16px !important;
+  }
+  
+  .community-card-actions .like-button {
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+    border-radius: 12px !important;
+    flex: 1 !important;
+    max-width: 150px !important;
+  }
+
+  /* Mobile community grid optimization */
+  .community-meditations {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .community-tab {
+    padding: 16px !important;
+  }
+  
+  .community-tab .meditations-grid {
+    gap: 16px !important;
+  }
+}
+

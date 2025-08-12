@@ -55,7 +55,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
       console.log('Initializing Pi SDK...');
       window.Pi.init({
         version: "2.0",
-        sandbox: false // Set to false for production
+        sandbox: false // Set to false for production like pingo1
       });
       console.log('Pi SDK initialized successfully');
 
@@ -151,7 +151,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
         onCancel: function(paymentId) {
           console.log('❌ Pi SDK: Payment cancelled', paymentId);
           setPaymentStatus(t('paymentCancelled', 'Payment cancelled'));
-          setError('Payment was cancelled by user');
+          setError(t('paymentCancelledByUser', 'Payment was cancelled by user'));
           setLoading(false);
         },
 
@@ -186,7 +186,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ margin: 0, color: '#6B46C1' }}>
-            <span style={{ fontSize: '24px' }}>π</span> NEW Pi Payment
+            <span style={{ fontSize: '24px' }}>π</span> {t('newPiPayment', 'NEW Pi Payment')}
           </h2>
           <button onClick={onClose} style={{
             background: 'none', border: 'none', fontSize: '24px',
@@ -220,7 +220,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
         {!loading && (
           <div>
             <p style={{ textAlign: 'center', marginBottom: '20px', color: '#666' }}>
-              Select tokens package (NEW Pi SDK implementation):
+              {t('selectTokensPackage', 'Select tokens package (NEW Pi SDK implementation):')}
             </p>
             
             <div style={{ display: 'grid', gap: '12px' }}>

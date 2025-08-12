@@ -27,13 +27,13 @@ const ConfirmDialog = ({
             className="confirm-btn confirm-yes" 
             onClick={onConfirm}
           >
-            ✅ {confirmText || t('confirm', 'Bevestigen')}
+            ✅ {confirmText || t('confirm', 'Confirm')}
           </button>
           <button 
             className="confirm-btn confirm-no" 
             onClick={onCancel}
           >
-            ❌ {cancelText || t('cancel', 'Annuleren')}
+            ❌ {cancelText || t('cancel', 'Cancel')}
           </button>
         </div>
       </div>

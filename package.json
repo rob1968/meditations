@@ -9,12 +9,15 @@
     "backend:dev": "cd backend && npm run dev",
     "frontend": "cd frontend && npm start",
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install --legacy-peer-deps",
-    "build": "cd frontend && GENERATE_SOURCEMAP=false npm run build",
+    "build": "cd frontend && GENERATE_SOURCEMAP=false npm run build && cd .. && cp -r frontend/build/* .",
+    "build-only": "cd frontend && GENERATE_SOURCEMAP=false npm run build",
+    "copy-files": "cp -r frontend/build/* .",
     "deploy": "./deploy.sh",
-    "deploy-quick": "npm run build && cp -r frontend/build/* . && systemctl --user restart meditations-backend",
-    "restart": "systemctl --user restart meditations-backend",
-    "status": "systemctl --user status meditations-backend",
-    "logs": "journalctl --user -u meditations-backend -f"
+    "deploy-quick": "npm run build",
+    "restart-backend": "pkill -f 'meditations.pihappy.me/backend' && cd backend && nohup npm start > ../backend.log 2>&1 &",
+    "stop-backend": "pkill -f 'meditations.pihappy.me/backend'",
+    "status": "ps aux | grep 'meditations.pihappy.me/backend' | grep -v grep || echo 'Backend not running'",
+    "logs": "tail -f backend.log"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

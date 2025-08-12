@@ -6,9 +6,7 @@ const BottomNavigation = ({ activeTab, onTabChange, user, onLogout }) => {
   const { t } = useTranslation();
 
   const tabs = [
-    { id: 'myAudio', icon: '🧘', label: t('meditations', 'Meditations') },
-    { id: 'community', icon: '🔮', label: t('community', 'Community') },
-    { id: 'create', icon: '✨', label: t('creeer', 'Create') },
+    { id: 'dashboard', icon: '🧘', label: t('meditations', 'Meditations') },
     { id: 'journal', icon: '📔', label: t('journal', 'Journal') }
   ];
 

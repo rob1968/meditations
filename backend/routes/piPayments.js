@@ -12,17 +12,21 @@ const router = express.Router();
 const axios = require('axios');
 const User = require('../models/User');
 
-// Helper function to call Pi Network API using axios
+// Helper function to call Pi Network API using axios (pingo1 pattern)
 async function callPiAPI(endpoint, method = 'GET', body = null) {
   const apiKey = process.env.PI_API_KEY;
   
   if (!apiKey) {
-    throw new Error('PI_API_KEY not configured');
+    console.error('PI_API_KEY is not set in environment variables.');
+    throw new Error('Server configuration error for Pi Payments.');
   }
+
+  // Always use production URL like pingo1
+  const baseUrl = 'https://api.minepi.com/v2';
 
   const config = {
     method: method.toLowerCase(),
-    url: `https://api.minepi.com/v2/${endpoint}`,
+    url: `${baseUrl}/${endpoint}`,
     headers: {
       'Authorization': `Key ${apiKey}`,
       'Content-Type': 'application/json',
@@ -53,55 +57,102 @@ async function callPiAPI(endpoint, method = 'GET', body = null) {
   }
 }
 
-// Approve payment endpoint
+// Approve payment endpoint (pingo1 pattern)
 router.post('/approve', async (req, res) => {
-  try {
-    const { paymentId } = req.body;
+  const { paymentId } = req.body;
+  
+  if (!paymentId) {
+    return res.status(400).json({ message: 'Missing paymentId' });
+  }
+  
+  if (!process.env.PI_API_KEY) {
+    console.error('PI_API_KEY is not set in environment variables.');
+    return res.status(500).json({ message: 'Server configuration error for Pi Payments.' });
+  }
 
-    if (!paymentId) {
-      return res.status(400).json({
-        success: false,
-        error: 'paymentId is required'
+  try {
+    console.log(`Approving Pi payment paymentId: ${paymentId}`);
+    
+    const piServerResponse = await axios.post(
+      `https://api.minepi.com/v2/payments/${paymentId}/approve`,
+      {},
+      {
+        headers: {
+          'Authorization': `Key ${process.env.PI_API_KEY}`,
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+
+    if (!piServerResponse.data) {
+      console.error('Pi Server approve failed:', piServerResponse.status);
+      return res.status(piServerResponse.status).json({ 
+        message: 'Pi server failed to approve payment.', 
+        details: piServerResponse.data 
       });
     }
-
-    console.log(`Approving Pi payment: ${paymentId}`);
     
-    // Call Pi API to approve payment
-    const result = await callPiAPI(`payments/${paymentId}/approve`, 'POST');
-    
-    console.log(`Payment ${paymentId} approved successfully`);
-    
-    res.json({
+    // Approval successful, Pi SDK on client will call onReadyForServerCompletion
+    console.log(`Pi payment paymentId: ${paymentId} approved by app server.`);
+    res.status(200).json({ 
       success: true,
-      payment: result
+      message: 'Payment approved, awaiting completion.' 
     });
-
+    
   } catch (error) {
+    if (error.response) {
+      console.error('Pi Server approve failed:', error.response.status, error.response.data);
+      return res.status(error.response.status).json({ 
+        message: 'Pi server failed to approve payment.', 
+        details: error.response.data 
+      });
+    }
     console.error('Error approving Pi payment:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
+    res.status(500).json({ 
+      message: 'Internal server error during payment approval.', 
+      error: error.message 
     });
   }
 });
 
-// Complete payment and add credits
+// Complete payment and add credits (pingo1 pattern)
 router.post('/complete', async (req, res) => {
-  try {
-    const { paymentId, txid, userId, creditsAmount } = req.body;
+  const { paymentId, txid, userId, creditsAmount } = req.body;
+  
+  if (!paymentId || !txid) {
+    return res.status(400).json({ message: 'Missing paymentId or txid' });
+  }
+  
+  if (!process.env.PI_API_KEY) {
+    console.error('PI_API_KEY is not set in environment variables.');
+    return res.status(500).json({ message: 'Server configuration error for Pi Payments.' });
+  }
 
-    if (!paymentId || !txid) {
-      return res.status(400).json({
-        success: false,
-        error: 'paymentId and txid are required'
+  try {
+
+    console.log(`Completing Pi payment paymentId: ${paymentId} with txid: ${txid}`);
+    
+    // Use direct axios call like pingo1
+    const piServerResponse = await axios.post(
+      `https://api.minepi.com/v2/payments/${paymentId}/complete`,
+      { txid },
+      {
+        headers: {
+          'Authorization': `Key ${process.env.PI_API_KEY}`,
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+
+    if (!piServerResponse.data) {
+      console.error('Pi Server complete payment failed:', piServerResponse.status);
+      return res.status(piServerResponse.status).json({ 
+        message: 'Pi server failed to complete payment.', 
+        details: piServerResponse.data 
       });
     }
-
-    console.log(`Completing Pi payment: ${paymentId} with txid: ${txid}`);
     
-    // Call Pi API to complete payment
-    const result = await callPiAPI(`payments/${paymentId}/complete`, 'POST', { txid });
+    const result = piServerResponse.data;
     
     console.log(`Payment ${paymentId} completed successfully`);
     

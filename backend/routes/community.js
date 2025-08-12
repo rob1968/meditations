@@ -215,7 +215,8 @@ router.get('/shared-meditations', async (req, res) => {
       sortOrder = 'desc',
       page = 1,
       limit = 20,
-      featured = false
+      featured = false,
+      userId
     } = req.query;
 
     const query = {
@@ -259,13 +260,18 @@ router.get('/shared-meditations', async (req, res) => {
       .populate('author.userId', 'username')
       .lean();
 
-    // Add virtual fields
+    // Add virtual fields and user-specific data
     const processedMeditations = meditations.map(meditation => ({
       ...meditation,
-      likeCount: meditation.likes ? meditation.likes.length : 0,
+      likes: meditation.likes ? meditation.likes.length : 0,
       downloadCount: meditation.downloads ? meditation.downloads.length : 0,
       ratingCount: meditation.ratings ? meditation.ratings.length : 0,
-      playCount: meditation.plays ? meditation.plays.length : 0
+      playCount: meditation.plays ? meditation.plays.length : 0,
+      userLiked: userId ? meditation.likes?.some(like => like.userId.toString() === userId) : false,
+      sharedBy: {
+        userId: meditation.author.userId,
+        username: meditation.author.username
+      }
     }));
 
     const total = await SharedMeditation.countDocuments(query);
@@ -447,7 +453,7 @@ router.post('/share', upload.fields([
 });
 
 // Like/unlike meditation
-router.post('/meditation/:id/like', async (req, res) => {
+router.post('/meditations/:id/like', async (req, res) => {
   try {
     const { userId } = req.body;
     const meditation = await SharedMeditation.findById(req.params.id);
@@ -466,8 +472,8 @@ router.post('/meditation/:id/like', async (req, res) => {
 
     res.json({
       success: true,
-      isLiked: !isLiked,
-      likeCount: meditation.likeCount
+      userLiked: !isLiked,
+      likes: meditation.likeCount
     });
   } catch (error) {
     console.error('Error toggling like:', error);
@@ -476,7 +482,7 @@ router.post('/meditation/:id/like', async (req, res) => {
 });
 
 // Track meditation play
-router.post('/meditation/:id/play', async (req, res) => {
+router.post('/meditations/:id/play', async (req, res) => {
   try {
     const { userId } = req.body;
     const meditation = await SharedMeditation.findById(req.params.id);
@@ -488,11 +494,13 @@ router.post('/meditation/:id/play', async (req, res) => {
     // Check if user has already played this meditation
     const wasAlreadyPlayed = meditation.isPlayedBy(userId);
     
-    // Add play record (only once per unique user)
-    await meditation.addPlay(userId);
+    // Only add play record if user hasn't played before
+    if (!wasAlreadyPlayed && userId) {
+      await meditation.addPlay(userId);
+    }
 
     res.json({
-      success: true,
+      success: !wasAlreadyPlayed, // Only return success if it's a new play
       playCount: meditation.playCount,
       wasNewPlay: !wasAlreadyPlayed
     });

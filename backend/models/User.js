@@ -77,6 +77,12 @@ const UserSchema = new mongoose.Schema({
     maxlength: 500,
     required: false
   },
+  profileImage: {
+    type: String,
+    trim: true,
+    maxlength: 500,
+    required: false
+  },
   
   // Pi Network integration
   authMethod: {

@@ -164,22 +164,22 @@ const EnhancedInsightsDashboard = ({ user }) => {
             <div className="metric-card">
               <span className="metric-icon">🧘</span>
               <span className="metric-value">{insights.metrics.totalMeditations}</span>
-              <span className="metric-label">Meditaties</span>
+              <span className="metric-label">{t('meditations', 'Meditaties')}</span>
             </div>
             <div className="metric-card">
               <span className="metric-icon">⏱️</span>
               <span className="metric-value">{insights.metrics.totalMinutes}</span>
-              <span className="metric-label">Minuten</span>
+              <span className="metric-label">{t('minutes', 'Minuten')}</span>
             </div>
             <div className="metric-card">
               <span className="metric-icon">⏳</span>
               <span className="metric-value">{insights.metrics.averageDuration} min</span>
-              <span className="metric-label">Gem. Duur</span>
+              <span className="metric-label">{t('avgDuration', 'Gem. Duur')}</span>
             </div>
             <div className="metric-card">
               <span className="metric-icon">🔥</span>
               <span className="metric-value">{insights.metrics.streakDays}</span>
-              <span className="metric-label">Dagen Streak</span>
+              <span className="metric-label">{t('daysStreak', 'Dagen Streak')}</span>
             </div>
           </div>
         )}

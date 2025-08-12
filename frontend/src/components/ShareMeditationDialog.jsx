@@ -20,7 +20,10 @@ const ShareMeditationDialog = ({ meditation, onShare, onClose, isSharing, t }) =
   const handleSubmit = (e) => {
     e.preventDefault();
     if (description.trim() && countWords(description) <= 25) {
-      onShare(meditation.id, { description: description.trim() });
+      onShare({ 
+        title: `${meditationTypeLabels[meditation.meditationType] || meditation.meditationType} Meditation`,
+        description: description.trim() 
+      });
     }
   };
 

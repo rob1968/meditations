@@ -9,6 +9,7 @@ import BottomNavigation from './components/BottomNavigation';
 import MyAudio from './components/MyAudio';
 import ProfileContainer from './components/ProfileContainer';
 import CommunityHub from './components/CommunityHub';
+import UnifiedDashboard from './components/UnifiedDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import Inbox from './components/Inbox';
 import Journal from './components/Journal';
@@ -72,7 +73,7 @@ const App = () => {
   
   // User authentication state
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('journal');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileSection, setProfileSection] = useState('profile');
   const [isPiEnvironment, setIsPiEnvironment] = useState(false);
@@ -848,7 +849,7 @@ const App = () => {
     }
     
     console.log('User logged in:', userData.authMethod || 'traditional', userData.username);
-    handleTabChange('journal');
+    handleTabChange('dashboard');
   };
 
   const handleLogout = () => {
@@ -877,7 +878,7 @@ const App = () => {
     // Reset all state
     setUser(null);
     setUserCredits(null);
-    setActiveTab('create');
+    setActiveTab('dashboard');
     
     // Force page reload to ensure clean state (especially for Pi Network)
     setTimeout(() => {
@@ -920,7 +921,7 @@ const App = () => {
     setIsLoading(true);
     setError("");
     setAudioFiles([]);
-    handleTabChange('myAudio'); // Switch to My Audio tab when generation starts
+    handleTabChange('dashboard'); // Switch to dashboard when generation starts
     
     try {
       // Prepare form data for file upload if custom background is used
@@ -1475,20 +1476,18 @@ const App = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'myAudio':
-        return <MyAudio user={user} userCredits={userCredits} isGenerating={isLoading} onCreditsUpdate={fetchUserCredits} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} unreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('create')} />;
+      case 'dashboard':
+        return <UnifiedDashboard user={user} userCredits={userCredits} onCreditsUpdate={fetchUserCredits} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} unreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('dashboard')} />;
       case 'journal':
-        return <Journal user={user} userCredits={userCredits} onCreditsUpdate={fetchUserCredits} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} unreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('create')} />;
-      case 'community':
-        return <CommunityHub user={user} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} unreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('create')} />;
+        return <Journal user={user} userCredits={userCredits} onCreditsUpdate={fetchUserCredits} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} unreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('dashboard')} />;
       case 'journalHub':
         return <JournalHub user={user} />;
       case 'admin':
-        return <AdminDashboard user={user} onLogout={handleLogout} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} unreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('create')} />;
+        return <AdminDashboard user={user} onLogout={handleLogout} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} unreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('dashboard')} />;
       case 'inbox':
-        return <Inbox user={user} onUnreadCountChange={setUnreadCount} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} headerUnreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('create')} />;
+        return <Inbox user={user} onUnreadCountChange={setUnreadCount} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} headerUnreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('dashboard')} />;
       case 'profile':
-        return <ProfileContainer user={user} onLogout={handleLogout} onBackToCreate={() => handleTabChange('create')} selectedSection={profileSection} onUserUpdate={setUser} />;
+        return <ProfileContainer user={user} onLogout={handleLogout} onBackToCreate={() => handleTabChange('dashboard')} selectedSection={profileSection} onUserUpdate={setUser} />;
       default:
         return (
           <div className="create-content">
@@ -1502,7 +1501,7 @@ const App = () => {
                   setProfileSection(section);
                 }}
                 onInboxClick={() => handleTabChange('inbox')}
-                onCreateClick={() => handleTabChange('create')}
+                onCreateClick={() => handleTabChange('dashboard')}
               />
             </div>
 

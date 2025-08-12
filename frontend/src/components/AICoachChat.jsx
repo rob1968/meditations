@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { getFullUrl } from '../config/api';
-import SimpleProgressDashboard from './SimpleProgressDashboard';
-import AdvancedProgressDashboard from './AdvancedProgressDashboard';
+import UnifiedInsightsDashboard from './UnifiedInsightsDashboard';
 import EmergencyModal from './EmergencyModal';
 
 const AICoachChat = ({ user, isVisible, onClose, initialMessage = null, initialTab = 'chat' }) => {
@@ -13,7 +12,6 @@ const AICoachChat = ({ user, isVisible, onClose, initialMessage = null, initialT
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab); // 'chat' or 'insights'
-  const [dashboardType, setDashboardType] = useState('simple'); // 'simple' or 'advanced'
   
   // Emergency states
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
@@ -329,81 +327,12 @@ const AICoachChat = ({ user, isVisible, onClose, initialMessage = null, initialT
         {activeTab === 'insights' && (
           <div className="insights-content">
             {/* Dashboard Type Toggle */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              padding: '16px 20px',
-              background: 'rgba(255, 255, 255, 0.08)',
-              borderRadius: '12px',
-              marginBottom: '20px',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.12)'
-            }}>
-              <div>
-                <h4 style={{ color: '#ffffff', margin: '0 0 4px 0', fontSize: '16px', fontWeight: '600' }}>
-                  {t('dashboardView', 'Dashboard View')}
-                </h4>
-                <p style={{ color: 'rgba(255, 255, 255, 0.7)', margin: 0, fontSize: '12px' }}>
-                  {dashboardType === 'simple' 
-                    ? t('simpleViewDesc', 'Basic insights and progress overview')
-                    : t('advancedViewDesc', 'Interactive charts and detailed analytics')
-                  }
-                </p>
-              </div>
-              
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button 
-                  onClick={() => setDashboardType('simple')}
-                  style={{
-                    background: dashboardType === 'simple' 
-                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-                      : 'rgba(255, 255, 255, 0.1)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 16px',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  📊 {t('simple', 'Simple')}
-                </button>
-                <button 
-                  onClick={() => setDashboardType('advanced')}
-                  style={{
-                    background: dashboardType === 'advanced' 
-                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-                      : 'rgba(255, 255, 255, 0.1)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 16px',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  📈 {t('advanced', 'Advanced')}
-                </button>
-              </div>
-            </div>
 
             {/* Dashboard Content */}
-            {dashboardType === 'simple' ? (
-              <SimpleProgressDashboard 
-                user={user} 
-                onStartCoaching={() => setActiveTab('chat')}
-              />
-            ) : (
-              <AdvancedProgressDashboard 
-                user={user} 
-                onStartCoaching={() => setActiveTab('chat')}
-              />
-            )}
+            <UnifiedInsightsDashboard 
+              user={user} 
+              onStartCoaching={() => setActiveTab('chat')}
+            />
           </div>
         )}
       </div>

@@ -412,8 +412,8 @@ const JournalHub = ({ user }) => {
       {sharedEntries.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">🎧</div>
-          <h3>{t('noSharedJournals', 'Geen gedeelde dagboeken gevonden')}</h3>
-          <p>{t('beFirstToShareJournal', 'Wees de eerste om je dagboek te delen met de gemeenschap!')}</p>
+          <h3>{t('noSharedJournals', 'No shared journals found')}</h3>
+          <p>{t('beFirstToShareJournal', 'Be the first to share your journal with the community!')}</p>
         </div>
       ) : (
         <div className="shared-entries-list">

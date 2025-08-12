@@ -5,7 +5,7 @@ import { getFullUrl } from '../config/api';
 import ProfileInfo from './ProfileInfo';
 import Credits from './Credits';
 import Statistics from './Statistics';
-import EnhancedInsightsDashboard from './EnhancedInsightsDashboard';
+import ProfileImageUpload from './ProfileImageUpload';
 import Alert from './Alert';
 
 const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'profile', onUserUpdate }) => {
@@ -14,10 +14,19 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
   const [deleteConfirmUsername, setDeleteConfirmUsername] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [alertState, setAlertState] = useState({ show: false, message: '', type: 'success' });
+  const [profileImage, setProfileImage] = useState(user?.profileImage || null);
   
   // Helper function to show alerts
   const showAlert = (message, type = 'success') => {
     setAlertState({ show: true, message, type });
+  };
+
+  const handleImageUpdate = (newImagePath) => {
+    setProfileImage(newImagePath);
+    // Update user object if we have onUserUpdate
+    if (onUserUpdate) {
+      onUserUpdate({ ...user, profileImage: newImagePath });
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -54,8 +63,6 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
         return <Credits user={user} />;
       case 'statistics':
         return <Statistics user={user} />;
-      case 'insights':
-        return <EnhancedInsightsDashboard user={user} />;
       default:
         return <ProfileInfo user={user} />;
     }
@@ -76,7 +83,11 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
         </div>
         
         <div className="profile-user-info">
-          <div className="profile-avatar">👤</div>
+          <ProfileImageUpload 
+            user={user}
+            profileImage={profileImage}
+            onImageUpdate={handleImageUpdate}
+          />
           <h2>{user.username}</h2>
           <p>{t('memberSince', 'Member since')} {new Date(user.createdAt).toLocaleDateString()}</p>
         </div>

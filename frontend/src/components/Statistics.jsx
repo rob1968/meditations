@@ -131,6 +131,33 @@ const Statistics = ({ user }) => {
             <div className="stat-sublabel">{t('audioFilesCreated', 'files created')}</div>
           </div>
         </div>
+
+        {/* Addiction Statistics Section */}
+        {stats?.addictionStats && stats.addictionStats.total > 0 && (
+          <div className="addiction-stats-section">
+            <h3 className="stats-section-title">
+              <span className="section-icon">🎯</span>
+              {t('addictionStats', 'Verslavingen Statistieken')}
+            </h3>
+            <div className="addiction-stats-grid">
+              <div className="addiction-stat-card active">
+                <div className="addiction-stat-icon">🔴</div>
+                <div className="addiction-stat-value">{stats.addictionStats.active}</div>
+                <div className="addiction-stat-label">{t('active', 'Actief')}</div>
+              </div>
+              <div className="addiction-stat-card recovering">
+                <div className="addiction-stat-icon">🟡</div>
+                <div className="addiction-stat-value">{stats.addictionStats.recovering}</div>
+                <div className="addiction-stat-label">{t('recovering', 'Herstellende')}</div>
+              </div>
+              <div className="addiction-stat-card clean">
+                <div className="addiction-stat-icon">🟢</div>
+                <div className="addiction-stat-value">{stats.addictionStats.clean}</div>
+                <div className="addiction-stat-label">{t('clean', 'Schoon')}</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="statistics-details">

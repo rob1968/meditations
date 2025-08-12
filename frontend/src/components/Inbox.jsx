@@ -209,8 +209,8 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
       {filteredNotifications.length === 0 ? (
         <div className="empty-inbox">
           <div className="empty-icon">📭</div>
-          <h3>{t('noNotifications', 'Geen berichten')}</h3>
-          <p>{t('notificationsAppearHere', 'Berichten over je meditaties verschijnen hier')}</p>
+          <h3>{t('noNotifications', 'No messages')}</h3>
+          <p>{t('notificationsAppearHere', 'Messages about your meditations will appear here')}</p>
         </div>
       ) : (
         <div className="notifications-list">

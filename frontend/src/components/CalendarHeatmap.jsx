@@ -73,28 +73,28 @@ const CalendarHeatmap = ({ entries, userId }) => {
   };
   
   const monthNames = [
-    t('january', 'Januari'),
-    t('february', 'Februari'),
-    t('march', 'Maart'),
+    t('january', 'January'),
+    t('february', 'February'),
+    t('march', 'March'),
     t('april', 'April'),
-    t('may', 'Mei'),
-    t('june', 'Juni'),
-    t('july', 'Juli'),
-    t('august', 'Augustus'),
+    t('may', 'May'),
+    t('june', 'June'),
+    t('july', 'July'),
+    t('august', 'August'),
     t('september', 'September'),
-    t('october', 'Oktober'),
+    t('october', 'October'),
     t('november', 'November'),
     t('december', 'December')
   ];
   
   const weekDays = [
-    t('sun', 'Zo'),
-    t('mon', 'Ma'),
-    t('tue', 'Di'),
-    t('wed', 'Wo'),
-    t('thu', 'Do'),
-    t('fri', 'Vr'),
-    t('sat', 'Za')
+    t('sun', 'Sun'),
+    t('mon', 'Mon'),
+    t('tue', 'Tue'),
+    t('wed', 'Wed'),
+    t('thu', 'Thu'),
+    t('fri', 'Fri'),
+    t('sat', 'Sat')
   ];
   
   const handlePrevMonth = () => {
@@ -140,7 +140,7 @@ const CalendarHeatmap = ({ entries, userId }) => {
         <div 
           key={day} 
           className={`calendar-day ${intensityClass} ${isToday ? 'today' : ''}`}
-          title={dayData ? `${dayData.count} ${t('entries', 'notities')} - ${dayData.wordCount} ${t('words', 'woorden')}` : t('noEntries', 'Geen notities')}
+          title={dayData ? `${dayData.count} ${t('entries', 'entries')} - ${dayData.wordCount} ${t('words', 'words')}` : t('noEntries', 'No entries')}
         >
           <span className="day-number">{day}</span>
           {dayData && dayData.mood && (
@@ -334,7 +334,7 @@ const CalendarHeatmap = ({ entries, userId }) => {
       `}</style>
       
       <div className="calendar-header">
-        <h3>📅 {t('journalActivity', 'Dagboek Activiteit')}</h3>
+        <h3>📅 {t('journalActivity', 'Journal Activity')}</h3>
         <div className="calendar-navigation">
           <button className="nav-button" onClick={handlePrevMonth}>‹</button>
           <span className="month-year">{monthNames[selectedMonth]} {selectedYear}</span>
@@ -355,23 +355,23 @@ const CalendarHeatmap = ({ entries, userId }) => {
       <div className="legend">
         <div className="legend-item">
           <div className="legend-box" style={{background: '#f8f9fa'}}></div>
-          <span>{t('noEntry', 'Geen notitie')}</span>
+          <span>{t('noEntry', 'No entry')}</span>
         </div>
         <div className="legend-item">
           <div className="legend-box" style={{background: '#e3f2fd', border: '1px solid #90caf9'}}></div>
-          <span>1 {t('entry', 'notitie')}</span>
+          <span>1 {t('entry', 'entry')}</span>
         </div>
         <div className="legend-item">
           <div className="legend-box" style={{background: '#bbdefb', border: '1px solid #64b5f6'}}></div>
-          <span>2 {t('entries', 'notities')}</span>
+          <span>2 {t('entries', 'entries')}</span>
         </div>
         <div className="legend-item">
           <div className="legend-box" style={{background: '#90caf9', border: '1px solid #42a5f5'}}></div>
-          <span>3+ {t('entries', 'notities')}</span>
+          <span>3+ {t('entries', 'entries')}</span>
         </div>
         <div className="legend-item">
           <div className="legend-box" style={{background: '#ffebee', border: '2px solid #ef5350'}}></div>
-          <span>{t('relapseDetected', 'Terugval gedetecteerd')}</span>
+          <span>{t('relapseDetected', 'Relapse detected')}</span>
         </div>
       </div>
     </div>
