@@ -49,10 +49,10 @@ const Statistics = ({ user }) => {
 
   const getTypeEmoji = (type) => {
     const emojiMap = {
-      sleep: '😴',
-      stress: '🧘‍♀️',
+      sleep: '🌙',
+      stress: '😌',
       focus: '🎯',
-      anxiety: '💚',
+      anxiety: '🌿',
       energy: '⚡',
       mindfulness: '🧘'
     };

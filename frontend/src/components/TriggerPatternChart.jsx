@@ -32,11 +32,11 @@ const TriggerPatternChart = ({ user, addictions }) => {
         console.log('📊 Received trigger data:', entries);
         analyzeTriggerPatterns(entries);
       } else {
-        setError('Failed to load trigger patterns');
+        setError(t('failedToLoadTriggerPatterns', 'Failed to load trigger patterns'));
       }
     } catch (error) {
       console.error('Error fetching trigger patterns:', error);
-      setError('Failed to load trigger patterns');
+      setError(t('failedToLoadTriggerPatterns', 'Failed to load trigger patterns'));
       // Fallback to empty data
       setTriggerData({
         patterns: [],

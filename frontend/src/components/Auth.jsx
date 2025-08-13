@@ -60,7 +60,7 @@ const Auth = ({ onLogin }) => {
           new Promise((_, reject) => setTimeout(() => reject(new Error('Pi init timeout')), 5000)) // 5 second init timeout
         ]);
         if (!initialized) {
-          throw new Error('Pi service initialization failed');
+          throw new Error(t('piServiceInitFailed', 'Pi service initialization failed'));
         }
 
         // Attempt automatic Pi authentication with shorter timeout for faster fallback
@@ -476,14 +476,17 @@ const Auth = ({ onLogin }) => {
               />
             </div>
 
-            <div className="form-group">
-              <label>{t('location', 'Location')} *</label>
-              <LocationPickerModal
-                value={location}
-                onChange={handleLocationChange}
-                placeholder={t('selectYourLocation', 'Select your location (City, Country)')}
-                required={true}
-              />
+            <div className="profile-field">
+              <div className="field-icon">📍</div>
+              <div className="field-content">
+                <label className="field-label">{t('location', 'Location')} *</label>
+                <LocationPickerModal
+                  value={location}
+                  onChange={handleLocationChange}
+                  placeholder={t('selectYourLocation', 'Select your location (City, Country)')}
+                  required={true}
+                />
+              </div>
             </div>
 
             <div className="form-group">
@@ -582,14 +585,17 @@ const Auth = ({ onLogin }) => {
                 />
               </div>
 
-              <div className="form-group">
-                <label>{t('location', 'Location')} *</label>
-                <LocationPickerModal
-                  value={location}
-                  onChange={handleLocationChange}
-                  placeholder={t('selectYourLocation', 'Select your location (City, Country)')}
-                  required={true}
-                />
+              <div className="profile-field">
+                <div className="field-icon">📍</div>
+                <div className="field-content">
+                  <label className="field-label">{t('location', 'Location')} *</label>
+                  <LocationPickerModal
+                    value={location}
+                    onChange={handleLocationChange}
+                    placeholder={t('selectYourLocation', 'Select your location (City, Country)')}
+                    required={true}
+                  />
+                </div>
               </div>
 
               <div className="form-group">

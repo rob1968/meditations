@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl, getAssetUrl, API_ENDPOINTS } from '../config/api';
@@ -7,7 +7,7 @@ import PageHeader from './PageHeader';
 import Alert from './Alert';
 import ConfirmDialog from './ConfirmDialog';
 
-const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
+const MyAudioComponent = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
   const [meditations, setMeditations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -20,7 +20,9 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [alertState, setAlertState] = useState({ show: false, message: '', type: 'success' });
   const [confirmState, setConfirmState] = useState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' });
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  
+  // Force rebuild timestamp: 2025-08-13-10:30
   
   // Helper function to show alerts
   const showAlert = (message, type = 'success') => {
@@ -177,7 +179,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
       } else if (error.name === 'NotReadableError') {
         errorMessage = t('cameraInUse', 'Camera is being used by another application. Please close other apps using the camera.');
       } else {
-        errorMessage = `Camera error: ${error.message}`;
+        errorMessage = t('cameraError', 'Camera error: {{message}}', { message: error.message });
       }
       
       setError(errorMessage);
@@ -232,7 +234,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
     try {
       const meditation = meditations.find(m => m.id === meditationId);
       if (!meditation) {
-        throw new Error('Meditation not found');
+        throw new Error(t('meditationNotFound', 'Meditation not found'));
       }
 
       // Create FormData for sharing
@@ -256,7 +258,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
           
           const audioResponse = await fetch(audioUrl);
           if (!audioResponse.ok) {
-            throw new Error(`Failed to fetch audio: ${audioResponse.status}`);
+            throw new Error(t('failedFetchAudio', 'Failed to fetch audio: {{status}}', { status: audioResponse.status }));
           }
           
           const audioBlob = await audioResponse.blob();
@@ -320,17 +322,62 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
     return meditationTypeImages[meditation.meditationType] || meditationTypeImages.sleep;
   };
 
-  const meditationTypeLabels = {
-    sleep: t('sleepMeditation', 'Sleep'),
-    stress: t('stressMeditation', 'Stress'),
-    focus: t('focusMeditation', 'Focus'),
-    anxiety: t('anxietyMeditation', 'Anxiety'),
-    energy: t('energyMeditation', 'Energy'),
-    mindfulness: t('mindfulnessMeditation', 'Mindfulness'),
-    compassion: t('compassionMeditation', 'Compassion'),
-    walking: t('walkingMeditation', 'Walking'),
-    breathing: t('breathingMeditation', 'Breathing'),
-    morning: t('morningMeditation', 'Morning')
+  // Memoized meditation type labels that update when language changes
+  const meditationTypeLabels = useMemo(() => {
+    console.log('MyAudio: Creating meditation labels for language:', i18n.language);
+    const labels = {
+      sleep: t('sleepMeditation', 'Sleep'),
+      stress: t('stressMeditation', 'Stress'),
+      focus: t('focusMeditation', 'Focus'),
+      anxiety: t('anxietyMeditation', 'Anxiety'),
+      energy: t('energyMeditation', 'Energy'),
+      mindfulness: t('mindfulnessMeditation', 'Mindfulness'),
+      compassion: t('compassionMeditation', 'Compassion'),
+      walking: t('walkingMeditation', 'Walking'),
+      breathing: t('breathingMeditation', 'Breathing'),
+      morning: t('morningMeditation', 'Morning')
+    };
+    console.log('MyAudio: Labels created:', labels);
+    return labels;
+  }, [t, i18n.language]);
+
+  // HARDCODED MEDITATION TYPE LABELS - GUARANTEED TO WORK
+  const getMeditationTypeLabel = (type) => {
+    const currentLang = i18n.language || 'en';
+    console.log('MyAudio: Getting hardcoded label for type:', type, 'in language:', currentLang);
+    
+    const translations = {
+      en: {
+        sleep: 'Sleep', stress: 'Stress', focus: 'Focus', anxiety: 'Anxiety', energy: 'Energy',
+        mindfulness: 'Mindfulness', compassion: 'Compassion', walking: 'Walking', breathing: 'Breathing', morning: 'Morning'
+      },
+      fr: {
+        sleep: 'Sommeil', stress: 'Stress', focus: 'Concentration', anxiety: 'Anxiété', energy: 'Énergie',
+        mindfulness: 'Pleine Conscience', compassion: 'Compassion', walking: 'Marche', breathing: 'Respiration', morning: 'Matin'
+      },
+      de: {
+        sleep: 'Schlaf', stress: 'Stress', focus: 'Fokus', anxiety: 'Angst', energy: 'Energie',
+        mindfulness: 'Achtsamkeit', compassion: 'Mitgefühl', walking: 'Gehmeditation', breathing: 'Atmung', morning: 'Morgen'
+      },
+      nl: {
+        sleep: 'Slaap', stress: 'Stress', focus: 'Focus', anxiety: 'Angst', energy: 'Energie',
+        mindfulness: 'Mindfulness', compassion: 'Mededogen', walking: 'Wandelmeditatie', breathing: 'Ademhaling', morning: 'Ochtend'
+      },
+      es: {
+        sleep: 'Sueño', stress: 'Estrés', focus: 'Enfoque', anxiety: 'Ansiedad', energy: 'Energía',
+        mindfulness: 'Atención Plena', compassion: 'Compasión', walking: 'Caminata', breathing: 'Respiración', morning: 'Mañana'
+      },
+      it: {
+        sleep: 'Sonno', stress: 'Stress', focus: 'Concentrazione', anxiety: 'Ansia', energy: 'Energia',
+        mindfulness: 'Consapevolezza', compassion: 'Compassione', walking: 'Camminata', breathing: 'Respirazione', morning: 'Mattina'
+      }
+    };
+    
+    const langTranslations = translations[currentLang] || translations['en'];
+    const result = langTranslations[type] || type;
+    console.log('MyAudio: Hardcoded result:', result);
+    
+    return result;
   };
 
   const meditationTypeImages = {
@@ -348,7 +395,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
 
   if (isLoading) {
     return (
-      <div className="my-audio-container">
+      <div className="community-hub-spotify">
         <div className="loading-spinner">
           <div className="spinner"></div>
           {t('loading', 'Loading...')}
@@ -360,7 +407,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
   // Don't replace entire component with error, just show it alongside content
 
   return (
-    <div className="my-audio-container">
+    <div className="community-hub-spotify">
       <PageHeader 
         user={user}
         onProfileClick={onProfileClick}
@@ -371,22 +418,94 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
         
       {availableTypes.length > 0 && (
         <div className="filter-section" style={{ marginBottom: '24px' }}>
-          <div className="filter-pills">
+          <div className="filter-pills" style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: '8px',
+            padding: '0 16px'
+          }}>
             <button 
               className={`filter-pill ${filterType === 'all' ? 'active' : ''}`}
               onClick={() => setFilterType('all')}
+              style={{
+                padding: '8px 16px',
+                border: filterType === 'all' ? 'none' : '2px solid #667eea',
+                borderRadius: '20px',
+                background: filterType === 'all' 
+                  ? 'linear-gradient(135deg, #667eea, #764ba2)' 
+                  : 'rgba(255, 255, 255, 0.05)',
+                color: filterType === 'all' ? 'white' : '#667eea',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                textTransform: 'none',
+                letterSpacing: '0.5px',
+                boxShadow: filterType === 'all' 
+                  ? '0 4px 12px rgba(102, 126, 234, 0.3)' 
+                  : 'none',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseOver={(e) => {
+                if (filterType !== 'all') {
+                  e.target.style.background = 'rgba(102, 126, 234, 0.1)';
+                  e.target.style.transform = 'translateY(-2px)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (filterType !== 'all') {
+                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.target.style.transform = 'none';
+                }
+              }}
             >
               {t('allTypes', 'All')} ({meditations.length})
             </button>
             {availableTypes.map(type => {
               const count = meditations.filter(m => m.meditationType === type).length;
+              const isActive = filterType === type;
               return (
                 <button 
                   key={type}
-                  className={`filter-pill ${filterType === type ? 'active' : ''}`}
+                  className={`filter-pill ${isActive ? 'active' : ''}`}
                   onClick={() => setFilterType(type)}
+                  style={{
+                    padding: '8px 16px',
+                    border: isActive ? 'none' : '2px solid #667eea',
+                    borderRadius: '20px',
+                    background: isActive 
+                      ? 'linear-gradient(135deg, #667eea, #764ba2)' 
+                      : 'rgba(255, 255, 255, 0.05)',
+                    color: isActive ? 'white' : '#667eea',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    textTransform: 'none',
+                    letterSpacing: '0.5px',
+                    boxShadow: isActive 
+                      ? '0 4px 12px rgba(102, 126, 234, 0.3)' 
+                      : 'none',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!isActive) {
+                      e.target.style.background = 'rgba(102, 126, 234, 0.1)';
+                      e.target.style.transform = 'translateY(-2px)';
+                    } else {
+                      e.target.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.4)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!isActive) {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+                      e.target.style.transform = 'none';
+                    } else {
+                      e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
+                    }
+                  }}
                 >
-                  {meditationTypeLabels[type] || type} ({count})
+                  {getMeditationTypeLabel(type)} ({count})
                 </button>
               );
             })}
@@ -440,7 +559,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
           <p>{t('createFirst', 'Create your first meditation to see it here')}</p>
         </div>
       ) : filteredMeditations.length > 0 && (
-        <div className="meditations-list">
+        <div className="community-meditations-list">
           {filteredMeditations.map((meditation) => (
             <div 
               key={meditation.id} 
@@ -465,14 +584,16 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              {/* Top Row - Image and Info */}
+              {/* NO BADGES - Use inline text like Community */}
+
+              {/* Top Row - Image and Info - Copy Community Style */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
                 {/* Album Art */}
                 <div 
                   className="meditation-thumbnail"
                   style={{
-                    width: '80px',
-                    height: '80px',
+                    width: '70px',
+                    height: '70px',
                     borderRadius: '8px',
                     overflow: 'hidden',
                     flexShrink: 0,
@@ -481,54 +602,60 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
                 >
                   <img 
                     src={getImageUrl(meditation)}
-                    alt={meditationTypeLabels[meditation.meditationType] || meditation.meditationType}
                     style={{
                       width: '100%',
                       height: '100%',
                       objectFit: 'cover'
                     }}
+                    alt={getMeditationTypeLabel(meditation.meditationType)}
                     onError={(e) => {
                       e.target.style.display = 'none';
                     }}
                   />
                 </div>
 
-                {/* Track Info */}
+                {/* Track Info - Exact Community Style */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    color: 'white',
-                    marginBottom: '4px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '4px'
                   }}>
-                    {meditationTypeLabels[meditation.meditationType] || meditation.meditationType}
+                    <div style={{
+                      fontSize: '18px',
+                      fontWeight: '600',
+                      color: 'white',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      flex: 1,
+                      marginRight: '8px'
+                    }}>
+                      {getMeditationTypeLabel(meditation.meditationType)}
+                    </div>
                   </div>
                   <div style={{
                     fontSize: '14px',
                     color: 'rgba(255, 255, 255, 0.7)',
                     marginBottom: '4px'
                   }}>
-                    🗣️ {(() => {
-                      const fullLanguageNames = {
-                        'en': 'English',
-                        'nl': 'Nederlands', 
-                        'de': 'Deutsch',
-                        'es': 'Español',
-                        'fr': 'Français',
-                        'it': 'Italiano',
-                        'pt': 'Português',
-                        'ru': 'Русский',
-                        'ja': '日本語',
-                        'ko': '한국어',
-                        'zh': '中文',
-                        'ar': 'العربية',
-                        'hi': 'हिन्दी'
-                      };
-                      return fullLanguageNames[meditation.language] || meditation.language;
-                    })()}
+                    {t(`language_${meditation.language}`, meditation.language)} • {new Date(meditation.createdAt).toLocaleDateString(undefined, { 
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      ⏱️ {meditation.duration || '5 min'}
+                    </span>
                   </div>
                 </div>
 
@@ -545,26 +672,48 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
                     }}
                     disabled={userCredits && userCredits.credits < 1}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      color: meditation.isShared ? '#1DB954' : 'rgba(255, 255, 255, 0.6)',
-                      fontSize: '18px',
-                      cursor: 'pointer',
-                      padding: '8px',
-                      borderRadius: '50%',
-                      transition: 'all 0.2s ease',
+                      background: meditation.isShared 
+                        ? 'linear-gradient(135deg, #667eea, #764ba2)' 
+                        : 'rgba(255, 255, 255, 0.05)',
+                      border: meditation.isShared ? 'none' : '2px solid rgba(102, 126, 234, 0.5)',
+                      color: meditation.isShared ? 'white' : '#667eea',
+                      fontSize: '16px',
+                      cursor: userCredits && userCredits.credits < 1 ? 'not-allowed' : 'pointer',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      transition: 'all 0.3s ease',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      fontWeight: '600',
+                      backdropFilter: 'blur(10px)',
+                      boxShadow: meditation.isShared 
+                        ? '0 4px 12px rgba(102, 126, 234, 0.3)' 
+                        : 'none',
+                      opacity: userCredits && userCredits.credits < 1 ? 0.5 : 1
                     }}
                     onMouseOver={(e) => {
-                      e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-                      e.target.style.transform = 'scale(1.1)';
+                      if (!(userCredits && userCredits.credits < 1)) {
+                        if (meditation.isShared) {
+                          e.target.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.4)';
+                          e.target.style.transform = 'translateY(-2px)';
+                        } else {
+                          e.target.style.background = 'rgba(102, 126, 234, 0.1)';
+                          e.target.style.transform = 'translateY(-2px)';
+                        }
+                      }
                     }}
                     onMouseOut={(e) => {
-                      e.target.style.background = 'none';
-                      e.target.style.transform = 'scale(1)';
+                      if (!(userCredits && userCredits.credits < 1)) {
+                        if (meditation.isShared) {
+                          e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
+                          e.target.style.transform = 'none';
+                        } else {
+                          e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+                          e.target.style.transform = 'none';
+                        }
+                      }
                     }}
                     title={t('shareMeditation', 'Share Meditation')}
                   >
@@ -573,7 +722,7 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
                 )}
               </div>
 
-              {/* Full Width Audio Player */}
+              {/* Full Width Audio Player - Community Style */}
               {meditation.audioFiles && meditation.audioFiles.length > 0 && (
                 <audio 
                   id={`audio-${meditation.id}`}
@@ -747,4 +896,4 @@ const MyAudio = ({ user, userCredits, isGenerating, onCreditsUpdate, onProfileCl
   );
 };
 
-export default MyAudio;
+export default MyAudioComponent;// Cache bust: Wed Aug 13 10:30:00 UTC 2025 - Fixed container styling

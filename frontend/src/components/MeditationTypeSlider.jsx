@@ -197,13 +197,44 @@ const MeditationTypeSlider = ({ selectedType, onTypeSelect }) => {
       <div 
         ref={cardRef}
         className={`meditation-type-card ${isTransitioning ? 'transitioning' : ''} ${swipeDirection ? 'swiping-' + swipeDirection : ''}`}
-        style={{ borderColor: currentType.color }}
+        style={{ 
+          borderColor: currentType.color,
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+        }}
       >
         <div className="meditation-type-navigation">
           <button 
             className="nav-button nav-prev" 
             onClick={goToPrevious}
             aria-label={t('previousType', 'Previous type')}
+            style={{
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              border: 'none',
+              color: 'white',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.4)';
+              e.target.style.transform = 'translateY(-2px) scale(1.05)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
+              e.target.style.transform = 'none';
+            }}
           >
             ◀
           </button>
@@ -225,6 +256,30 @@ const MeditationTypeSlider = ({ selectedType, onTypeSelect }) => {
             className="nav-button nav-next" 
             onClick={goToNext}
             aria-label={t('nextType', 'Next type')}
+            style={{
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              border: 'none',
+              color: 'white',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.4)';
+              e.target.style.transform = 'translateY(-2px) scale(1.05)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
+              e.target.style.transform = 'none';
+            }}
           >
             ▶
           </button>

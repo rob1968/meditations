@@ -6,7 +6,7 @@ import './styles/globals.css';
 import './styles/wizard.css';
 import Auth from './components/Auth';
 import BottomNavigation from './components/BottomNavigation';
-import MyAudio from './components/MyAudio';
+import MyAudioComponent from './components/MyAudio';
 import ProfileContainer from './components/ProfileContainer';
 import CommunityHub from './components/CommunityHub';
 import UnifiedDashboard from './components/UnifiedDashboard';
@@ -73,7 +73,7 @@ const App = () => {
   
   // User authentication state
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('journal');
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileSection, setProfileSection] = useState('profile');
   const [isPiEnvironment, setIsPiEnvironment] = useState(false);
@@ -849,7 +849,7 @@ const App = () => {
     }
     
     console.log('User logged in:', userData.authMethod || 'traditional', userData.username);
-    handleTabChange('dashboard');
+    handleTabChange('journal'); // Start with journal instead of dashboard
   };
 
   const handleLogout = () => {

@@ -247,11 +247,11 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     { value: 'grateful', emoji: '🥰', label: t('grateful', 'Dankbaar'), description: t('gratefulDesc', 'Ik ben dankbaar voor wat ik heb'), color: '#DDA0DD', bg: 'linear-gradient(135deg, #DDA0DD, #9370DB)' },
     { value: 'reflective', emoji: '🤔', label: t('reflective', 'Reflectief'), description: t('reflectiveDesc', 'Ik denk na over het leven'), color: '#C0C0C0', bg: 'linear-gradient(135deg, #C0C0C0, #708090)' },
     { value: 'energetic', emoji: '😄', label: t('energetic', 'Energiek'), description: t('energeticDesc', 'Ik voel me vol energie en motivatie'), color: '#FF6347', bg: 'linear-gradient(135deg, #FF6347, #DC143C)' },
-    { value: 'stressed', emoji: '😫', label: t('stressed', 'Gestrest'), description: t('stressedDesc', 'Ik voel me onder druk staan'), color: '#FF4500', bg: 'linear-gradient(135deg, #FF4500, #B22222)' },
-    { value: 'anxious', emoji: '😰', label: t('anxious', 'Bezorgd'), description: t('anxiousDesc', 'Ik maak me zorgen over dingen'), color: '#708090', bg: 'linear-gradient(135deg, #708090, #2F4F4F)' },
-    { value: 'sad', emoji: '😢', label: t('sad', 'Verdrietig'), description: t('sadDesc', 'Ik voel me bedroefd of neerslachtig'), color: '#4682B4', bg: 'linear-gradient(135deg, #4682B4, #2F4F4F)' },
-    { value: 'angry', emoji: '😠', label: t('angry', 'Boos'), description: t('angryDesc', 'Ik voel boosheid of irritatie'), color: '#DC143C', bg: 'linear-gradient(135deg, #DC143C, #8B0000)' },
-    { value: 'frustrated', emoji: '😤', label: t('frustrated', 'Gefrustreerd'), description: t('frustratedDesc', 'Ik voel me gefrustreerd door situaties'), color: '#FF8C00', bg: 'linear-gradient(135deg, #FF8C00, #FF4500)' },
+    { value: 'stressed', emoji: '😔', label: t('stressed', 'Gestrest'), description: t('stressedDesc', 'Ik voel me onder druk staan'), color: '#FF4500', bg: 'linear-gradient(135deg, #FF4500, #B22222)' },
+    { value: 'anxious', emoji: '😟', label: t('anxious', 'Bezorgd'), description: t('anxiousDesc', 'Ik maak me zorgen over dingen'), color: '#708090', bg: 'linear-gradient(135deg, #708090, #2F4F4F)' },
+    { value: 'sad', emoji: '😞', label: t('sad', 'Verdrietig'), description: t('sadDesc', 'Ik voel me bedroefd of neerslachtig'), color: '#4682B4', bg: 'linear-gradient(135deg, #4682B4, #2F4F4F)' },
+    { value: 'angry', emoji: '😤', label: t('angry', 'Boos'), description: t('angryDesc', 'Ik voel boosheid of irritatie'), color: '#DC143C', bg: 'linear-gradient(135deg, #DC143C, #8B0000)' },
+    { value: 'frustrated', emoji: '😮‍💨', label: t('frustrated', 'Gefrustreerd'), description: t('frustratedDesc', 'Ik voel me gefrustreerd door situaties'), color: '#FF8C00', bg: 'linear-gradient(135deg, #FF8C00, #FF4500)' },
     { value: 'confused', emoji: '😕', label: t('confused', 'In de war'), description: t('confusedDesc', 'Ik voel me verward of onzeker'), color: '#9370DB', bg: 'linear-gradient(135deg, #9370DB, #663399)' },
     { value: 'lonely', emoji: '😔', label: t('lonely', 'Eenzaam'), description: t('lonelyDesc', 'Ik voel me alleen of geïsoleerd'), color: '#778899', bg: 'linear-gradient(135deg, #778899, #556B2F)' },
     { value: 'mixed', emoji: '😐', label: t('mixed', 'Gemengd'), description: t('mixedDesc', 'Ik voel verschillende emoties tegelijk'), color: '#A9A9A9', bg: 'linear-gradient(135deg, #A9A9A9, #696969)' },
@@ -555,11 +555,11 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       
       // Check if getUserMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('getUserMedia not supported');
+        throw new Error(t('getUserMediaNotSupported', 'getUserMedia not supported'));
       }
 
       if (!window.MediaRecorder) {
-        throw new Error('MediaRecorder not supported');
+        throw new Error(t('mediaRecorderNotSupported', 'MediaRecorder not supported'));
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -572,7 +572,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       });
 
       if (!stream.getAudioTracks().length) {
-        throw new Error('No audio tracks available');
+        throw new Error(t('noAudioTracks', 'No audio tracks available'));
       }
 
       // Use MP3 format for better ElevenLabs compatibility
@@ -1306,12 +1306,12 @@ const handleSaveEntry = async () => {
       
       // Check if getUserMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('getUserMedia not supported');
+        throw new Error(t('getUserMediaNotSupported', 'getUserMedia not supported'));
       }
 
       // Check if MediaRecorder is supported
       if (!window.MediaRecorder) {
-        throw new Error('MediaRecorder not supported');
+        throw new Error(t('mediaRecorderNotSupported', 'MediaRecorder not supported'));
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -1325,7 +1325,7 @@ const handleSaveEntry = async () => {
 
       // Check if the stream has audio tracks
       if (!stream.getAudioTracks().length) {
-        throw new Error('No audio tracks available');
+        throw new Error(t('noAudioTracks', 'No audio tracks available'));
       }
 
       // Use supported audio format for mobile
@@ -1446,7 +1446,7 @@ const handleSaveEntry = async () => {
     try {
       // Check if the audio blob has content
       if (!audioBlob || audioBlob.size === 0) {
-        throw new Error('No audio data recorded');
+        throw new Error(t('noAudioDataRecorded', 'No audio data recorded'));
       }
 
       console.log('Audio blob size:', audioBlob.size, 'type:', audioBlob.type);

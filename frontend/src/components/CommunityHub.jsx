@@ -58,13 +58,13 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
   const { t } = useTranslation();
 
   const meditationTypes = [
-    { value: 'sleep', emoji: '😴', label: t('sleepMeditation', 'Sleep'), color: '#1E293B' }, // Dark Slate
-    { value: 'stress', emoji: '😤', label: t('stressMeditation', 'Stress'), color: '#991B1B' }, // Dark Red
+    { value: 'sleep', emoji: '🌙', label: t('sleepMeditation', 'Sleep'), color: '#1E293B' }, // Dark Slate
+    { value: 'stress', emoji: '😌', label: t('stressMeditation', 'Stress'), color: '#991B1B' }, // Dark Red
     { value: 'focus', emoji: '🎯', label: t('focusMeditation', 'Focus'), color: '#065F46' }, // Dark Green
-    { value: 'anxiety', emoji: '😰', label: t('anxietyMeditation', 'Anxiety'), color: '#5B21B6' }, // Dark Purple
+    { value: 'anxiety', emoji: '🌿', label: t('anxietyMeditation', 'Anxiety'), color: '#5B21B6' }, // Dark Purple
     { value: 'energy', emoji: '⚡', label: t('energyMeditation', 'Energy'), color: '#C2410C' }, // Dark Orange
     { value: 'mindfulness', emoji: '🧘', label: t('mindfulnessMeditation', 'Mindfulness'), color: '#047857' }, // Dark Emerald
-    { value: 'compassion', emoji: '💗', label: t('compassionMeditation', 'Compassion'), color: '#BE185D' }, // Dark Pink
+    { value: 'compassion', emoji: '💙', label: t('compassionMeditation', 'Compassion'), color: '#BE185D' }, // Dark Pink
     { value: 'walking', emoji: '🚶', label: t('walkingMeditation', 'Walking'), color: '#6B21A8' }, // Dark Violet
     { value: 'breathing', emoji: '🌬️', label: t('breathingMeditation', 'Breathing'), color: '#0E7490' }, // Dark Cyan
     { value: 'morning', emoji: '🌅', label: t('morningMeditation', 'Morning'), color: '#EA580C' } // Dark Orange

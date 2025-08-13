@@ -6,13 +6,13 @@ const BottomNavigation = ({ activeTab, onTabChange, user, onLogout }) => {
   const { t } = useTranslation();
 
   const tabs = [
-    { id: 'dashboard', icon: '🧘', label: t('meditations', 'Meditations') },
-    { id: 'journal', icon: '📔', label: t('journal', 'Journal') }
+    { id: 'journal', icon: '✍️', label: t('journal', 'Journal') },
+    { id: 'dashboard', icon: '🧘', label: t('meditations', 'Meditations') }
   ];
 
   // Add admin tab for user 'rob'
   if (user && user.username === 'rob') {
-    tabs.push({ id: 'admin', icon: '🛡️', label: t('admin', 'Admin') });
+    tabs.push({ id: 'admin', icon: '⚙️', label: t('admin', 'Admin') });
   }
 
   return (

@@ -278,13 +278,13 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
                 </>
               ) : (
                 <>
-                  <span className="save-icon">💾</span>
+                  <span className="save-icon">✓</span>
                   {t('save', 'Save')}
                 </>
               )}
             </button>
             <button className="cancel-btn" onClick={cancelEdit} disabled={isSaving}>
-              <span className="cancel-icon">❌</span>
+              <span className="cancel-icon">✕</span>
               {t('cancel', 'Cancel')}
             </button>
           </div>
@@ -462,13 +462,13 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
                       </>
                     ) : (
                       <>
-                        <span className="save-icon">💾</span>
+                        <span className="save-icon">✓</span>
                         {t('save', 'Save')}
                       </>
                     )}
                   </button>
                   <button className="cancel-btn" onClick={cancelEdit} disabled={isSaving}>
-                    <span className="cancel-icon">❌</span>
+                    <span className="cancel-icon">✕</span>
                     {t('cancel', 'Cancel')}
                   </button>
                 </div>
