@@ -534,6 +534,27 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     }
   };
 
+  const unshareMeditation = async (meditation) => {
+    showConfirm(
+      t('confirmUnshareMeditation', 'Are you sure you want to unshare this meditation? It will be removed from the community.'),
+      async () => {
+        try {
+          await axios.patch(getFullUrl(`/api/user-meditations/${user.id}/${meditation._id || meditation.id}/share`), {
+            isShared: false,
+            sharedMeditationId: null
+          });
+          await loadMyMeditations();
+          showAlert(t('meditationUnshared', 'Meditation unshared successfully!'), 'success');
+        } catch (error) {
+          console.error('Error unsharing meditation:', error);
+          showAlert(t('failedUnshareMeditation', 'Failed to unshare meditation. Please try again.'), 'error');
+        }
+      },
+      t('unshare', 'Unshare'),
+      t('cancel', 'Cancel')
+    );
+  };
+
   const deleteMeditation = async (meditationId) => {
     showConfirm(
       t('confirmDeleteMeditation', 'Are you sure you want to delete this meditation? This action cannot be undone.'),
@@ -951,15 +972,18 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setShowShareDialog(meditation);
+                            if (meditation.isShared) {
+                              unshareMeditation(meditation);
+                            } else {
+                              setShowShareDialog(meditation);
+                            }
                           }}
-                          disabled={meditation.isShared}
                           style={{
                             background: 'none',
                             border: 'none',
-                            color: meditation.isShared ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.8)',
+                            color: meditation.isShared ? 'rgba(76, 175, 80, 0.8)' : 'rgba(255, 255, 255, 0.8)',
                             fontSize: '20px',
-                            cursor: meditation.isShared ? 'default' : 'pointer',
+                            cursor: 'pointer',
                             padding: '4px',
                             borderRadius: '4px',
                             transition: 'all 0.2s ease',
@@ -968,16 +992,18 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
                             justifyContent: 'center'
                           }}
                           onMouseOver={(e) => {
-                            if (!meditation.isShared) {
-                              e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                            e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                            if (meditation.isShared) {
+                              e.target.style.color = '#ff6b6b';
+                            } else {
                               e.target.style.color = 'white';
                             }
                           }}
                           onMouseOut={(e) => {
                             e.target.style.background = 'none';
-                            e.target.style.color = meditation.isShared ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.8)';
+                            e.target.style.color = meditation.isShared ? 'rgba(76, 175, 80, 0.8)' : 'rgba(255, 255, 255, 0.8)';
                           }}
-                          title={meditation.isShared ? t('alreadyShared', 'Already shared') : t('shareMeditation', 'Share with community')}
+                          title={meditation.isShared ? t('unshareMeditation', 'Unshare from community') : t('shareMeditation', 'Share with community')}
                         >
                           {meditation.isShared ? '✅' : '🔗'}
                         </button>
@@ -1497,18 +1523,17 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
         />
       )}
 
-      {confirmState.show && (
-        <ConfirmDialog
-          message={confirmState.message}
-          onConfirm={() => {
-            confirmState.onConfirm();
-            setConfirmState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' });
-          }}
-          onCancel={() => setConfirmState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' })}
-          confirmText={confirmState.confirmText}
-          cancelText={confirmState.cancelText}
-        />
-      )}
+      <ConfirmDialog
+        message={confirmState.message}
+        visible={confirmState.show}
+        onConfirm={() => {
+          confirmState.onConfirm();
+          setConfirmState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' });
+        }}
+        onCancel={() => setConfirmState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' })}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+      />
 
       {showShareDialog && (
         <ShareMeditationDialog
