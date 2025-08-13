@@ -35,10 +35,8 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
   const [filterType, setFilterType] = useState('all');
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   
-  // Additional refs for camera functionality
+  // File upload ref
   const fileInputRef = useRef(null);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   
   // Community tab states (from CommunityHub)
   const [communityMeditations, setCommunityMeditations] = useState([]);
@@ -351,87 +349,6 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     }
   };
 
-  const startCamera = async (meditationId) => {
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showAlert(t('cameraNotSupported', 'Camera is not supported in this browser. Please use Chrome, Firefox, or Safari.'), 'error');
-        return;
-      }
-
-      // Mobile-optimized camera constraints
-      const constraints = {
-        video: {
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1920, max: 1920 },
-          height: { ideal: 1080, max: 1080 }
-        }
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute('playsinline', 'true'); // Important for iOS
-        videoRef.current.setAttribute('webkit-playsinline', 'true'); // iOS Safari
-        await videoRef.current.play();
-        setShowImageOptions(meditationId + '_camera');
-      }
-    } catch (error) {
-      console.error('Camera error:', error);
-      let errorMessage = '';
-      
-      if (error.name === 'NotAllowedError') {
-        errorMessage = t('cameraPermissionDenied', 'Camera permission denied. Please allow camera access in your browser.');
-      } else if (error.name === 'NotFoundError') {
-        errorMessage = t('noCameraFound', 'No camera found. Please ensure your device has a camera connected.');
-      } else if (error.name === 'NotReadableError') {
-        errorMessage = t('cameraInUse', 'Camera is being used by another application. Please close other apps using the camera.');
-      } else if (error.name === 'OverconstrainedError') {
-        // Fallback for mobile devices that don't support the constraints
-        try {
-          const simpleStream = await navigator.mediaDevices.getUserMedia({ video: true });
-          if (videoRef.current) {
-            videoRef.current.srcObject = simpleStream;
-            videoRef.current.setAttribute('playsinline', 'true');
-            videoRef.current.setAttribute('webkit-playsinline', 'true');
-            await videoRef.current.play();
-            setShowImageOptions(meditationId + '_camera');
-            return;
-          }
-        } catch (fallbackError) {
-          errorMessage = t('cameraConstraintError', 'Camera settings not supported. Please try a different device or browser.');
-        }
-      } else {
-        errorMessage = `Camera error: ${error.message}`;
-      }
-      
-      showAlert(errorMessage, 'error');
-    }
-  };
-
-  const capturePhoto = async (meditationId) => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-    
-    // Convert canvas to blob
-    canvas.toBlob(async (blob) => {
-      const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
-      await handleImageUpload(meditationId, file);
-      
-      // Stop camera stream
-      const stream = video.srcObject;
-      const tracks = stream.getTracks();
-      tracks.forEach(track => track.stop());
-      
-      setShowImageOptions(null);
-    }, 'image/jpeg', 0.8);
-  };
 
   const deleteCustomImage = async (meditationId) => {
     try {
@@ -444,6 +361,105 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     } catch (error) {
       console.error('Error deleting custom image:', error);
       showAlert(t('failedDeleteImage', 'Failed to delete image. Please try again.'), 'error');
+    }
+  };
+
+  // Template images for each meditation type
+  const getTemplateImages = (meditationType) => {
+    const templateImages = {
+      sleep: [
+        { name: 'Night Sky', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Peaceful Moon', url: 'https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Starry Night', url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Calm Bedroom', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' }
+      ],
+      stress: [
+        { name: 'Calm Ocean', url: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Peaceful Waves', url: 'https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Zen Garden', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Gentle Stream', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' }
+      ],
+      focus: [
+        { name: 'Mountain Peak', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Clear Sky', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Calm Lake', url: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Minimalist Design', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop&crop=center' }
+      ],
+      anxiety: [
+        { name: 'Gentle Sunrise', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Soft Clouds', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Peaceful Field', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Calming Colors', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop&crop=center' }
+      ],
+      energy: [
+        { name: 'Sunrise Energy', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Mountain Power', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Ocean Waves', url: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Lightning', url: 'https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?w=400&h=400&fit=crop&crop=center' }
+      ],
+      mindfulness: [
+        { name: 'Buddha Statue', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Zen Stones', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Lotus Flower', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Present Moment', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop&crop=center' }
+      ],
+      compassion: [
+        { name: 'Heart Shape', url: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Warm Light', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Golden Hour', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Loving Kindness', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center' }
+      ],
+      walking: [
+        { name: 'Forest Path', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Mountain Trail', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Beach Walk', url: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Garden Steps', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' }
+      ],
+      breathing: [
+        { name: 'Fresh Air', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Wind Patterns', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Clear Lungs', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Life Force', url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=400&fit=crop&crop=center' }
+      ],
+      morning: [
+        { name: 'Sunrise Glory', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Dawn Light', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Morning Dew', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Fresh Start', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' }
+      ]
+    };
+    
+    return templateImages[meditationType] || templateImages.mindfulness;
+  };
+
+  const selectTemplateImage = async (meditationId, templateImage) => {
+    try {
+      setUploadingImage(meditationId);
+      
+      // Download the image from the URL
+      const response = await fetch(templateImage.url);
+      const blob = await response.blob();
+      
+      // Create a file object
+      const file = new File([blob], `${templateImage.name}.jpg`, { type: 'image/jpeg' });
+      
+      // Use the existing upload functionality
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('userId', user.id);
+      
+      await axios.post(getFullUrl(`/api/user-meditations/meditation/${meditationId}/upload-image`), formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      await loadMyMeditations();
+      showAlert(t('templateImageSet', 'Template image set successfully!'), 'success');
+      setShowImageOptions(null);
+    } catch (error) {
+      console.error('Error setting template image:', error);
+      showAlert(t('failedSetTemplateImage', 'Failed to set template image. Please try again.'), 'error');
+    } finally {
+      setUploadingImage(null);
     }
   };
 
@@ -498,9 +514,18 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
 
       // Copy custom image if exists
       if (meditation.customImage && meditation.customImage.filename) {
-        const imageResponse = await fetch(getFullUrl(API_ENDPOINTS.CUSTOM_IMAGE(meditation.customImage.filename)));
-        const imageBlob = await imageResponse.blob();
-        formData.append('image', imageBlob, meditation.customImage.filename);
+        try {
+          const imageResponse = await fetch(getFullUrl(API_ENDPOINTS.CUSTOM_IMAGE(meditation.customImage.filename)));
+          if (!imageResponse.ok) {
+            throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+          }
+          const imageBlob = await imageResponse.blob();
+          const imageFile = new File([imageBlob], meditation.customImage.filename, { type: 'image/jpeg' });
+          formData.append('image', imageFile);
+        } catch (imageError) {
+          console.error('Error fetching custom image:', imageError);
+          // Continue without image if fetch fails
+        }
       }
 
       const response = await axios.post(getFullUrl('/api/community/share'), formData, {
@@ -576,7 +601,14 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
   // Get meditation image URL
   const getImageUrl = (meditation) => {
     if (meditation.customImage && meditation.customImage.filename) {
-      return getAssetUrl(API_ENDPOINTS.CUSTOM_IMAGE(meditation.customImage.filename));
+      // Check if this is a community meditation (has sharedBy property) or user meditation
+      if (meditation.sharedBy || meditation.author) {
+        // Community meditation - images stored in /assets/images/shared/
+        return getAssetUrl(`/assets/images/shared/${meditation.customImage.filename}`);
+      } else {
+        // User meditation - images stored in /assets/images/custom/
+        return getAssetUrl(API_ENDPOINTS.CUSTOM_IMAGE(meditation.customImage.filename));
+      }
     }
     
     const meditationTypeImages = {
@@ -915,7 +947,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
               >
                 {/* Top Row - Image and Info */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
-                  {/* Album Art */}
+                  {/* Album Art with Edit Options */}
                   <div 
                     className="meditation-thumbnail"
                     style={{
@@ -924,7 +956,8 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
                       borderRadius: '8px',
                       overflow: 'hidden',
                       flexShrink: 0,
-                      background: 'rgba(255, 255, 255, 0.1)'
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      position: 'relative'
                     }}
                   >
                     <img 
@@ -939,6 +972,281 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
                         e.target.style.display = 'none';
                       }}
                     />
+                    
+                    {/* Image Edit Button */}
+                    <button
+                      className="image-edit-button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Image edit button clicked for meditation:', meditation._id || meditation.id);
+                        console.log('Current showImageOptions:', showImageOptions);
+                        const newValue = showImageOptions === (meditation._id || meditation.id) ? null : (meditation._id || meditation.id);
+                        console.log('Setting showImageOptions to:', newValue);
+                        setShowImageOptions(newValue);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        bottom: '4px',
+                        right: '4px',
+                        background: 'rgba(0, 0, 0, 0.8)',
+                        color: 'white',
+                        border: '2px solid rgba(255, 255, 255, 0.3)',
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        transition: 'all 0.2s ease',
+                        zIndex: 10,
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.target.style.background = 'rgba(76, 175, 80, 0.9)';
+                        e.target.style.transform = 'scale(1.2)';
+                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.target.style.background = 'rgba(0, 0, 0, 0.8)';
+                        e.target.style.transform = 'scale(1)';
+                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                      }}
+                      title={t('editImage', 'Edit Image')}
+                    >
+                      📷
+                    </button>
+                    
+                    {/* Debug: Show visual indicator when menu should be visible */}
+                    {showImageOptions === (meditation._id || meditation.id) && (
+                      <div style={{
+                        position: 'fixed',
+                        top: '10px',
+                        right: '10px',
+                        background: 'red',
+                        color: 'white',
+                        padding: '5px',
+                        zIndex: 9999,
+                        fontSize: '12px'
+                      }}>
+                        Menu Open: {meditation._id || meditation.id}
+                      </div>
+                    )}
+                    
+                    {/* Image Options Menu */}
+                    {showImageOptions === (meditation._id || meditation.id) && (
+                      <div 
+                        className="image-options-menu"
+                        style={{
+                          position: 'fixed',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          background: 'rgba(0, 0, 0, 0.95)',
+                          borderRadius: '12px',
+                          padding: '16px',
+                          minWidth: '200px',
+                          zIndex: 9999,
+                          backdropFilter: 'blur(20px)',
+                          border: '2px solid rgba(255, 255, 255, 0.3)',
+                          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <h4 style={{ color: 'white', margin: 0, fontSize: '16px' }}>
+                            {t('editImage', 'Edit Image')}
+                          </h4>
+                          <button 
+                            onClick={() => setShowImageOptions(null)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'white',
+                              fontSize: '18px',
+                              cursor: 'pointer',
+                              padding: '4px'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          style={{ display: 'none' }}
+                          accept="image/*"
+                          onChange={(e) => handleFileSelect(meditation._id || meditation.id, e)}
+                        />
+                        <button 
+                          onClick={() => fileInputRef.current?.click()}
+                          style={{
+                            width: '100%',
+                            background: 'none',
+                            border: 'none',
+                            color: 'white',
+                            padding: '8px 12px',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            marginBottom: '4px'
+                          }}
+                          onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+                          onMouseOut={(e) => e.target.style.background = 'none'}
+                        >
+                          📁 {t('upload', 'Upload')}
+                        </button>
+                        <button 
+                          onClick={() => setShowImageOptions((meditation._id || meditation.id) + '_templates')}
+                          style={{
+                            width: '100%',
+                            background: 'none',
+                            border: 'none',
+                            color: 'white',
+                            padding: '8px 12px',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            marginBottom: '4px'
+                          }}
+                          onMouseOver={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+                          onMouseOut={(e) => e.target.style.background = 'none'}
+                        >
+                          🎨 {t('chooseTemplate', 'Choose Template')}
+                        </button>
+                        {meditation.customImage && (
+                          <button 
+                            onClick={() => deleteCustomImage(meditation._id || meditation.id)}
+                            style={{
+                              width: '100%',
+                              background: 'none',
+                              border: 'none',
+                              color: '#ff6b6b',
+                              padding: '8px 12px',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              borderRadius: '4px',
+                              fontSize: '12px'
+                            }}
+                            onMouseOver={(e) => e.target.style.background = 'rgba(255, 107, 107, 0.1)'}
+                            onMouseOut={(e) => e.target.style.background = 'none'}
+                          >
+                            🗑️ {t('deleteCustomImage', 'Delete Custom Image')}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    
+                    
+                    {/* Template Image Selector */}
+                    {showImageOptions === (meditation._id || meditation.id) + '_templates' && (
+                      <div 
+                        className="template-selector"
+                        style={{
+                          position: 'fixed',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          background: 'rgba(0, 0, 0, 0.95)',
+                          borderRadius: '12px',
+                          padding: '20px',
+                          zIndex: 2000,
+                          backdropFilter: 'blur(20px)',
+                          maxWidth: '90vw',
+                          maxHeight: '80vh',
+                          overflow: 'auto'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                          <h3 style={{ color: 'white', margin: 0, fontSize: '18px' }}>
+                            {t('selectMeditationImage', 'Select Meditation Image')}
+                          </h3>
+                          <button 
+                            onClick={() => setShowImageOptions(null)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'white',
+                              fontSize: '20px',
+                              cursor: 'pointer',
+                              padding: '4px'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                          gap: '12px',
+                          maxHeight: '400px',
+                          overflow: 'auto'
+                        }}>
+                          {getTemplateImages(meditation.meditationType).map((templateImage, index) => (
+                            <div
+                              key={index}
+                              onClick={() => selectTemplateImage(meditation._id || meditation.id, templateImage)}
+                              style={{
+                                cursor: 'pointer',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                border: '2px solid rgba(255, 255, 255, 0.2)',
+                                transition: 'all 0.2s ease',
+                                aspectRatio: '1'
+                              }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.border = '2px solid rgba(255, 255, 255, 0.6)';
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.border = '2px solid rgba(255, 255, 255, 0.2)';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
+                            >
+                              <img 
+                                src={templateImage.url}
+                                alt={templateImage.name}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div style={{ marginTop: '16px', fontSize: '12px', color: 'rgba(255, 255, 255, 0.7)', textAlign: 'center' }}>
+                          {t('templateImagesNote', 'Images from Pixabay, Unsplash, and other free sources')}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {uploadingImage === (meditation._id || meditation.id) && (
+                      <div 
+                        style={{
+                          position: 'absolute',
+                          top: '0',
+                          left: '0',
+                          right: '0',
+                          bottom: '0',
+                          background: 'rgba(0, 0, 0, 0.7)',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '12px'
+                        }}
+                      >
+                        ⏳ {t('uploading', 'Uploading...')}
+                      </div>
+                    )}
                   </div>
 
                   {/* Track Info */}
