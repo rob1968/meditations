@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { getFullUrl, getAssetUrl, API_ENDPOINTS } from '../config/api';
@@ -42,14 +42,26 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
   
   // Community tab states (from CommunityHub)
   const [communityMeditations, setCommunityMeditations] = useState([]);
-  const [filterOptions] = useState([
+  // Use dynamic filter options that update with language changes
+  const filterOptions = useMemo(() => [
     { id: 'all', label: t('all', 'All'), icon: '🌟' },
-    { id: 'sleep', label: t('sleep', 'Sleep'), icon: '😴' },
-    { id: 'stress', label: t('stress', 'Stress'), icon: '😰' },
+    { id: 'sleep', label: t('sleep', 'Sleep'), icon: '🌙' },
+    { id: 'stress', label: t('stress', 'Stress'), icon: '😌' },
     { id: 'focus', label: t('focus', 'Focus'), icon: '🎯' },
-    { id: 'anxiety', label: t('anxiety', 'Anxiety'), icon: '😟' },
+    { id: 'anxiety', label: t('anxiety', 'Anxiety'), icon: '🌿' },
     { id: 'energy', label: t('energy', 'Energy'), icon: '⚡' }
-  ]);
+  ], [t]);
+  
+  const meditationTypeLabels = useMemo(() => {
+    const labels = {};
+    filterOptions.forEach(option => {
+      if (option.id !== 'all') {
+        labels[option.id] = option.label;
+      }
+    });
+    return labels;
+  }, [filterOptions]);
+  
   const [communityFilter, setCommunityFilter] = useState('all');
   const [likingMeditation, setLikingMeditation] = useState(null);
   const [playedMeditations, setPlayedMeditations] = useState(new Set());
@@ -701,6 +713,9 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     setIsGenerating(true);
     setError("");
     
+    // Switch to Mine tab immediately to show progress bar
+    switchTab('mine');
+    
     try {
       // Prepare form data for file upload
       const formData = new FormData();
@@ -754,9 +769,6 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       setShowTextPreview(false);
       setCustomBackgroundFile(null);
       
-      // Switch to Mine tab to show the new meditation
-      switchTab('mine');
-      
       showAlert(t('meditationCreated', 'Meditation created successfully!'), 'success');
       
     } catch (error) {
@@ -783,168 +795,285 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       : myMeditations.filter(m => m.meditationType === filterType);
 
     return (
-      <div className="mine-tab">
-        {/* Filter chips */}
-        <div className="filter-chips">
-          {['all', 'sleep', 'stress', 'focus', 'anxiety', 'energy', 'mindfulness', 'compassion', 'walking', 'breathing', 'morning'].map(type => (
-            <button
-              key={type}
-              className={`filter-chip ${filterType === type ? 'active' : ''}`}
-              onClick={() => setFilterType(type)}
-            >
-              {type === 'all' ? t('all', 'All') : t(type, type)}
-            </button>
-          ))}
+      <div className="community-hub-spotify">
+        {/* Audio generation spinner */}
+        {isGenerating && (
+          <div className="audio-generation-progress">
+            <div className="progress-content">
+              <div className="progress-spinner"></div>
+            </div>
+          </div>
+        )}
+        
+        {/* Filter slider */}
+        <div className="filter-slider">
+          {(() => {
+            // Calculate counts for each type
+            const typeCounts = {};
+            const allTypes = ['all', 'sleep', 'stress', 'focus', 'anxiety', 'energy', 'mindfulness', 'compassion', 'walking', 'breathing', 'morning'];
+            
+            allTypes.forEach(type => {
+              if (type === 'all') {
+                typeCounts[type] = myMeditations.length;
+              } else {
+                typeCounts[type] = myMeditations.filter(m => m.meditationType === type).length;
+              }
+            });
+
+            // Sort types by count (highest first), but keep 'all' first
+            const sortedTypes = allTypes.sort((a, b) => {
+              if (a === 'all') return -1;
+              if (b === 'all') return 1;
+              return typeCounts[b] - typeCounts[a];
+            });
+
+            // Define multi-color flowing gradients for each type
+            const typeColors = {
+              all: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%, #f1f5f9 100%)',
+              sleep: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 25%, #bfdbfe 50%, #93c5fd 75%, #dbeafe 100%)', 
+              stress: 'linear-gradient(135deg, #f0fdf4 0%, #d1fae5 25%, #a7f3d0 50%, #6ee7b7 75%, #d1fae5 100%)',
+              focus: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 25%, #fde68a 50%, #facc15 75%, #fef3c7 100%)',
+              anxiety: 'linear-gradient(135deg, #faf5ff 0%, #e9d5ff 25%, #d8b4fe 50%, #c084fc 75%, #e9d5ff 100%)',
+              energy: 'linear-gradient(135deg, #fef2f2 0%, #fecaca 25%, #fca5a5 50%, #f87171 75%, #fed7d7 100%)',
+              mindfulness: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 25%, #99f6e4 50%, #5eead4 75%, #cffafe 100%)',
+              compassion: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 25%, #fbcfe8 50%, #f9a8d4 75%, #fce7f3 100%)',
+              walking: 'linear-gradient(135deg, #f7fee7 0%, #ecfccb 25%, #d9f99d 50%, #bef264 75%, #ecfccb 100%)',
+              breathing: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 25%, #99f6e4 50%, #5eead4 75%, #a7f3d0 100%)',
+              morning: 'linear-gradient(135deg, #fef7ed 0%, #fed7aa 25%, #fdba74 50%, #fb923c 75%, #fed7aa 100%)'
+            };
+
+            return sortedTypes.map(type => (
+              <button
+                key={type}
+                className={`filter-slide-card ${filterType === type ? 'active' : ''}`}
+                onClick={() => setFilterType(type)}
+                style={{
+                  '--card-color': typeColors[type],
+                  '--card-count': typeCounts[type] || 0
+                }}
+              >
+                <div className="filter-slide-content">
+                  <span className="filter-slide-label">
+                    {type === 'all' ? t('all', 'All') : t(type, type)}
+                  </span>
+                  <span className="filter-slide-count">
+                    ({typeCounts[type] || 0})
+                  </span>
+                </div>
+              </button>
+            ));
+          })()}
         </div>
 
         {/* Meditations grid */}
-        <div className="meditations-grid">
+        <div className="community-meditations-list">
           {filteredMeditations.length > 0 ? (
             filteredMeditations.map((meditation) => (
-              <div key={meditation._id || meditation.id} className="meditation-card expanded">
-                {/* Meditation Image */}
-                <div className="meditation-image-container">
-                  <img 
-                    src={getImageUrl(meditation)} 
-                    alt={`${meditation.meditationType} meditation`}
-                    className="meditation-image"
-                  />
-                  
-                  {/* Image Options Menu */}
-                  <div className="image-actions">
-                    <button
-                      className="image-action-button"
-                      onClick={() => setShowImageOptions(showImageOptions === (meditation._id || meditation.id) ? null : (meditation._id || meditation.id))}
-                      title={t('editImage', 'Edit Image')}
-                    >
-                      📷
-                    </button>
-                    
-                    {showImageOptions === (meditation._id || meditation.id) && (
-                      <div className="image-options-menu">
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          style={{ display: 'none' }}
-                          accept="image/*"
-                          onChange={(e) => handleFileSelect(meditation._id || meditation.id, e)}
-                        />
-                        <button onClick={() => fileInputRef.current?.click()}>
-                          📁 {t('uploadFromDevice', 'Upload from Device')}
-                        </button>
-                        <button onClick={() => startCamera(meditation._id || meditation.id)}>
-                          📸 {t('takePhoto', 'Take Photo')}
-                        </button>
-                        {meditation.customImage && (
-                          <button 
-                            onClick={() => deleteCustomImage(meditation._id || meditation.id)}
-                            className="delete-image-btn"
-                          >
-                            🗑️ {t('deleteCustomImage', 'Delete Custom Image')}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Camera capture interface */}
-                    {showImageOptions === (meditation._id || meditation.id) + '_camera' && (
-                      <div className="camera-interface">
-                        <video ref={videoRef} autoPlay playsInline className="camera-video" />
-                        <div className="camera-controls">
-                          <button onClick={() => capturePhoto(meditation._id || meditation.id)} className="capture-btn">
-                            📷 {t('capture', 'Capture')}
-                          </button>
-                          <button onClick={() => setShowImageOptions(null)} className="cancel-btn">
-                            ❌ {t('cancel', 'Cancel')}
-                          </button>
-                        </div>
-                        <canvas ref={canvasRef} style={{ display: 'none' }} />
-                      </div>
-                    )}
+              <div 
+                key={meditation._id || meditation.id} 
+                className={`meditation-card-with-player ${playingMeditationId === (meditation._id || meditation.id) ? 'playing' : ''}`}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  transition: 'all 0.3s ease',
+                  marginBottom: '12px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                {/* Top Row - Image and Info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+                  {/* Album Art */}
+                  <div 
+                    className="meditation-thumbnail"
+                    style={{
+                      width: '70px',
+                      height: '70px',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      background: 'rgba(255, 255, 255, 0.1)'
+                    }}
+                  >
+                    <img 
+                      src={getImageUrl(meditation)}
+                      alt={`${meditationTypeLabels[meditation.meditationType] || meditation.meditationType} meditation`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
                   </div>
-                  
-                  {uploadingImage === (meditation._id || meditation.id) && (
-                    <div className="upload-overlay">
-                      <div className="upload-spinner">⏳</div>
-                      <p>{t('uploadingImage', 'Uploading image...')}</p>
+
+                  {/* Track Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '4px'
+                    }}>
+                      <div style={{
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        color: 'white',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        flex: 1,
+                        marginRight: '8px'
+                      }}>
+                        {meditationTypeLabels[meditation.meditationType] || meditation.meditationType}
+                      </div>
+                      
+                      {/* Action Buttons - Right Upper Corner */}
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowShareDialog(meditation);
+                          }}
+                          disabled={meditation.isShared}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: meditation.isShared ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.8)',
+                            fontSize: '20px',
+                            cursor: meditation.isShared ? 'default' : 'pointer',
+                            padding: '4px',
+                            borderRadius: '4px',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          onMouseOver={(e) => {
+                            if (!meditation.isShared) {
+                              e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                              e.target.style.color = 'white';
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            e.target.style.background = 'none';
+                            e.target.style.color = meditation.isShared ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.8)';
+                          }}
+                          title={meditation.isShared ? t('alreadyShared', 'Already shared') : t('shareMeditation', 'Share with community')}
+                        >
+                          {meditation.isShared ? '✅' : '🔗'}
+                        </button>
+                        
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteMeditation(meditation._id || meditation.id);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            fontSize: '18px',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            borderRadius: '4px',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          onMouseOver={(e) => {
+                            e.target.style.background = 'rgba(255, 107, 107, 0.2)';
+                            e.target.style.color = '#ff6b6b';
+                          }}
+                          onMouseOut={(e) => {
+                            e.target.style.background = 'none';
+                            e.target.style.color = 'rgba(255, 255, 255, 0.6)';
+                          }}
+                          title={t('deleteMeditation', 'Delete meditation')}
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
-                  )}
+                    <div style={{
+                      fontSize: '14px',
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      marginBottom: '4px'
+                    }}>
+                      {meditation.language === 'nl' ? 'Nederlands' : 
+                       meditation.language === 'en' ? 'English' :
+                       meditation.language === 'de' ? 'Deutsch' :
+                       meditation.language === 'fr' ? 'Français' :
+                       meditation.language?.toUpperCase() || 'EN'} • {(() => {
+                        const date = new Date(meditation.createdAt);
+                        const now = new Date();
+                        const diffTime = Math.abs(now - date);
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        if (diffDays === 1) return 'Vandaag';
+                        if (diffDays === 2) return 'Gisteren';
+                        if (diffDays <= 7) return `${diffDays - 1} dagen geleden`;
+                        return date.toLocaleDateString();
+                      })()}
+                    </div>
+                  </div>
                 </div>
 
-                {/* Meditation Content */}
-                <div className="meditation-content">
-                  <div className="meditation-header">
-                    <h3 className="meditation-title">
-                      {meditation.title || `${t(meditation.meditationType, meditation.meditationType)} ${t('meditation', 'Meditation')}`}
-                    </h3>
-                    <span className="meditation-type-label">
-                      {t(meditation.meditationType, meditation.meditationType)}
-                    </span>
-                    {meditation.isShared && (
-                      <span className="shared-badge">✅ {t('shared', 'Shared')}</span>
-                    )}
-                  </div>
-                  
-                  <div className="meditation-meta">
-                    <span className="meditation-date">
-                      {new Date(meditation.createdAt).toLocaleDateString()}
-                    </span>
-                    <span className="meditation-language">
-                      🌍 {meditation.language?.toUpperCase() || 'EN'}
-                    </span>
-                    {meditation.audioFiles?.[0]?.duration && (
-                      <span className="meditation-duration">
-                        ⏱️ {Math.round(meditation.audioFiles[0].duration / 60)}m
-                      </span>
-                    )}
-                  </div>
-                  
-                  <p className="meditation-text-preview">
-                    {meditation.text ? meditation.text.substring(0, 150) + '...' : t('noContent', 'No content')}
-                  </p>
-                </div>
-
-                {/* Audio Player */}
+                {/* Full Width Audio Player */}
                 {meditation.audioFiles?.length > 0 && (
-                  <div className="audio-player-section">
-                    <audio
-                      id={`audio-${meditation._id || meditation.id}`}
-                      controls
-                      controlsList="nodownload"
-                      preload="none"
-                      onPlay={() => setPlayingMeditationId(meditation._id || meditation.id)}
-                      onPause={() => setPlayingMeditationId(null)}
-                      onEnded={() => setPlayingMeditationId(null)}
-                    >
-                      <source 
-                        src={getAssetUrl(`/assets/meditations/${meditation.audioFiles[0].filename}`)} 
-                        type="audio/mpeg" 
-                      />
-                      {t('audioNotSupported', 'Your browser does not support the audio element.')}
-                    </audio>
-                  </div>
+                  <audio 
+                    id={`audio-${meditation._id || meditation.id}`}
+                    controls
+                    controlsList="nodownload"
+                    preload="metadata"
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      borderRadius: '6px',
+                      outline: 'none'
+                    }}
+                    onPlay={() => {
+                      // Pause all other audios first
+                      document.querySelectorAll('audio').forEach(a => {
+                        if (a.id !== `audio-${meditation._id || meditation.id}`) {
+                          a.pause();
+                        }
+                      });
+                      setPlayingMeditationId(meditation._id || meditation.id);
+                    }}
+                    onPause={() => {
+                      setPlayingMeditationId(null);
+                    }}
+                    onEnded={() => {
+                      setPlayingMeditationId(null);
+                    }}
+                  >
+                    <source 
+                      src={getAssetUrl(`/assets/meditations/${meditation.audioFiles[0].filename}`)} 
+                      type="audio/mpeg" 
+                    />
+                    {t('audioNotSupported', 'Your browser does not support the audio element.')}
+                  </audio>
                 )}
-
-                {/* Action Buttons */}
-                <div className="meditation-actions">
-                  <button
-                    className="action-btn share-btn"
-                    onClick={() => setShowShareDialog(meditation)}
-                    disabled={meditation.isShared}
-                    title={meditation.isShared ? t('alreadyShared', 'Already shared') : t('shareMeditation', 'Share with community')}
-                  >
-                    {meditation.isShared ? '✅' : '🔗'} {t('share', 'Share')}
-                  </button>
-                  
-                  
-                  <button
-                    className="action-btn delete-btn"
-                    onClick={() => deleteMeditation(meditation._id || meditation.id)}
-                    title={t('deleteMeditation', 'Delete meditation')}
-                  >
-                    🗑️ {t('delete', 'Delete')}
-                  </button>
-                </div>
               </div>
             ))
           ) : (
@@ -972,18 +1101,64 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
 
     return (
       <div className="community-tab">
-        {/* Filter chips */}
-        <div className="filter-chips">
-          {filterOptions.map(option => (
-            <button
-              key={option.id}
-              className={`filter-chip ${communityFilter === option.id ? 'active' : ''}`}
-              onClick={() => setCommunityFilter(option.id)}
-            >
-              <span className="filter-chip-icon">{option.icon}</span>
-              {option.label}
-            </button>
-          ))}
+        {/* Filter slider */}
+        <div className="filter-slider">
+          {(() => {
+            // Calculate counts for each type in community meditations
+            const typeCounts = {};
+            const allTypes = ['all', 'sleep', 'stress', 'focus', 'anxiety', 'energy', 'mindfulness', 'compassion', 'walking', 'breathing', 'morning'];
+            
+            allTypes.forEach(type => {
+              if (type === 'all') {
+                typeCounts[type] = communityMeditations.length;
+              } else {
+                typeCounts[type] = communityMeditations.filter(m => m.meditationType === type).length;
+              }
+            });
+
+            // Sort types by count (highest first), but keep 'all' first
+            const sortedTypes = allTypes.sort((a, b) => {
+              if (a === 'all') return -1;
+              if (b === 'all') return 1;
+              return typeCounts[b] - typeCounts[a];
+            });
+
+            // Define multi-color flowing gradients for each type
+            const typeColors = {
+              all: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 25%, #cbd5e1 50%, #e2e8f0 75%, #f1f5f9 100%)',
+              sleep: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 25%, #bfdbfe 50%, #93c5fd 75%, #dbeafe 100%)', 
+              stress: 'linear-gradient(135deg, #f0fdf4 0%, #d1fae5 25%, #a7f3d0 50%, #6ee7b7 75%, #d1fae5 100%)',
+              focus: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 25%, #fde68a 50%, #facc15 75%, #fef3c7 100%)',
+              anxiety: 'linear-gradient(135deg, #faf5ff 0%, #e9d5ff 25%, #d8b4fe 50%, #c084fc 75%, #e9d5ff 100%)',
+              energy: 'linear-gradient(135deg, #fef2f2 0%, #fecaca 25%, #fca5a5 50%, #f87171 75%, #fed7d7 100%)',
+              mindfulness: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 25%, #99f6e4 50%, #5eead4 75%, #cffafe 100%)',
+              compassion: 'linear-gradient(135deg, #fdf2f8 0%, #fce7f3 25%, #fbcfe8 50%, #f9a8d4 75%, #fce7f3 100%)',
+              walking: 'linear-gradient(135deg, #f7fee7 0%, #ecfccb 25%, #d9f99d 50%, #bef264 75%, #ecfccb 100%)',
+              breathing: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 25%, #99f6e4 50%, #5eead4 75%, #a7f3d0 100%)',
+              morning: 'linear-gradient(135deg, #fef7ed 0%, #fed7aa 25%, #fdba74 50%, #fb923c 75%, #fed7aa 100%)'
+            };
+
+            return sortedTypes.map(type => (
+              <button
+                key={type}
+                className={`filter-slide-card ${communityFilter === type ? 'active' : ''}`}
+                onClick={() => setCommunityFilter(type)}
+                style={{
+                  '--card-color': typeColors[type],
+                  '--card-count': typeCounts[type] || 0
+                }}
+              >
+                <div className="filter-slide-content">
+                  <span className="filter-slide-label">
+                    {type === 'all' ? t('all', 'All') : t(type, type)}
+                  </span>
+                  <span className="filter-slide-count">
+                    ({typeCounts[type] || 0})
+                  </span>
+                </div>
+              </button>
+            ));
+          })()}
         </div>
 
         {/* Community meditations grid */}
@@ -1286,7 +1461,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
           className={`tab-button ${activeTab === 'create' ? 'active' : ''}`}
           onClick={() => switchTab('create')}
         >
-          <span className="tab-icon">➕</span>
+          <span className="tab-icon">✨</span>
           {t('create', 'Create')}
         </button>
       </div>
