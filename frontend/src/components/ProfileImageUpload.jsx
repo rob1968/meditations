@@ -1,14 +1,20 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getFullUrl } from '../config/api';
+import ConfirmDialog from './ConfirmDialog';
 
 const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
   const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [showOptions, setShowOptions] = useState(false);
+  const [confirmState, setConfirmState] = useState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' });
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+
+  const showConfirmDialog = (message, onConfirm, confirmText = t('confirm', 'Confirm'), cancelText = t('cancel', 'Cancel')) => {
+    setConfirmState({ show: true, message, onConfirm, confirmText, cancelText });
+  };
 
   const handleFileSelect = async (event) => {
     const file = event.target.files[0];
@@ -60,33 +66,34 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
     }
   };
 
-  const handleDeleteImage = async () => {
-    if (!window.confirm(t('confirmDeleteImage', 'Are you sure you want to delete your profile image?'))) {
-      return;
-    }
+  const handleDeleteImage = () => {
+    showConfirmDialog(
+      t('confirmDeleteImage', 'Are you sure you want to delete your profile image?'),
+      async () => {
+        setUploading(true);
+        setError(null);
 
-    setUploading(true);
-    setError(null);
+        try {
+          const response = await fetch(getFullUrl(`/api/profile/delete-image/${user.id}`), {
+            method: 'DELETE'
+          });
 
-    try {
-      const response = await fetch(getFullUrl(`/api/profile/delete-image/${user.id}`), {
-        method: 'DELETE'
-      });
+          const data = await response.json();
 
-      const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || 'Delete failed');
+          }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Delete failed');
+          onImageUpdate(null);
+          setShowOptions(false);
+        } catch (error) {
+          console.error('Delete error:', error);
+          setError(error.message || t('deleteFailed', 'Failed to delete image'));
+        } finally {
+          setUploading(false);
+        }
       }
-
-      onImageUpdate(null);
-      setShowOptions(false);
-    } catch (error) {
-      console.error('Delete error:', error);
-      setError(error.message || t('deleteFailed', 'Failed to delete image'));
-    } finally {
-      setUploading(false);
-    }
+    );
   };
 
   const getImageUrl = () => {
@@ -173,6 +180,19 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
         capture="user"
         style={{ display: 'none' }}
         onChange={handleFileSelect}
+      />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        message={confirmState.message}
+        visible={confirmState.show}
+        onConfirm={() => {
+          confirmState.onConfirm();
+          setConfirmState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' });
+        }}
+        onCancel={() => setConfirmState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' })}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
       />
 
       <style jsx>{`

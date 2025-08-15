@@ -9,16 +9,30 @@ const ReviewStep = ({ wizardData, voices, savedCustomBackgrounds }) => {
     return voice ? voice.name : voiceId;
   };
 
-  const getBackgroundInfo = (background) => {
-    if (wizardData.useBackgroundMusic) {
-      const savedBg = savedCustomBackgrounds.find(bg => {
-        // Check both filename and saved-id format
-        return bg.filename.replace('.mp3', '') === background || 
-               `saved-${bg.id}` === background;
+  const getBackgroundInfo = () => {
+    // Check for new selectedMusic property first
+    if (wizardData.selectedMusic) {
+      if (wizardData.selectedMusic.type === 'catalog') {
+        return {
+          icon: wizardData.selectedMusic.categoryIcon || '🎵',
+          name: wizardData.selectedMusic.name
+        };
+      } else if (wizardData.selectedMusic.type === 'custom') {
+        return {
+          icon: '🎵',
+          name: wizardData.selectedMusic.name || wizardData.selectedMusic.customName || t('customMusic', 'Custom Music')
+        };
+      }
+    }
+    
+    // Fallback to old background property
+    if (wizardData.useBackgroundMusic && wizardData.background) {
+      const savedBg = savedCustomBackgrounds?.find(bg => {
+        return bg.filename.replace('.mp3', '') === wizardData.background || 
+               `saved-${bg.id}` === wizardData.background;
       });
       
       if (savedBg) {
-        // Return both icon and name
         return {
           icon: savedBg.icon || '🎵',
           name: savedBg.isSystemBackground 
@@ -31,17 +45,20 @@ const ReviewStep = ({ wizardData, voices, savedCustomBackgrounds }) => {
       const backgroundIcons = {
         ocean: '🌊',
         forest: '🌲',
-        rain: '🌧️'
+        rain: '🌧️',
+        stream: '🏔️',
+        wind: '💨',
+        birds: '🐦'
       };
       
       return {
-        icon: backgroundIcons[background] || '🎵',
-        name: background.charAt(0).toUpperCase() + background.slice(1)
+        icon: backgroundIcons[wizardData.background] || '🎵',
+        name: wizardData.background.charAt(0).toUpperCase() + wizardData.background.slice(1)
       };
     }
     
     return {
-      icon: '🚫',
+      icon: '🔇',
       name: t('noBackground', 'No music')
     };
   };
@@ -101,32 +118,34 @@ const ReviewStep = ({ wizardData, voices, savedCustomBackgrounds }) => {
         background: 'rgba(255, 255, 255, 0.05)',
         backdropFilter: 'blur(10px)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '12px',
-        padding: '12px',
-        marginBottom: '16px'
+        borderRadius: '16px',
+        padding: '20px',
+        marginBottom: '20px',
+        maxWidth: '100%',
+        width: '100%'
       }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr 1fr',
-          gap: '12px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          gap: '20px',
           alignItems: 'center'
         }}>
           {/* Meditation Type */}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5em', marginBottom: '2px' }}>
+          <div style={{ textAlign: 'center', padding: '8px' }}>
+            <div style={{ fontSize: '2em', marginBottom: '4px' }}>
               {meditationTypeEmojis[wizardData.meditationType] || '🧘'}
             </div>
-            <div style={{ fontSize: '0.75em', opacity: '0.8', lineHeight: '1.2' }}>
+            <div style={{ fontSize: '0.85em', opacity: '0.9', lineHeight: '1.3', fontWeight: '500' }}>
               {meditationTypes[wizardData.meditationType]}
             </div>
           </div>
 
           {/* Language */}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5em', marginBottom: '2px' }}>
+          <div style={{ textAlign: 'center', padding: '8px' }}>
+            <div style={{ fontSize: '2em', marginBottom: '4px' }}>
               {languageFlags[i18n.language] || '🌍'}
             </div>
-            <div style={{ fontSize: '0.75em', opacity: '0.8', lineHeight: '1.2' }}>
+            <div style={{ fontSize: '0.85em', opacity: '0.9', lineHeight: '1.3', fontWeight: '500' }}>
               {(() => {
                 const languageMap = {
                   'en': 'EN',
@@ -149,22 +168,22 @@ const ReviewStep = ({ wizardData, voices, savedCustomBackgrounds }) => {
           </div>
 
           {/* Voice */}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5em', marginBottom: '2px' }}>🎤</div>
-            <div style={{ fontSize: '0.75em', opacity: '0.8', lineHeight: '1.2' }}>
+          <div style={{ textAlign: 'center', padding: '8px' }}>
+            <div style={{ fontSize: '2em', marginBottom: '4px' }}>🎤</div>
+            <div style={{ fontSize: '0.85em', opacity: '0.9', lineHeight: '1.3', fontWeight: '500' }}>
               {getVoiceName(wizardData.voiceId).split(' ')[0]}
             </div>
           </div>
 
           {/* Background */}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.5em', marginBottom: '2px' }}>
-              {getBackgroundInfo(wizardData.background).icon}
+          <div style={{ textAlign: 'center', padding: '8px' }}>
+            <div style={{ fontSize: '2em', marginBottom: '4px' }}>
+              {getBackgroundInfo().icon}
             </div>
-            <div style={{ fontSize: '0.75em', opacity: '0.8', lineHeight: '1.2' }}>
-              {getBackgroundInfo(wizardData.background).name.length > 8 
-                ? getBackgroundInfo(wizardData.background).name.substring(0, 8) + '...'
-                : getBackgroundInfo(wizardData.background).name
+            <div style={{ fontSize: '0.85em', opacity: '0.9', lineHeight: '1.3', fontWeight: '500' }}>
+              {getBackgroundInfo().name.length > 12 
+                ? getBackgroundInfo().name.substring(0, 12) + '...'
+                : getBackgroundInfo().name
               }
             </div>
           </div>

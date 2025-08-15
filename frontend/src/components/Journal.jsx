@@ -163,7 +163,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   };
   
   // Helper function to show confirmation dialog
-  const showConfirmDialog = (message, onConfirm, confirmText = t('confirm', 'Bevestigen'), cancelText = t('cancel', 'Annuleren')) => {
+  const showConfirmDialog = (message, onConfirm, confirmText = t('confirm', 'Confirm'), cancelText = t('cancel', 'Cancel')) => {
     setConfirmState({
       show: true,
       message,

@@ -14,5 +14,12 @@
     }
   ],
   "createdAt": "2025-08-13T10:41:19.710Z",
-  "updatedAt": "2025-08-13T10:41:19.710Z"
+  "updatedAt": "2025-08-14T19:01:55.682Z",
+  "customImage": {
+    "filename": "meditation-1755197700909-2b6059c0ed16.jpg",
+    "originalName": "1000029720.jpg",
+    "uploadedAt": "2025-08-14T18:55:00.911Z"
+  },
+  "isShared": false,
+  "sharedMeditationId": null
 }

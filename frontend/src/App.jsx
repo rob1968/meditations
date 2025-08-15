@@ -17,7 +17,7 @@ import JournalHub from './components/JournalHub';
 import PageHeader from './components/PageHeader';
 import VoiceSlider from './components/VoiceSlider';
 import MeditationTypeSlider from './components/MeditationTypeSlider';
-import BackgroundSlider from './components/BackgroundSlider';
+import CustomMusicUploader from './components/CustomMusicUploader';
 import WizardContainer from './components/WizardContainer';
 import ReviewStep from './components/ReviewStep';
 import Alert from './components/Alert';
@@ -112,7 +112,7 @@ const App = () => {
   const [showingSavedTexts, setShowingSavedTexts] = useState(false);
   
   // Background audio cleanup ref
-  const backgroundSliderRef = useRef(null);
+  // const backgroundSliderRef = useRef(null); // Not needed anymore with custom uploader only
 
   // Auto-load appropriate text when wizard meditation type changes
   useEffect(() => {
@@ -147,15 +147,7 @@ const App = () => {
   const stopAllBackgroundAudio = () => {
     console.log('stopAllBackgroundAudio called');
     
-    // Method 1: Try using the ref if available
-    if (backgroundSliderRef.current && backgroundSliderRef.current.stopBackgroundSound) {
-      console.log('Calling stopBackgroundSound via ref');
-      backgroundSliderRef.current.stopBackgroundSound();
-    } else {
-      console.log('backgroundSliderRef not available, trying alternative method');
-    }
-    
-    // Method 2: Force stop all audio elements (backup method)
+    // Stop all audio elements in the document
     try {
       const audioElements = document.querySelectorAll('audio');
       audioElements.forEach(audio => {
@@ -498,27 +490,24 @@ const App = () => {
       case 4:
         return (
           <div className="background-step">
-            <BackgroundSlider
-                ref={backgroundSliderRef}
-                selectedBackground={wizardData.background}
-                onBackgroundSelect={(bg) => {
-                  if (bg === 'none') {
-                    updateWizardData('useBackgroundMusic', false);
-                    updateWizardData('background', '');
-                  } else {
-                    updateWizardData('useBackgroundMusic', true);
-                    updateWizardData('background', bg);
-                  }
-                }}
-                meditationType={wizardData.meditationType}
-                customBackground={customBackgroundFile}
-                customBackgroundFile={customBackgroundFile}
-                savedCustomBackgrounds={savedCustomBackgrounds}
-                backgroundsLoading={backgroundsLoading}
-                onCustomBackgroundUpload={handleCustomBackgroundUpload}
-                onCustomBackgroundDelete={handleCustomBackgroundDelete}
-                onStopAllAudio={stopAllBackgroundAudio}
-              />
+            <CustomMusicUploader
+              selectedMusic={wizardData.selectedMusic}
+              onMusicSelect={(music) => {
+                updateWizardData('selectedMusic', music);
+                if (music) {
+                  updateWizardData('useBackgroundMusic', true);
+                  updateWizardData('background', music.name || 'custom');
+                  updateWizardData('customBackgroundFile', music.file);
+                } else {
+                  updateWizardData('useBackgroundMusic', false);
+                  updateWizardData('background', '');
+                  updateWizardData('customBackgroundFile', null);
+                }
+              }}
+              customBackgrounds={savedCustomBackgrounds}
+              onUpload={handleCustomBackgroundUpload}
+              onDelete={handleCustomBackgroundDelete}
+            />
           </div>
         );
       

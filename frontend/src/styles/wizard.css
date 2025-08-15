@@ -4,10 +4,13 @@
   margin: 0 auto;
   padding: 20px;
   padding-bottom: calc(80px + var(--space-lg)); /* Space for bottom navigation */
+  /* Removed border from container - moved to step-body */
 }
 
 .wizard-header {
   margin-bottom: 30px;
+  /* Ensure no background behind wizard header */
+  background: transparent;
 }
 
 .wizard-content {
@@ -31,6 +34,12 @@
   justify-content: center;
   align-items: center;
   overflow: hidden;
+  /* Add border around step content */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(10px);
+  padding: 20px;
 }
 
 /* Step Container - universal wrapper for all steps */
@@ -48,6 +57,8 @@
 .step-indicator {
   position: relative;
   margin-bottom: 20px;
+  /* Ensure no background behind step indicators */
+  background: transparent;
 }
 
 .step-progress-bar {
@@ -63,6 +74,8 @@
   justify-content: space-between;
   position: relative;
   z-index: 1;
+  /* Ensure no background behind step items */
+  background: transparent;
 }
 
 .step-item {
@@ -106,9 +119,9 @@
 }
 
 .step-item.step-current .step-number {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: #6366f1; /* Simplified to solid color */
   color: #fff;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  /* Removed box-shadow to reduce visual layering */
 }
 
 .step-item.step-completed .step-number {
@@ -208,15 +221,16 @@
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: #6366f1; /* Simplified to solid color */
   color: #fff;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  /* Removed box-shadow to reduce visual effects */
 }
 
 .generate-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+  background: #7c7ff3; /* Lighter shade on hover */
+  /* Removed box-shadow for cleaner look */
 }
 
 .generate-btn:disabled {
@@ -308,7 +322,8 @@
   margin-top: 12px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  /* Reduced background opacity to be more subtle */
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -408,7 +423,7 @@
 }
 
 .review-section {
-  background: rgba(255, 255, 255, 0.1);
+  /* Removed background to prevent double background effect */
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 20px;
@@ -451,7 +466,8 @@
 }
 
 .text-preview {
-  background: rgba(0, 0, 0, 0.2);
+  /* Subtle border instead of background */
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 12px;
   border-radius: 8px;
   font-style: italic;
@@ -478,7 +494,8 @@
 }
 
 .generation-info {
-  background: rgba(0, 0, 0, 0.2);
+  /* Removed background to prevent layering */
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 16px;
   display: grid;
@@ -522,6 +539,14 @@
   
   .step-title {
     font-size: 10px;
+  }
+  
+  .step-body {
+    border-radius: 12px; /* Slightly smaller radius on mobile */
+    padding: 15px; /* Less padding on mobile */
+    min-height: 350px; /* Smaller height on mobile */
+    max-height: 350px;
+    height: 350px;
   }
   
   .step-navigation {

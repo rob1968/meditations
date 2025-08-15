@@ -5,6 +5,32 @@
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Meditation App</title>
+    
+    <!-- Global Browser Alert/Confirm Prevention -->
+    <script>
+      // Override window.confirm and window.alert to prevent accidental usage
+      window.confirm = function(message) {
+        console.error('❌ window.confirm is disabled! Use ConfirmDialog component instead.');
+        console.error('Message was:', message);
+        console.trace('Called from:');
+        // Return false to cancel any action that depends on confirmation
+        return false;
+      };
+      
+      window.alert = function(message) {
+        console.error('❌ window.alert is disabled! Use Alert component instead.');
+        console.error('Message was:', message);
+        console.trace('Called from:');
+        // Don't show anything - alerts should use our Alert component
+      };
+      
+      // Also override the original functions to prevent bypassing
+      window.originalConfirm = window.confirm;
+      window.originalAlert = window.alert;
+      
+      console.log('✅ Browser confirm/alert functions disabled. Use ConfirmDialog and Alert components.');
+    </script>
+    
     <!-- Pi Network SDK -->
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   </head>

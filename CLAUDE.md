@@ -167,6 +167,16 @@ cd frontend && npm install && npm start   # Frontend only
    - **AI Service Failures**: Fallback responses prevent user-facing errors
    - **Credit System**: Prevents infinite API usage through user credit management
 
+8. **Dialog System (CRITICAL - NEVER USE BROWSER ALERTS)**: 
+   - **FORBIDDEN**: `window.confirm()`, `window.alert()`, `confirm()`, `alert()` - ALL DISABLED
+   - **Browser functions are globally overridden** and will log errors instead of showing dialogs
+   - **ESLint rules prevent** usage with clear error messages during development
+   - **ALWAYS USE**: `ConfirmDialog` component with `showConfirmDialog()` function pattern
+   - **ALWAYS USE**: `Alert` component with `showAlert()` function pattern
+   - **Helper utilities**: Import from `/src/utils/dialogHelpers.js` for common patterns
+   - **Standard pattern**: All components must import ConfirmDialog/Alert and implement state management
+   - **Dutch defaults**: All confirmations use "Bevestigen"/"Annuleren" buttons consistently
+
 ## Specialized Features
 
 ### AI Coaching System (`aiCoachService.js`)

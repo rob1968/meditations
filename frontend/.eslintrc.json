@@ -1,0 +1,39 @@
+{
+  "extends": [
+    "react-app",
+    "react-app/jest"
+  ],
+  "rules": {
+    "no-undef": "warn",
+    "no-restricted-globals": [
+      "warn",
+      {
+        "name": "confirm",
+        "message": "Use ConfirmDialog component instead of window.confirm"
+      },
+      {
+        "name": "alert", 
+        "message": "Use Alert component instead of window.alert"
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "CallExpression[callee.object.name='window'][callee.property.name='confirm']",
+        "message": "window.confirm is not allowed. Use ConfirmDialog component instead."
+      },
+      {
+        "selector": "CallExpression[callee.object.name='window'][callee.property.name='alert']",
+        "message": "window.alert is not allowed. Use Alert component instead."
+      },
+      {
+        "selector": "CallExpression[callee.name='confirm']",
+        "message": "Global confirm() is not allowed. Use ConfirmDialog component instead."
+      },
+      {
+        "selector": "CallExpression[callee.name='alert']",
+        "message": "Global alert() is not allowed. Use Alert component instead."
+      }
+    ]
+  }
+}

@@ -2839,7 +2839,8 @@ router.post('/custom-background/upload', upload.single('customBackground'), asyn
     res.json({ 
       success: true, 
       backgroundId: metadata.id,
-      filename: req.file.filename,
+      filename: uniqueFilename, // Return the actual saved filename
+      metadata: metadata, // Include full metadata for frontend
       message: 'Custom background uploaded and saved successfully' 
     });
   } catch (error) {

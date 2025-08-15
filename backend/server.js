@@ -22,6 +22,7 @@ const piPaymentsRoute = require('./routes/piPayments');
 const aiCoachRoute = require('./routes/aiCoach');
 const emergencyContactsRoute = require('./routes/emergencyContacts');
 const profileRoute = require('./routes/profile');
+const musicRoute = require('./routes/music');
 const app = express();
 
 // Create a write stream (in append mode) for logging
@@ -75,6 +76,7 @@ app.use('/api/pi-payments', piPaymentsRoute);
 app.use('/api/ai-coach', aiCoachRoute);
 app.use('/api/emergency-contacts', emergencyContactsRoute);
 app.use('/api/profile', profileRoute);
+app.use('/api/music', musicRoute);
 
 // Serve profile images
 app.use('/profile-images', express.static(path.join(__dirname, 'profile-images')));

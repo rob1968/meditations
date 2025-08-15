@@ -8,7 +8,7 @@ import ConfirmDialog from './ConfirmDialog';
 import ShareMeditationDialog from './ShareMeditationDialog';
 import VoiceSlider from './VoiceSlider';
 import MeditationTypeSlider from './MeditationTypeSlider';
-import BackgroundSlider from './BackgroundSlider';
+import CustomMusicUploader from './CustomMusicUploader';
 import WizardContainer from './WizardContainer';
 import ReviewStep from './ReviewStep';
 
@@ -85,14 +85,13 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
   const [showTextPreview, setShowTextPreview] = useState(false);
   
   // Background audio cleanup ref
-  const backgroundSliderRef = useRef(null);
 
   // Helper functions
   const showAlert = (message, type = 'success') => {
     setAlertState({ show: true, message, type });
   };
 
-  const showConfirm = (message, onConfirm, confirmText = t('confirm', 'Confirm'), cancelText = t('cancel', 'Cancel')) => {
+  const showConfirmDialog = (message, onConfirm, confirmText = t('confirm', 'Confirm'), cancelText = t('cancel', 'Cancel')) => {
     setConfirmState({ show: true, message, onConfirm, confirmText, cancelText });
   };
 
@@ -101,19 +100,32 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     loadTabData();
   }, [activeTab, user]);
 
-  // Load voices and custom backgrounds on component mount
+  // Load voices on component mount
   useEffect(() => {
     fetchVoices();
-    if (user) {
-      fetchSavedCustomBackgrounds();
-    }
   }, []);
 
+  // Load custom backgrounds when user changes
   useEffect(() => {
     if (user) {
       fetchSavedCustomBackgrounds();
     }
   }, [user]);
+
+  // Remove duplicates from savedCustomBackgrounds
+  const uniqueCustomBackgrounds = savedCustomBackgrounds.reduce((unique, current) => {
+    const exists = unique.find(bg => 
+      bg.id === current.id || 
+      (bg.filename === current.filename && bg.userId === current.userId) ||
+      (bg.customName === current.customName && bg.userId === current.userId)
+    );
+    
+    if (!exists) {
+      unique.push(current);
+    }
+    
+    return unique;
+  }, []);
 
   // Load voices
   const fetchVoices = async () => {
@@ -146,6 +158,30 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     }
   };
 
+  // Handle custom background upload
+  const handleCustomBackgroundUpload = async (uploadedFile, metadata) => {
+    try {
+      console.log('Custom background uploaded successfully:', metadata);
+      // Refresh the list of custom backgrounds
+      await fetchSavedCustomBackgrounds();
+      // The music is already selected by CustomMusicUploader
+    } catch (error) {
+      console.error('Error handling custom background upload:', error);
+    }
+  };
+
+  // Handle custom background deletion
+  const handleDeleteCustomBackground = async (filename) => {
+    try {
+      console.log('Deleting custom background:', filename);
+      // Optionally implement deletion if needed
+      // await axios.delete(getFullUrl(`/api/meditation/custom-background/${user.id}/${filename}`));
+      await fetchSavedCustomBackgrounds();
+    } catch (error) {
+      console.error('Error deleting custom background:', error);
+    }
+  };
+
   const loadTabData = async () => {
     if (!user) return;
     
@@ -157,6 +193,11 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
         await loadMyMeditations();
       } else if (activeTab === 'community') {
         await loadCommunityMeditations();
+      } else if (activeTab === 'create') {
+        await Promise.all([
+          fetchVoices(),
+          fetchSavedCustomBackgrounds()
+        ]);
       }
     } catch (error) {
       console.error('Error loading tab data:', error);
@@ -371,61 +412,121 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
         { name: 'Night Sky', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
         { name: 'Peaceful Moon', url: 'https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=400&h=400&fit=crop&crop=center' },
         { name: 'Starry Night', url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400&h=400&fit=crop&crop=center' },
-        { name: 'Calm Bedroom', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' }
+        { name: 'Calm Bedroom', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Cozy Bed', url: 'https://images.unsplash.com/photo-1540518614846-7eded47fa4d9?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Galaxy Dreams', url: 'https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Twilight Sky', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Peaceful Night', url: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Crescent Moon', url: 'https://images.unsplash.com/photo-1532978379173-1e3e8ffccb44?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Night Clouds', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' }
       ],
       stress: [
         { name: 'Calm Ocean', url: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=400&h=400&fit=crop&crop=center' },
         { name: 'Peaceful Waves', url: 'https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=400&h=400&fit=crop&crop=center' },
         { name: 'Zen Garden', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' },
-        { name: 'Gentle Stream', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' }
+        { name: 'Gentle Stream', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Serene Lake', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Spa Stones', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Soft Clouds', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Tranquil Forest', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Peaceful Pond', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Calm Beach', url: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=400&h=400&fit=crop&crop=center' }
       ],
       focus: [
         { name: 'Mountain Peak', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
         { name: 'Clear Sky', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
         { name: 'Calm Lake', url: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=400&h=400&fit=crop&crop=center' },
-        { name: 'Minimalist Design', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop&crop=center' }
+        { name: 'Minimalist Design', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Crystal Clear', url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Sharp Focus', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Centered Mind', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Zen Circle', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Morning Light', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Deep Concentration', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center' }
       ],
       anxiety: [
         { name: 'Gentle Sunrise', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
         { name: 'Soft Clouds', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
         { name: 'Peaceful Field', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' },
-        { name: 'Calming Colors', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop&crop=center' }
+        { name: 'Calming Colors', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Safe Haven', url: 'https://images.unsplash.com/photo-1540518614846-7eded47fa4d9?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Gentle Breeze', url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Warm Embrace', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Inner Peace', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Comfort Zone', url: 'https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Healing Light', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center' }
       ],
       energy: [
         { name: 'Sunrise Energy', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
         { name: 'Mountain Power', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
         { name: 'Ocean Waves', url: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=400&h=400&fit=crop&crop=center' },
-        { name: 'Lightning', url: 'https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?w=400&h=400&fit=crop&crop=center' }
+        { name: 'Lightning', url: 'https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Golden Hour', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Fire Within', url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Solar Power', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Electric Sky', url: 'https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Dynamic Force', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Vital Energy', url: 'https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?w=400&h=400&fit=crop&crop=center' }
       ],
       mindfulness: [
         { name: 'Buddha Statue', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' },
         { name: 'Zen Stones', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' },
         { name: 'Lotus Flower', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center' },
-        { name: 'Present Moment', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop&crop=center' }
+        { name: 'Present Moment', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Meditation Pose', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Peaceful Garden', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Sacred Space', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Inner Light', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Awareness', url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Mindful Nature', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' }
       ],
       compassion: [
         { name: 'Heart Shape', url: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=400&fit=crop&crop=center' },
         { name: 'Warm Light', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
         { name: 'Golden Hour', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
-        { name: 'Loving Kindness', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center' }
+        { name: 'Loving Kindness', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Gentle Touch', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Open Heart', url: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Soft Embrace', url: 'https://images.unsplash.com/photo-1540518614846-7eded47fa4d9?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Healing Energy', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Universal Love', url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Kind Soul', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' }
       ],
       walking: [
         { name: 'Forest Path', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' },
         { name: 'Mountain Trail', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
         { name: 'Beach Walk', url: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=400&h=400&fit=crop&crop=center' },
-        { name: 'Garden Steps', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' }
+        { name: 'Garden Steps', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Woodland Trail', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Sunrise Walk', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Peaceful Journey', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Nature Walk', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Mindful Steps', url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Moving Meditation', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center' }
       ],
       breathing: [
         { name: 'Fresh Air', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
         { name: 'Wind Patterns', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
         { name: 'Clear Lungs', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop&crop=center' },
-        { name: 'Life Force', url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=400&fit=crop&crop=center' }
+        { name: 'Life Force', url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Ocean Breeze', url: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Mountain Air', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Deep Breath', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Rhythmic Flow', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Breath of Life', url: 'https://images.unsplash.com/photo-1545389336-cf090694435e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Pure Oxygen', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center' }
       ],
       morning: [
         { name: 'Sunrise Glory', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
         { name: 'Dawn Light', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
         { name: 'Morning Dew', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=400&fit=crop&crop=center' },
-        { name: 'Fresh Start', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' }
+        { name: 'Fresh Start', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Golden Dawn', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop&crop=center' },
+        { name: 'New Day', url: 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Morning Energy', url: 'https://images.unsplash.com/photo-1464822759844-d150d4e2b2e7?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Awakening', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Morning Peace', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop&crop=center' },
+        { name: 'Early Light', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=center' }
       ]
     };
     
@@ -560,7 +661,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
   };
 
   const unshareMeditation = async (meditation) => {
-    showConfirm(
+    showConfirmDialog(
       t('confirmUnshareMeditation', 'Are you sure you want to unshare this meditation? It will be removed from the community.'),
       async () => {
         try {
@@ -581,7 +682,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
   };
 
   const deleteMeditation = async (meditationId) => {
-    showConfirm(
+    showConfirmDialog(
       t('confirmDeleteMeditation', 'Are you sure you want to delete this meditation? This action cannot be undone.'),
       async () => {
         try {
@@ -742,10 +843,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
 
   // Global function to stop all background audio
   const stopAllBackgroundAudio = () => {
-    // Method 1: Try using the ref if available
-    if (backgroundSliderRef.current && backgroundSliderRef.current.stopBackgroundSound) {
-      backgroundSliderRef.current.stopBackgroundSound();
-    }
+    // Method 1: Stop all audio (simplified without ref)
     
     // Method 2: Force stop all audio elements (backup method)
     try {
@@ -1702,24 +1800,32 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
         case 4:
           return (
             <div className="background-step">
-              <BackgroundSlider
-                ref={backgroundSliderRef}
-                selectedBackground={wizardData.background}
-                onBackgroundSelect={(bg) => {
-                  if (bg === 'none') {
+              <CustomMusicUploader
+                selectedMusic={wizardData.selectedMusic || null}
+                onMusicSelect={(music) => {
+                  updateWizardData('selectedMusic', music);
+                  if (music) {
+                    updateWizardData('useBackgroundMusic', true);
+                    if (music.type === 'custom') {
+                      updateWizardData('background', music.filename);
+                    } else if (music.type === 'catalog') {
+                      updateWizardData('background', music.filename);
+                    } else {
+                      updateWizardData('background', music.filename || music.id);
+                    }
+                  } else {
                     updateWizardData('useBackgroundMusic', false);
                     updateWizardData('background', '');
-                  } else {
-                    updateWizardData('useBackgroundMusic', true);
-                    updateWizardData('background', bg);
                   }
                 }}
-                meditationType={wizardData.meditationType}
-                customBackground={customBackgroundFile}
-                customBackgroundFile={customBackgroundFile}
-                savedCustomBackgrounds={savedCustomBackgrounds}
-                backgroundsLoading={backgroundsLoading}
-                onStopAllAudio={stopAllBackgroundAudio}
+                customBackgrounds={uniqueCustomBackgrounds}
+                onUpload={(uploadedFile, metadata) => {
+                  handleCustomBackgroundUpload(uploadedFile, metadata);
+                }}
+                onDelete={(filename) => {
+                  handleDeleteCustomBackground(filename);
+                }}
+                userId={user?.id}
               />
             </div>
           );
@@ -1730,7 +1836,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
               key={`review-${JSON.stringify(wizardData)}`}
               wizardData={wizardData}
               voices={voices}
-              savedCustomBackgrounds={savedCustomBackgrounds}
+              savedCustomBackgrounds={uniqueCustomBackgrounds}
             />
           );
         
