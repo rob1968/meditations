@@ -143,10 +143,9 @@
 /* Step Navigation */
 .step-navigation {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 10px 0 20px 0;
-  gap: 20px;
   min-height: 48px;
 }
 
@@ -550,7 +549,6 @@
   }
   
   .step-navigation {
-    gap: 15px;
     padding: 8px 0 18px 0;
   }
   
@@ -592,7 +590,6 @@
 
 @media (max-width: 480px) {
   .step-navigation {
-    gap: 12px;
     padding: 5px 0 15px 0;
   }
   

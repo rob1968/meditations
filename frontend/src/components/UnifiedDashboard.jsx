@@ -880,8 +880,20 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       formData.append('useBackgroundMusic', wizardData.useBackgroundMusic);
       formData.append('speechTempo', wizardData.speechTempo);
       
-      // Add custom background file if selected
-      if (customBackgroundFile) {
+      // Add music selection if available
+      if (wizardData.selectedMusic) {
+        const music = wizardData.selectedMusic;
+        if (music.type === 'custom') {
+          // Custom uploaded music
+          formData.append('savedBackgroundId', music.id);
+          formData.append('savedBackgroundUserId', user?.id);
+          formData.append('savedBackgroundFilename', music.filename);
+        } else if (music.type === 'catalog') {
+          // Catalog music (future use)
+          formData.append('background', music.name);
+        }
+      } else if (customBackgroundFile) {
+        // Fallback to old customBackgroundFile logic
         if (customBackgroundFile.savedBackground) {
           const savedBg = customBackgroundFile.savedBackground;
           formData.append('savedBackgroundId', savedBg.id);
