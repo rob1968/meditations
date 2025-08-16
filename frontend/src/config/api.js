@@ -32,6 +32,15 @@ export const API_ENDPOINTS = {
   // AI Coach endpoints
   AI_COACH: '/api/ai-coach',
   
+  // User endpoints
+  USER_CREDITS: (userId) => `/api/users/${userId}/credits`,
+  
+  // Community endpoints
+  COMMUNITY_MEDITATIONS: '/api/community/shared-meditations',
+  COMMUNITY_MEDITATION: (id) => `/api/community/meditation/${id}`,
+  COMMUNITY_LIKE: (id) => `/api/community/meditations/${id}/like`,
+  COMMUNITY_PLAY: (id) => `/api/community/meditations/${id}/play`,
+  
   // Asset endpoints
   MEDITATION_AUDIO: (filename) => `/assets/meditations/${filename}`,
   CUSTOM_IMAGE: (filename) => `/assets/images/custom/${filename}`,

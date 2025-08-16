@@ -28,10 +28,16 @@ router.get('/user/:userId', async (req, res) => {
     
     console.log('Found addictions:', addictions.length);
     
-    // Add calculated days clean to each addiction
+    // Add calculated days clean and CRUKS status to each addiction
     const addictionsWithDays = addictions.map(addiction => {
       const addictionObj = addiction.toObject();
       addictionObj.daysClean = addiction.getDaysClean();
+      
+      // Add CRUKS status for gambling addictions
+      if (addiction.type === 'gambling' && addiction.cruksRegistration?.isRegistered) {
+        addictionObj.cruksStatus = addiction.getCruksStatus();
+      }
+      
       return addictionObj;
     });
     
@@ -48,7 +54,7 @@ router.get('/user/:userId', async (req, res) => {
 // Create new addiction
 router.post('/create', async (req, res) => {
   try {
-    const { userId, type, customType, description, startDate, quitDate, status, severity, triggers, copingStrategies } = req.body;
+    const { userId, type, customType, description, startDate, quitDate, status, severity, triggers, copingStrategies, cruksRegistration } = req.body;
     
     if (!userId || !type || !startDate) {
       return res.status(400).json({ 
@@ -91,6 +97,14 @@ router.post('/create', async (req, res) => {
       addictionData.copingStrategies = copingStrategies.filter(s => s.trim()).map(s => s.trim());
     }
     
+    // Add CRUKS registration data for gambling addiction (Netherlands users)
+    if (type === 'gambling' && cruksRegistration) {
+      addictionData.cruksRegistration = {
+        isRegistered: Boolean(cruksRegistration.isRegistered),
+        registrationDate: cruksRegistration.registrationDate ? new Date(cruksRegistration.registrationDate) : null
+      };
+    }
+    
     const newAddiction = new Addiction(addictionData);
     await newAddiction.save();
     await newAddiction.populate('userId', 'username');
@@ -115,7 +129,7 @@ router.post('/create', async (req, res) => {
 router.put('/:addictionId', async (req, res) => {
   try {
     const { addictionId } = req.params;
-    const { userId, type, customType, description, startDate, quitDate, status, severity, triggers, copingStrategies } = req.body;
+    const { userId, type, customType, description, startDate, quitDate, status, severity, triggers, copingStrategies, cruksRegistration } = req.body;
     
     console.log('Updating addiction:', addictionId);
     
@@ -179,6 +193,14 @@ router.put('/:addictionId', async (req, res) => {
     if (copingStrategies !== undefined) {
       addiction.copingStrategies = Array.isArray(copingStrategies) ? 
         copingStrategies.filter(s => s.trim()).map(s => s.trim()) : [];
+    }
+    
+    // Update CRUKS registration data for gambling addiction
+    if (type === 'gambling' && cruksRegistration !== undefined) {
+      addiction.cruksRegistration = {
+        isRegistered: Boolean(cruksRegistration.isRegistered),
+        registrationDate: cruksRegistration.registrationDate ? new Date(cruksRegistration.registrationDate) : null
+      };
     }
     
     await addiction.save();

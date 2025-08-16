@@ -1,0 +1,30 @@
+/* Force hide all images in meditation thumbnails */
+.meditation-thumbnail img {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* Force hide any image overlays */
+.meditation-thumbnail div[style*="position: absolute"] {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Ensure emoji styling for thumbnails */
+.meditation-thumbnail {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 24px !important;
+    background: linear-gradient(135deg, rgba(75, 70, 229, 0.25), rgba(255, 255, 255, 0.1)) !important;
+}
+
+/* Mobile responsive emoji size */
+@media (max-width: 768px) {
+    .meditation-thumbnail {
+        font-size: 20px !important;
+    }
+}

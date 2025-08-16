@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Community Hub - No Images Test</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .thumbnail {
+            width: 70px;
+            height: 70px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(75, 70, 229, 0.25), rgba(255, 255, 255, 0.1));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        
+        .content {
+            flex: 1;
+        }
+        
+        .author {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .metadata {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .badge {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .like-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 Community Hub - No Images Version</h1>
+    <p>This is a test page showing community cards with ONLY emojis (no images):</p>
+    
+    <div class="card">
+        <div class="thumbnail">🧘</div>
+        <div class="content">
+            <div class="author">TestUser1</div>
+            <div class="metadata">
+                <span class="badge">English</span>
+                <span>•</span>
+                <span>5 likes</span>
+                <span>•</span>
+                <span>12 plays</span>
+            </div>
+            <button class="like-btn">♡ Like</button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="thumbnail">😴</div>
+        <div class="content">
+            <div class="author">SleepExpert</div>
+            <div class="metadata">
+                <span class="badge">Nederlands</span>
+                <span>•</span>
+                <span>8 likes</span>
+                <span>•</span>
+                <span>23 plays</span>
+            </div>
+            <button class="like-btn">♡ Like</button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="thumbnail">💪</div>
+        <div class="content">
+            <div class="author">StressRelief</div>
+            <div class="metadata">
+                <span class="badge">Français</span>
+                <span>•</span>
+                <span>3 likes</span>
+                <span>•</span>
+                <span>7 plays</span>
+            </div>
+            <button class="like-btn">♡ Like</button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="thumbnail">🎯</div>
+        <div class="content">
+            <div class="author">FocusMaster</div>
+            <div class="metadata">
+                <span class="badge">Español</span>
+                <span>•</span>
+                <span>15 likes</span>
+                <span>•</span>
+                <span>34 plays</span>
+            </div>
+            <button class="like-btn">♡ Like</button>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="thumbnail">⚡</div>
+        <div class="content">
+            <div class="author">EnergyBoost</div>
+            <div class="metadata">
+                <span class="badge">Deutsch</span>
+                <span>•</span>
+                <span>6 likes</span>
+                <span>•</span>
+                <span>18 plays</span>
+            </div>
+            <button class="like-btn">♡ Like</button>
+        </div>
+    </div>
+    
+    <p><strong>✅ This shows exactly what the community cards should look like - ONLY emojis, no images!</strong></p>
+    <p><a href="/" style="color: white;">← Back to main site</a></p>
+    
+    <script>
+        console.log('🎯 TEST PAGE: Community Hub with NO IMAGES - only emojis!');
+        
+        // Add click handlers to like buttons
+        document.querySelectorAll('.like-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.textContent.includes('♡')) {
+                    btn.innerHTML = '♥ Liked';
+                    btn.style.background = 'rgba(255, 107, 107, 0.2)';
+                    btn.style.color = '#ff6b6b';
+                } else {
+                    btn.innerHTML = '♡ Like';
+                    btn.style.background = 'rgba(255, 255, 255, 0.1)';
+                    btn.style.color = 'white';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

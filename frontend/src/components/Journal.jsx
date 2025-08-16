@@ -67,7 +67,11 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     description: '',
     startDate: '',
     quitDate: '',
-    status: 'active' // 'active', 'recovering', 'relapsed', 'clean'
+    status: 'active', // 'active', 'recovering', 'relapsed', 'clean'
+    cruksRegistration: {
+      isRegistered: false,
+      registrationDate: ''
+    }
   });
   const [expandedMoodId, setExpandedMoodId] = useState(null);
   const [showMoodDescription, setShowMoodDescription] = useState(null);
@@ -1684,7 +1688,11 @@ const handleSaveEntry = async () => {
           description: '',
           startDate: '',
           quitDate: '',
-          status: 'active'
+          status: 'active',
+          cruksRegistration: {
+            isRegistered: false,
+            registrationDate: ''
+          }
         });
       }
     } catch (error) {
@@ -1699,7 +1707,12 @@ const handleSaveEntry = async () => {
       description: addiction.description || '',
       startDate: addiction.startDate ? new Date(addiction.startDate).toISOString().split('T')[0] : '',
       quitDate: addiction.quitDate ? new Date(addiction.quitDate).toISOString().split('T')[0] : '',
-      status: addiction.status
+      status: addiction.status,
+      cruksRegistration: {
+        isRegistered: addiction.cruksRegistration?.isRegistered || false,
+        registrationDate: addiction.cruksRegistration?.registrationDate ? 
+          new Date(addiction.cruksRegistration.registrationDate).toISOString().split('T')[0] : ''
+      }
     });
     setEditingAddiction(addiction);
     setShowAddictionForm(true);
@@ -2690,7 +2703,11 @@ const handleSaveEntry = async () => {
                       description: '',
                       startDate: '',
                       quitDate: '',
-                      status: 'active'
+                      status: 'active',
+                      cruksRegistration: {
+                        isRegistered: false,
+                        registrationDate: ''
+                      }
                     });
                     setEditingAddiction(null);
                     setShowAddictionForm(true);
@@ -2812,6 +2829,66 @@ const handleSaveEntry = async () => {
                       </div>
                     </div>
                     
+                    {/* CRUKS Register Section - Only for gambling addiction in Netherlands */}
+                    {addictionForm.type === 'gambling' && (user?.location?.countryCode === 'NL' || user?.location?.country === 'Nederland') && (
+                      <div className="cruks-section">
+                        <div className="cruks-header">
+                          <h4>🇳🇱 {t('cruksRegister', 'CRUKS Register')}</h4>
+                          <p className="cruks-description">
+                            {t('cruksDescription', 'Houd bij wanneer je je hebt ingeschreven bij het CRUKS gokuitsluitingssysteem.')}
+                          </p>
+                        </div>
+                        
+                        <div className="cruks-form">
+                          <div className="checkbox-group">
+                            <label className="checkbox-label">
+                              <input 
+                                type="checkbox"
+                                checked={addictionForm.cruksRegistration?.isRegistered || false}
+                                onChange={(e) => setAddictionForm({
+                                  ...addictionForm,
+                                  cruksRegistration: {
+                                    ...(addictionForm.cruksRegistration || {}),
+                                    isRegistered: e.target.checked
+                                  }
+                                })}
+                              />
+                              <span className="checkmark"></span>
+                              {t('isCruksRegistered', 'Ik ben ingeschreven bij CRUKS')}
+                            </label>
+                          </div>
+                          
+                          {addictionForm.cruksRegistration?.isRegistered && (
+                            <div className="cruks-details">
+                              <div className="form-group">
+                                <label>{t('cruksRegistrationDate', 'Inschrijfdatum CRUKS')}:</label>
+                                <input 
+                                  type="date"
+                                  value={addictionForm.cruksRegistration?.registrationDate || ''}
+                                  onChange={(e) => setAddictionForm({
+                                    ...addictionForm,
+                                    cruksRegistration: {
+                                      ...(addictionForm.cruksRegistration || {}),
+                                      registrationDate: e.target.value
+                                    }
+                                  })}
+                                  required
+                                />
+                              </div>
+                              
+                              <div className="cruks-reminder">
+                                <div className="reminder-icon">⏰</div>
+                                <div className="reminder-text">
+                                  <strong>{t('cruksReminder', 'Herinnering')}</strong><br/>
+                                  {t('cruksReminderText', 'CRUKS registratie moet elke 6 maanden worden vernieuwd')}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="form-actions">
                       <button type="button" onClick={() => setShowAddictionForm(false)}>
                         {t('cancel', 'Annuleren')}
@@ -2879,6 +2956,25 @@ const handleSaveEntry = async () => {
                         </div>
                       )}
                       
+                      {/* CRUKS Status Display for Dutch gambling addictions */}
+                      {addiction.type === 'gambling' && addiction.cruksStatus && (
+                        <div className="cruks-status">
+                          <div className="cruks-badge">
+                            🇳🇱 {t('cruksStatus', 'CRUKS Status')}: 
+                            <span className={`cruks-indicator ${addiction.cruksStatus.isActive ? 'active' : 'expired'}`}>
+                              {addiction.cruksStatus.isActive ? 
+                                t('cruksActive', 'Actief') : 
+                                t('cruksExpired', 'Verlopen')
+                              }
+                            </span>
+                          </div>
+                          {addiction.cruksStatus.isActive && addiction.cruksStatus.daysRemaining > 0 && (
+                            <div className="cruks-remaining">
+                              {t('cruksDaysRemaining', 'Nog {{days}} dagen exclusie', { days: addiction.cruksStatus.daysRemaining })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       
                       <div className="addiction-actions">
                         <button 

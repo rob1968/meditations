@@ -10,23 +10,39 @@ const ReviewStep = ({ wizardData, voices, savedCustomBackgrounds }) => {
   };
 
   const getBackgroundInfo = () => {
+    // First check if background music is disabled
+    if (!wizardData.useBackgroundMusic) {
+      return {
+        icon: '🔇',
+        name: t('noBackground', 'Geen muziek')
+      };
+    }
+    
     // Check for new selectedMusic property first
-    if (wizardData.selectedMusic) {
-      if (wizardData.selectedMusic.type === 'catalog') {
+    // Important: Check if selectedMusic is explicitly null (No Music selected)
+    if (wizardData.hasOwnProperty('selectedMusic')) {
+      if (wizardData.selectedMusic === null) {
         return {
-          icon: wizardData.selectedMusic.categoryIcon || '🎵',
-          name: wizardData.selectedMusic.name
+          icon: '🔇',
+          name: t('noBackground', 'Geen muziek')
         };
-      } else if (wizardData.selectedMusic.type === 'custom') {
-        return {
-          icon: '🎵',
-          name: wizardData.selectedMusic.name || wizardData.selectedMusic.customName || t('customMusic', 'Custom Music')
-        };
+      } else if (wizardData.selectedMusic) {
+        if (wizardData.selectedMusic.type === 'catalog') {
+          return {
+            icon: wizardData.selectedMusic.categoryIcon || '🎵',
+            name: wizardData.selectedMusic.name
+          };
+        } else if (wizardData.selectedMusic.type === 'custom') {
+          return {
+            icon: '🎵',
+            name: wizardData.selectedMusic.name || wizardData.selectedMusic.customName || t('customMusic', 'Custom Music')
+          };
+        }
       }
     }
     
-    // Fallback to old background property
-    if (wizardData.useBackgroundMusic && wizardData.background) {
+    // Fallback to old background property (only if background music is enabled)
+    if (wizardData.background) {
       const savedBg = savedCustomBackgrounds?.find(bg => {
         return bg.filename.replace('.mp3', '') === wizardData.background || 
                `saved-${bg.id}` === wizardData.background;
@@ -53,13 +69,14 @@ const ReviewStep = ({ wizardData, voices, savedCustomBackgrounds }) => {
       
       return {
         icon: backgroundIcons[wizardData.background] || '🎵',
-        name: wizardData.background.charAt(0).toUpperCase() + wizardData.background.slice(1)
+        name: t(wizardData.background, wizardData.background.charAt(0).toUpperCase() + wizardData.background.slice(1))
       };
     }
     
+    // If background music is enabled but no background is selected
     return {
       icon: '🔇',
-      name: t('noBackground', 'No music')
+      name: t('noBackground', 'Geen muziek')
     };
   };
 

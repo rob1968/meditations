@@ -119,6 +119,18 @@ const AddictionSchema = new mongoose.Schema({
     default: true
   },
 
+  // CRUKS Register integration (Netherlands gambling exclusion system)
+  cruksRegistration: {
+    isRegistered: {
+      type: Boolean,
+      default: false
+    },
+    registrationDate: {
+      type: Date,
+      required: false
+    }
+  },
+
   // Relapse tracking
   lastRelapse: {
     type: Date
@@ -270,6 +282,37 @@ AddictionSchema.methods.getDisplayName = function() {
   };
   
   return typeNames[this.type] || this.type;
+};
+
+// Calculate CRUKS exclusion status (Netherlands gambling exclusion system)
+AddictionSchema.methods.getCruksStatus = function() {
+  if (!this.cruksRegistration?.isRegistered || !this.cruksRegistration.registrationDate) {
+    return { status: 'not_registered', daysRemaining: 0, isActive: false };
+  }
+
+  const now = new Date();
+  const registrationDate = new Date(this.cruksRegistration.registrationDate);
+  
+  // Use explicitly set expiry date or calculate from registration date
+  let expiryDate;
+  if (this.cruksRegistration.expiryDate) {
+    expiryDate = new Date(this.cruksRegistration.expiryDate);
+  } else {
+    // Default minimum 6 months exclusion
+    expiryDate = new Date(registrationDate);
+    expiryDate.setMonth(expiryDate.getMonth() + 6);
+  }
+
+  const isActive = now < expiryDate;
+  const daysRemaining = Math.max(0, Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24)));
+
+  return {
+    status: isActive ? 'active' : 'expired',
+    registrationDate,
+    expiryDate,
+    daysRemaining,
+    isActive
+  };
 };
 
 // Indexes for better performance

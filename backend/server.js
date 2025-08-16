@@ -14,6 +14,7 @@ const googleVoicesRoute = require('./routes/googleVoices');
 const googleVoicePreviewRoute = require('./routes/googleVoicePreview');
 const googleTTSInfoRoute = require('./routes/googleTTSInfo');
 const userMeditationsRoute = require('./routes/userMeditations');
+const usersRoute = require('./routes/users');
 const communityRoute = require('./routes/community');
 const notificationsRoute = require('./routes/notifications');
 const journalRoute = require('./routes/journal');
@@ -68,6 +69,7 @@ app.use('/api/meditation', meditationRoute);
 app.use('/api', meditationRoute); // Also mount on /api for direct access to custom-backgrounds routes
 app.use('/api/auth', authRoute);
 app.use('/api/user-meditations', userMeditationsRoute);
+app.use('/api/users', usersRoute);
 app.use('/api/community', communityRoute);
 app.use('/api/notifications', notificationsRoute);
 app.use('/api/journal', journalRoute);

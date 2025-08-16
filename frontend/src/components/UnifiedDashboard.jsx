@@ -8,6 +8,7 @@ import ConfirmDialog from './ConfirmDialog';
 import ShareMeditationDialog from './ShareMeditationDialog';
 import VoiceSlider from './VoiceSlider';
 import MeditationTypeSlider from './MeditationTypeSlider';
+import CommunityTabContent from './CommunityTabContent';
 import CustomMusicUploader from './CustomMusicUploader';
 import WizardContainer from './WizardContainer';
 import ReviewStep from './ReviewStep';
@@ -71,7 +72,8 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     text: '',
     voiceId: 'EXAVITQu4vr4xnSDxMaL',
     background: 'ocean',
-    useBackgroundMusic: true,
+    useBackgroundMusic: false,
+    selectedMusic: null,
     speechTempo: 1.00,
     genderFilter: 'all'
   });
@@ -860,6 +862,13 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
 
   // Audio generation function
   const generateAudio = async () => {
+    // Check if user is logged in
+    if (!user || !user.id) {
+      setError('Je moet ingelogd zijn om een meditatie te kunnen genereren.');
+      setIsGenerating(false);
+      return;
+    }
+
     stopAllBackgroundAudio();
     setIsGenerating(true);
     setError("");
@@ -907,7 +916,17 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       const res = await axios.post(getFullUrl(API_ENDPOINTS.GENERATE_MEDITATION), formData, { 
         responseType: 'blob',
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'x-user-id': user.id
+        },
+        withCredentials: true,
+        validateStatus: function (status) {
+          // Custom validation - don't throw error for 402, handle it manually
+          if (status === 402) {
+            console.log('🔴 AXIOS: 402 detected, handling manually');
+            return false; // This will cause axios to throw an error that we can catch
+          }
+          return status >= 200 && status < 300; // default
         }
       });
 
@@ -936,16 +955,78 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       
     } catch (error) {
       console.error("Error generating meditation:", error);
+      console.log("CATCH BLOCK EXECUTED - Testing all conditions");
       
-      if (error.response && error.response.status === 400 && error.response.data) {
-        if (error.response.data.error && error.response.data.error.includes('Insufficient credits')) {
-          showAlert(t('insufficientTokensAudio', 'Insufficient tokens. You need 1 token to generate audio.'), 'error');
-        } else {
-          showAlert(error.response.data.error || t('errorGenerating', 'Failed to generate meditation.'), 'error');
-        }
-      } else {
-        showAlert(t('errorGenerating', 'Failed to generate meditation.'), 'error');
+      // Immediate test to see if this catch block runs
+      showAlert('CATCH BLOCK UITGEVOERD! Status: ' + (error.response?.status || 'geen status'), 'success');
+      
+      // Handle 402 Payment Required (Elevenlabs quota exceeded)
+      // Note: response data might be a Blob when responseType is 'blob'
+      if (error.response?.status === 402) {
+        console.log("402 CONDITION MET");
+        // Test with different alert types and messages
+        showAlert('🚨 402 GEDETECTEERD! ELEVENLABS TOKENS UITGEPUT! 🚨', 'error');
+        
+        // Open credits modal after delay
+        setTimeout(() => {
+          const creditsButton = document.querySelector('[data-credits-button]');
+          if (creditsButton) creditsButton.click();
+        }, 2000);
+        
+        return; // Exit early to prevent other error handling
       }
+      
+      console.log("Not 402 error, status was:", error.response?.status);
+      
+      // Handle other HTTP errors (500, 503, etc.)
+      if (error.response?.status >= 400) {
+        // Try to parse Blob as JSON for error messages
+        let errorData = null;
+        if (error.response.data instanceof Blob) {
+          try {
+            const text = await error.response.data.text();
+            errorData = JSON.parse(text);
+          } catch (parseError) {
+            console.log('Could not parse error response as JSON');
+          }
+        } else {
+          errorData = error.response.data;
+        }
+        
+        const { status } = error.response;
+        
+        if (status === 503 && errorData?.error === 'elevenlabs_connection_failed') {
+          const message = 'Kan geen verbinding maken met Elevenlabs. Probeer het later opnieuw.';
+          showAlert(message, 'error');
+          return;
+        }
+        
+        if (status === 500 && errorData?.error === 'elevenlabs_error') {
+          const message = 'Er is een fout opgetreden bij het genereren van audio. Probeer het opnieuw.';
+          showAlert(message, 'error');
+          return;
+        }
+        
+        if (status === 400 && errorData?.error?.includes('Insufficient credits')) {
+          const currentCredits = errorData.currentCredits || 0;
+          const message = `Je hebt onvoldoende tokens om audio te genereren.\n\nHuidig saldo: ${currentCredits} tokens\nBenodigd: 1 token\n\nKlik op "Tokens kopen" in het menu om tokens aan te schaffen.`;
+          showAlert(message, 'error');
+          
+          setTimeout(() => {
+            const creditsButton = document.querySelector('[data-credits-button]');
+            if (creditsButton) creditsButton.click();
+          }, 2000);
+          return;
+        }
+        
+        // Generic error message for other HTTP errors
+        const message = errorData?.message || errorData?.error || 'Er is een fout opgetreden bij het genereren van de meditatie.';
+        showAlert(message, 'error');
+        return;
+      }
+      
+      // Fallback for non-HTTP errors
+      showAlert('Er is een onverwachte fout opgetreden. Probeer het opnieuw.', 'error');
     } finally {
       setIsGenerating(false);
     }
@@ -1933,7 +2014,11 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
         ) : (
           <>
             {activeTab === 'mine' && renderMineTab()}
-            {activeTab === 'community' && renderCommunityTab()}
+            {activeTab === 'community' && (
+              <CommunityTabContent 
+                user={user} 
+              />
+            )}
             {activeTab === 'create' && renderCreateTab()}
           </>
         )}

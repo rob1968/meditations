@@ -8,7 +8,7 @@ import Auth from './components/Auth';
 import BottomNavigation from './components/BottomNavigation';
 import MyAudioComponent from './components/MyAudio';
 import ProfileContainer from './components/ProfileContainer';
-import CommunityHub from './components/CommunityHub';
+import CommunityHubNew from './components/CommunityHubNew';
 import UnifiedDashboard from './components/UnifiedDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import Inbox from './components/Inbox';

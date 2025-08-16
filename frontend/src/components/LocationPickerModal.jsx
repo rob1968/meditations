@@ -50,13 +50,82 @@ const LocationPickerModal = ({
         let countryCode = '';
         if (prediction.terms && prediction.terms.length > 0) {
           const lastTerm = prediction.terms[prediction.terms.length - 1];
-          // This is a simple mapping - in production you'd want a more robust solution
+          // Comprehensive country code mapping for CRUKS and other location-based features
           const countryCodeMap = {
-            'Netherlands': 'NL', 'United States': 'US', 'United Kingdom': 'GB',
-            'France': 'FR', 'Germany': 'DE', 'Spain': 'ES', 'Italy': 'IT',
-            'Japan': 'JP', 'Australia': 'AU', 'Canada': 'CA', 'Belgium': 'BE'
+            'Netherlands': 'NL',
+            'Nederland': 'NL', // Dutch name for Netherlands
+            'United States': 'US',
+            'United Kingdom': 'GB',
+            'France': 'FR',
+            'Germany': 'DE',
+            'Deutschland': 'DE', // German name
+            'Spain': 'ES',
+            'España': 'ES', // Spanish name
+            'Italy': 'IT',
+            'Italia': 'IT', // Italian name
+            'Japan': 'JP',
+            'Australia': 'AU',
+            'Canada': 'CA',
+            'Belgium': 'BE',
+            'België': 'BE', // Dutch name for Belgium
+            'Belgique': 'BE', // French name for Belgium
+            'Portugal': 'PT',
+            'Russia': 'RU',
+            'China': 'CN',
+            'India': 'IN',
+            'Brazil': 'BR',
+            'Argentina': 'AR',
+            'Mexico': 'MX',
+            'South Korea': 'KR',
+            'Norway': 'NO',
+            'Sweden': 'SE',
+            'Denmark': 'DK',
+            'Finland': 'FI',
+            'Austria': 'AT',
+            'Switzerland': 'CH',
+            'Poland': 'PL',
+            'Czech Republic': 'CZ',
+            'Hungary': 'HU',
+            'Romania': 'RO',
+            'Greece': 'GR',
+            'Turkey': 'TR',
+            'South Africa': 'ZA',
+            'Israel': 'IL',
+            'Thailand': 'TH',
+            'Indonesia': 'ID',
+            'Malaysia': 'MY',
+            'Singapore': 'SG',
+            'Philippines': 'PH',
+            'Vietnam': 'VN',
+            'New Zealand': 'NZ',
+            'Ireland': 'IE',
+            'Luxembourg': 'LU',
+            'Ukraine': 'UA',
+            'Slovakia': 'SK',
+            'Slovenia': 'SI',
+            'Croatia': 'HR',
+            'Serbia': 'RS',
+            'Bulgaria': 'BG',
+            'Lithuania': 'LT',
+            'Latvia': 'LV',
+            'Estonia': 'EE'
           };
-          countryCode = countryCodeMap[country] || '';
+          // Try exact match first, then try case-insensitive match
+          countryCode = countryCodeMap[country] || 
+                       countryCodeMap[Object.keys(countryCodeMap).find(key => 
+                         key.toLowerCase() === country.toLowerCase()
+                       )] || '';
+                       
+          // Additional fallback for common variations
+          if (!countryCode) {
+            if (country.toLowerCase().includes('netherland') || country.toLowerCase().includes('nederland')) {
+              countryCode = 'NL';
+            } else if (country.toLowerCase().includes('united states') || country.toLowerCase().includes('usa')) {
+              countryCode = 'US';
+            } else if (country.toLowerCase().includes('united kingdom') || country.toLowerCase().includes('uk')) {
+              countryCode = 'GB';
+            }
+          }
         }
 
         return {
@@ -103,6 +172,7 @@ const LocationPickerModal = ({
       fullName: location.fullName
     };
     
+    console.log('Location selected:', locationData); // Debug log
     onChange(locationData);
     closeModal(); // Use closeModal instead of direct setIsOpen to restore scroll
   };

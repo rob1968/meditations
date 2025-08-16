@@ -530,14 +530,15 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
           `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
           {
             text: processedText,
-            model_id: speechLanguage === 'en' ? "eleven_monolingual_v1" : "eleven_multilingual_v2",
+            model_id: speechLanguage === 'en' ? "eleven_turbo_v2_5" : "eleven_multilingual_v2_5",
             voice_settings: { 
               stability: 0.85,
               similarity_boost: 0.75,
               style: 0,
               use_speaker_boost: true,
               speed: elevenLabsSpeed // Use native ElevenLabs speed control
-            }
+            },
+            language_code: speechLanguage // Language enforcement for v2.5 models
           },
           {
             headers: {
@@ -551,35 +552,69 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
       }
     } else {
       // Use Eleven Labs
-      const processedText = addSSMLPauses(translatedText);
-      
-      // Track ElevenLabs usage
-      if (userId) {
-        trackElevenlabsUsage(userId, processedText, false);
-      }
-      
-      const response = await axios.post(
-        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-        {
-          text: processedText,
-          model_id: speechLanguage === 'en' ? "eleven_monolingual_v1" : "eleven_multilingual_v2",
-          voice_settings: { 
-            stability: 0.85,
-            similarity_boost: 0.75,
-            style: 0,
-            use_speaker_boost: true,
-            speed: elevenLabsSpeed // Use native ElevenLabs speed control
-          }
-        },
-        {
-          headers: {
-            "xi-api-key": apiKey,
-            "Content-Type": "application/json"
-          },
-          responseType: "arraybuffer"
+      try {
+        const processedText = addSSMLPauses(translatedText);
+        
+        // Track ElevenLabs usage
+        if (userId) {
+          trackElevenlabsUsage(userId, processedText, false);
         }
-      );
-      audioContent = response.data;
+        
+        const response = await axios.post(
+          `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+          {
+            text: processedText,
+            model_id: speechLanguage === 'en' ? "eleven_turbo_v2_5" : "eleven_multilingual_v2_5",
+            voice_settings: { 
+              stability: 0.85,
+              similarity_boost: 0.75,
+              style: 0,
+              use_speaker_boost: true,
+              speed: elevenLabsSpeed // Use native ElevenLabs speed control
+            },
+            language_code: speechLanguage // Language enforcement for v2.5 models
+          },
+          {
+            headers: {
+              "xi-api-key": apiKey,
+              "Content-Type": "application/json"
+            },
+            responseType: "arraybuffer"
+          }
+        );
+        audioContent = response.data;
+      } catch (elevenLabsError) {
+        console.error('ElevenLabs TTS failed:', elevenLabsError.response?.status, elevenLabsError.response?.data);
+        
+        // Check if it's a quota/auth error
+        if (elevenLabsError.response?.status === 401 || elevenLabsError.response?.status === 429) {
+          console.log('❌ ElevenLabs quota exceeded or authentication failed');
+          
+          // Return clear error message to user instead of using fallback
+          return res.status(402).json({ 
+            error: 'elevenlabs_quota_exceeded',
+            message: 'Je hebt geen Elevenlabs tokens meer. Koop nieuwe tokens om audio te genereren.',
+            details: 'Your Elevenlabs quota has been exceeded. Please purchase more tokens to continue generating audio.'
+          });
+        } else if (elevenLabsError.code === 'ECONNREFUSED' || elevenLabsError.code === 'ETIMEDOUT' || elevenLabsError.code === 'ENOTFOUND') {
+          console.log('❌ Cannot connect to ElevenLabs service');
+          
+          // Return clear error message for connection issues
+          return res.status(503).json({ 
+            error: 'elevenlabs_connection_failed',
+            message: 'Kan geen verbinding maken met Elevenlabs. Probeer het later opnieuw.',
+            details: 'Unable to connect to Elevenlabs service. Please try again later.'
+          });
+        } else {
+          // For other errors, return a generic error message
+          console.error('❌ ElevenLabs TTS failed with error:', elevenLabsError.message);
+          return res.status(500).json({ 
+            error: 'elevenlabs_error',
+            message: 'Er is een fout opgetreden bij het genereren van audio. Probeer het opnieuw.',
+            details: elevenLabsError.message || 'An error occurred while generating audio.'
+          });
+        }
+      }
     }
     
     // Only check for background path if background music is enabled
@@ -676,7 +711,7 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
     const introSeconds = 5; // reduced intro time
     const outroSeconds = 10; // reduced outro time
     
-    if (useBackgroundMusic) {
+    if (useBackgroundMusic && backgroundPath && backgroundPath !== null && backgroundPath !== 'null') {
       console.log(`Processing audio with background music - Intro: ${introSeconds}s, Speech: dynamic length, Outro: ${outroSeconds}s`);
       
       const { ffmpegPath } = getFFmpegPaths();
@@ -936,12 +971,21 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
       // Eleven Labs API specific errors
       console.error("Eleven Labs API Response Data:", error.response.data);
       console.error("Eleven Labs API Response Status:", error.response.status);
-      if (error.response.status === 401) {
-        res.status(401).json({ error: 'Unauthorized: Invalid Eleven Labs API Key.' });
-      } else if (error.response.status === 429) {
-        res.status(429).json({ error: 'Too Many Requests: Eleven Labs API rate limit exceeded.' });
+      if (error.response.status === 401 || error.response.status === 429) {
+        // Elevenlabs quota exceeded or authentication failed
+        console.log('❌ ElevenLabs quota exceeded or authentication failed');
+        
+        return res.status(402).json({ 
+          error: 'elevenlabs_quota_exceeded',
+          message: 'Je hebt geen Elevenlabs tokens meer. Koop nieuwe tokens om audio te genereren.',
+          details: 'Your Elevenlabs quota has been exceeded. Please purchase more tokens to continue generating audio.'
+        });
       } else {
-        res.status(error.response.status).json({ error: `Eleven Labs API Error: ${error.response.statusText || 'Unknown error'}` });
+        return res.status(500).json({ 
+          error: 'elevenlabs_error',
+          message: 'Er is een fout opgetreden bij het genereren van audio. Probeer het opnieuw.',
+          details: error.response.statusText || 'An error occurred while generating audio.'
+        });
       }
     } else if (error.code === 'ENOENT') {
       // FFmpeg not found error
@@ -2378,19 +2422,20 @@ router.post('/voice-preview', async (req, res) => {
     // Note: We don't have userId in preview requests, so we can't track per user
     console.log(`🎵 ElevenLabs preview character count: ${previewText.length}`);
     
-    // Generate the audio using Eleven Labs TTS API
+    // Generate the audio using Eleven Labs TTS API v2.5 models (upgraded for better performance)
     const response = await axios.post(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
         text: previewText,
-        model_id: "eleven_multilingual_v2",
+        model_id: "eleven_multilingual_v2_5",
         voice_settings: { 
           stability: 0.7,
           similarity_boost: 0.8,
           style: 0.2,
           use_speaker_boost: true,
           speed: elevenLabsSpeed
-        }
+        },
+        language_code: speechLanguage // Language enforcement for v2.5 models
       },
       {
         headers: {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// FORCE BUILD TIMESTAMP: 20250815073900
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { getFullUrl, getAssetUrl, API_ENDPOINTS, API_BASE_URL } from '../config/api';
@@ -6,24 +7,48 @@ import JournalHub from './JournalHub';
 import PageHeader from './PageHeader';
 
 const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
-  // CSS for custom scrollbar - added as style tag
+  // CACHE BUSTER: Forcing new build hash - Aug15-0740
+  const CACHE_BUST = 'v2.0.1-cropped-images-mobile-responsive';
+  console.log('🎯 Community Hub v2.1.0: NO IMAGES - Emoji only version loaded!', CACHE_BUST, new Date().toISOString());
+  // Enhanced CSS for modern slider styling
   const customScrollbarCSS = `
+    .meditation-slider-container {
+      position: relative;
+    }
     .meditation-slider-container::-webkit-scrollbar {
-      height: 6px;
+      height: 8px;
     }
     .meditation-slider-container::-webkit-scrollbar-track {
-      background: transparent;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      margin: 4px;
     }
     .meditation-slider-container::-webkit-scrollbar-thumb {
-      background: #CBD5E0;
-      border-radius: 3px;
+      background: linear-gradient(45deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.15));
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .meditation-slider-container::-webkit-scrollbar-thumb:hover {
-      background: #A0AEC0;
+      background: linear-gradient(45deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.25));
     }
     .meditation-filter-button {
       flex-shrink: 0;
       white-space: nowrap;
+      position: relative;
+      overflow: hidden;
+    }
+    .meditation-filter-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.6s ease;
+    }
+    .meditation-filter-button:hover::before {
+      left: 100%;
     }
   `;
 
@@ -53,21 +78,32 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
   const [likedMeditations, setLikedMeditations] = useState(new Set());
   const [mutedMeditations, setMutedMeditations] = useState(new Set());
   const [activeSubTab, setActiveSubTab] = useState('meditations'); // 'meditations' or 'journals'
-  const [filterType, setFilterType] = useState('all');
+  const [filterType, setFilterType] = useState('all'); // Cache buster v3
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const { t } = useTranslation();
 
+  // Handle window resize for responsive design
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const meditationTypes = [
-    { value: 'sleep', emoji: '🌙', label: t('sleepMeditation', 'Sleep'), color: '#1E293B' }, // Dark Slate
-    { value: 'stress', emoji: '😌', label: t('stressMeditation', 'Stress'), color: '#991B1B' }, // Dark Red
-    { value: 'focus', emoji: '🎯', label: t('focusMeditation', 'Focus'), color: '#065F46' }, // Dark Green
-    { value: 'anxiety', emoji: '🌿', label: t('anxietyMeditation', 'Anxiety'), color: '#5B21B6' }, // Dark Purple
-    { value: 'energy', emoji: '⚡', label: t('energyMeditation', 'Energy'), color: '#C2410C' }, // Dark Orange
-    { value: 'mindfulness', emoji: '🧘', label: t('mindfulnessMeditation', 'Mindfulness'), color: '#047857' }, // Dark Emerald
-    { value: 'compassion', emoji: '💙', label: t('compassionMeditation', 'Compassion'), color: '#BE185D' }, // Dark Pink
-    { value: 'walking', emoji: '🚶', label: t('walkingMeditation', 'Walking'), color: '#6B21A8' }, // Dark Violet
-    { value: 'breathing', emoji: '🌬️', label: t('breathingMeditation', 'Breathing'), color: '#0E7490' }, // Dark Cyan
-    { value: 'morning', emoji: '🌅', label: t('morningMeditation', 'Morning'), color: '#EA580C' } // Dark Orange
+    { value: 'sleep', emoji: '🌙', label: 'Sleep', color: '#1E293B' }, // Dark Slate
+    { value: 'stress', emoji: '😌', label: 'Stress', color: '#991B1B' }, // Dark Red
+    { value: 'focus', emoji: '🎯', label: 'Focus', color: '#065F46' }, // Dark Green
+    { value: 'anxiety', emoji: '🌿', label: 'Anxiety', color: '#5B21B6' }, // Dark Purple
+    { value: 'energy', emoji: '⚡', label: 'Energy', color: '#C2410C' }, // Dark Orange
+    { value: 'mindfulness', emoji: '🧘', label: 'Mindfulness', color: '#047857' }, // Dark Emerald
+    { value: 'compassion', emoji: '💙', label: 'Compassion', color: '#BE185D' }, // Dark Pink
+    { value: 'walking', emoji: '🚶', label: 'Walking', color: '#6B21A8' }, // Dark Violet
+    { value: 'breathing', emoji: '🌬️', label: 'Breathing', color: '#0E7490' }, // Dark Cyan
+    { value: 'morning', emoji: '🌅', label: 'Morning', color: '#EA580C' } // Dark Orange
   ];
   
   const languages = ['en', 'es', 'fr', 'de', 'nl', 'zh', 'hi', 'ar', 'pt', 'ru', 'ja', 'ko', 'it'];
@@ -142,9 +178,6 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
     return filterType === 'all' || meditation.meditationType === filterType;
   });
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString();
-  };
 
   const formatDuration = (seconds) => {
     if (!seconds) return t('unknown', 'Unknown');
@@ -329,16 +362,35 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
       />
 
       {/* Sub-tabs for meditations and journals */}
-      <div className="community-subtabs">
+      <div className="community-subtabs" style={{
+        display: 'flex',
+        gap: isMobile ? '8px' : '12px',
+        marginBottom: '16px',
+        padding: isMobile ? '0 8px' : '0 16px'
+      }}>
         <button 
           className={`subtab-btn ${activeSubTab === 'meditations' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('meditations')}
+          style={{
+            flex: 1,
+            padding: isMobile ? '12px 16px' : '14px 20px',
+            fontSize: isMobile ? '14px' : '16px',
+            borderRadius: isMobile ? '10px' : '12px',
+            minHeight: isMobile ? '48px' : 'auto'
+          }}
         >
           🧘 {t('meditations', 'Meditaties')}
         </button>
         <button 
           className={`subtab-btn ${activeSubTab === 'journals' ? 'active' : ''}`}
           onClick={() => setActiveSubTab('journals')}
+          style={{
+            flex: 1,
+            padding: isMobile ? '12px 16px' : '14px 20px',
+            fontSize: isMobile ? '14px' : '16px',
+            borderRadius: isMobile ? '10px' : '12px',
+            minHeight: isMobile ? '48px' : 'auto'
+          }}
         >
           📔 {t('voiceJournals', 'Dagboeken')}
         </button>
@@ -348,23 +400,42 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
       {activeSubTab === 'meditations' ? (
         <>
           {/* Meditation Type Slider */}
-          <div className="meditation-filter-section" style={{ marginTop: '16px', marginBottom: '24px' }}>
-            <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', color: '#374151' }}>
-              {t('meditationType', 'Meditatie Type')}:
+          <div className="meditation-filter-section" style={{ 
+            marginTop: '20px', 
+            marginBottom: '28px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '20px',
+            padding: window.innerWidth <= 768 ? '16px' : '20px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
+          }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '16px', 
+              fontWeight: '700', 
+              color: 'white',
+              fontSize: window.innerWidth <= 768 ? '16px' : '18px',
+              letterSpacing: '-0.01em',
+              textAlign: 'center'
+            }}>
+              ✨ {t('meditationType', 'Meditatie Type')}
             </label>
             <div 
               className="meditation-slider-container"
               style={{
                 display: 'flex',
                 flexWrap: 'nowrap',
-                gap: '8px',
-                padding: '8px 0',
+                gap: '12px',
+                padding: '12px 8px',
                 width: '100%',
                 overflowX: 'auto',
                 overflowY: 'hidden',
                 scrollbarWidth: 'thin',
-                scrollbarColor: '#CBD5E0 transparent',
-                WebkitOverflowScrolling: 'touch'
+                scrollbarColor: 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.05)',
+                WebkitOverflowScrolling: 'touch',
+                borderRadius: '16px',
+                background: 'rgba(255, 255, 255, 0.02)'
               }}
             >
               {/* All Types Button */}
@@ -372,37 +443,54 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
                 className={`meditation-filter-button ${filterType === 'all' ? 'active' : ''}`}
                 onClick={() => setFilterType('all')}
                 style={{
-                  background: filterType === 'all' ? 'linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #48dbfb 100%)' : 'rgba(255, 255, 255, 0.1)',
+                  background: filterType === 'all' 
+                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                    : 'rgba(255, 255, 255, 0.08)',
                   color: 'white',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  padding: '12px 20px',
-                  margin: '4px',
+                  border: filterType === 'all' 
+                    ? '2px solid rgba(255, 255, 255, 0.3)' 
+                    : '1.5px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: window.innerWidth <= 768 ? '12px' : '16px',
+                  padding: window.innerWidth <= 768 ? '12px 16px' : '14px 22px',
+                  margin: '2px',
                   cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  fontSize: '15px',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  fontSize: window.innerWidth <= 768 ? '14px' : '15px',
                   fontWeight: '600',
-                  minWidth: '100px',
+                  minWidth: window.innerWidth <= 768 ? '90px' : '110px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  backdropFilter: 'blur(15px)',
+                  backdropFilter: 'blur(20px)',
                   flexShrink: 0,
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  boxShadow: filterType === 'all' 
+                    ? '0 8px 24px rgba(102, 126, 234, 0.4), 0 4px 12px rgba(118, 75, 162, 0.3)' 
+                    : '0 4px 12px rgba(0, 0, 0, 0.1)',
+                  textShadow: filterType === 'all' ? '0 1px 2px rgba(0, 0, 0, 0.3)' : 'none',
+                  transform: filterType === 'all' ? 'translateY(-2px) scale(1.02)' : 'none'
                 }}
                 onMouseOver={(e) => {
                   if (filterType !== 'all') {
-                    e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    e.target.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)';
+                    e.target.style.transform = 'translateY(-3px) scale(1.05)';
+                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+                    e.target.style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.2)';
+                  } else {
+                    e.target.style.transform = 'translateY(-3px) scale(1.05)';
+                    e.target.style.boxShadow = '0 12px 32px rgba(102, 126, 234, 0.5), 0 6px 16px rgba(118, 75, 162, 0.4)';
                   }
                 }}
                 onMouseOut={(e) => {
                   if (filterType !== 'all') {
-                    e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.background = 'rgba(255, 255, 255, 0.08)';
                     e.target.style.transform = 'none';
-                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                  } else {
+                    e.target.style.transform = 'translateY(-2px) scale(1.02)';
+                    e.target.style.boxShadow = '0 8px 24px rgba(102, 126, 234, 0.4), 0 4px 12px rgba(118, 75, 162, 0.3)';
                   }
                 }}
               >
@@ -421,43 +509,60 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
                     className={`meditation-filter-button ${filterType === type.value ? 'active' : ''}`}
                     onClick={() => setFilterType(type.value)}
                     style={{
-                      background: filterType === type.value ? `linear-gradient(135deg, ${type.color}, ${type.color}DD)` : 'rgba(255, 255, 255, 0.1)',
+                      background: filterType === type.value 
+                        ? `linear-gradient(135deg, ${type.color}, ${type.color}CC)` 
+                        : 'rgba(255, 255, 255, 0.08)',
                       color: 'white',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '12px',
-                      padding: '12px 20px',
-                      margin: '4px',
+                      border: filterType === type.value 
+                        ? '2px solid rgba(255, 255, 255, 0.3)' 
+                        : '1.5px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: window.innerWidth <= 768 ? '12px' : '16px',
+                      padding: window.innerWidth <= 768 ? '12px 16px' : '14px 22px',
+                      margin: '2px',
                       cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      fontSize: '15px',
+                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                      fontSize: window.innerWidth <= 768 ? '14px' : '15px',
                       fontWeight: '600',
-                      minWidth: '100px',
+                      minWidth: window.innerWidth <= 768 ? '90px' : '110px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
-                      backdropFilter: 'blur(15px)',
+                      backdropFilter: 'blur(20px)',
                       flexShrink: 0,
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      boxShadow: filterType === type.value 
+                        ? `0 8px 24px ${type.color}40, 0 4px 12px ${type.color}30` 
+                        : '0 4px 12px rgba(0, 0, 0, 0.1)',
+                      textShadow: filterType === type.value ? '0 1px 2px rgba(0, 0, 0, 0.3)' : 'none',
+                      transform: filterType === type.value ? 'translateY(-2px) scale(1.02)' : 'none'
                     }}
                     onMouseOver={(e) => {
                       if (filterType !== type.value) {
-                        e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                        e.target.style.transform = 'translateY(-2px)';
-                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                        e.target.style.background = `linear-gradient(135deg, ${type.color}30, rgba(255, 255, 255, 0.15))`;
+                        e.target.style.transform = 'translateY(-3px) scale(1.05)';
+                        e.target.style.borderColor = `${type.color}60`;
+                        e.target.style.boxShadow = `0 12px 28px ${type.color}20, 0 6px 16px rgba(0, 0, 0, 0.2)`;
+                      } else {
+                        e.target.style.transform = 'translateY(-3px) scale(1.05)';
+                        e.target.style.boxShadow = `0 12px 32px ${type.color}50, 0 6px 16px ${type.color}40`;
                       }
                     }}
                     onMouseOut={(e) => {
                       if (filterType !== type.value) {
-                        e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.target.style.background = 'rgba(255, 255, 255, 0.08)';
                         e.target.style.transform = 'none';
-                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                        e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                        e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                      } else {
+                        e.target.style.transform = 'translateY(-2px) scale(1.02)';
+                        e.target.style.boxShadow = `0 8px 24px ${type.color}40, 0 4px 12px ${type.color}30`;
                       }
                     }}
                     title={`${type.label} - ${count} ${t('meditations', 'meditaties')}`}
                   >
-                    <span style={{ fontSize: '18px' }}>{type.emoji}</span>
-                    <span style={{ fontSize: '13px', fontWeight: 'inherit' }}>
+                    <span style={{ fontSize: window.innerWidth <= 768 ? '16px' : '18px' }}>{type.emoji}</span>
+                    <span style={{ fontSize: window.innerWidth <= 768 ? '12px' : '13px', fontWeight: 'inherit' }}>
                       {type.label} ({count})
                     </span>
                   </button>
@@ -475,7 +580,9 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
               </div>
             </div>
           ) : (
-            <div className="community-meditations-list">
+            <div className="community-meditations-list" style={{
+              padding: isMobile ? '0 8px' : '0 16px'
+            }}>
                 {filteredMeditations.map((meditation, index) => (
                   <div 
                     key={meditation._id} 
@@ -485,7 +592,7 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
                       backdropFilter: 'blur(10px)',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
                       borderRadius: '12px',
-                      padding: '16px',
+                      padding: isMobile ? '12px' : '16px',
                       transition: 'all 0.3s ease',
                       marginBottom: '12px'
                     }}
@@ -500,62 +607,75 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                   >
-                    {/* Top Row - Image and Info */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
-                      {/* Album Art */}
+                    {/* Top Row - Album Art and Info (Mine page style) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '16px', marginBottom: '12px' }}>
+                      {/* Album Art with Type Badge */}
                       <div 
                         className="meditation-thumbnail"
                         style={{
-                          width: '70px',
-                          height: '70px',
+                          width: isMobile ? '60px' : '70px',
+                          height: isMobile ? '60px' : '70px',
                           borderRadius: '8px',
                           overflow: 'hidden',
                           flexShrink: 0,
-                          background: 'rgba(255, 255, 255, 0.1)'
+                          background: `linear-gradient(135deg, ${meditationTypes.find(t => t.value === meditation.meditationType)?.color || '#4F46E5'}40, rgba(255, 255, 255, 0.1))`,
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: isMobile ? '20px' : '24px'
                         }}
                       >
-                        <img 
-                          src={getImageUrl(meditation)}
-                          alt={`${meditationTypeLabels[meditation.meditationType] || meditation.meditationType} meditation`}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                          }}
-                        />
+                        {/* Just the emoji - no images */}
+                        {meditationTypes.find(t => t.value === meditation.meditationType)?.emoji || '🧘'}
                       </div>
 
-                      {/* Track Info */}
+                      {/* Content Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
+                        {/* Title and Author Info */}
+                        <div style={{ marginBottom: '4px' }}>
+                          <h3 style={{
+                            fontSize: isMobile ? '15px' : '16px',
+                            fontWeight: '600',
+                            color: 'white',
+                            margin: '0 0 4px 0',
+                            lineHeight: '1.3'
+                          }}>
+                            {meditation.author.username || meditation.author}
+                          </h3>
+                          <div style={{
+                            fontSize: isMobile ? '13px' : '14px',
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: isMobile ? '6px' : '8px',
+                            flexWrap: isMobile ? 'wrap' : 'nowrap'
+                          }}>
+                            <span style={{
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              padding: isMobile ? '2px 4px' : '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: isMobile ? '11px' : '12px',
+                              fontWeight: '500'
+                            }}>
+                              {languageLabels[meditation.language] || meditation.language}
+                            </span>
+                            <span>•</span>
+                            <span>{meditation.likeCount || 0} likes</span>
+                            <span>•</span>
+                            <span>{meditation.playCount || 0} plays</span>
+                          </div>
+                        </div>
+                        
+                        {/* Action Buttons Row */}
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          marginBottom: '4px'
+                          marginTop: '8px'
                         }}>
-                          <div style={{
-                            fontSize: '18px',
-                            fontWeight: '600',
-                            color: 'white',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            flex: 1,
-                            marginRight: '8px'
-                          }}>
-                            {meditationTypeLabels[meditation.meditationType] || meditation.meditationType}
-                          </div>
-                          
-                          {/* Like Button - Next to title */}
-                          <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '2px'
-                          }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {/* Like Button */}
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -563,111 +683,98 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
                               }}
                               disabled={!user}
                               style={{
-                                background: 'none',
-                                border: 'none',
-                                color: likedMeditations.has(meditation._id) ? '#ff6b6b' : 'rgba(255, 255, 255, 0.6)',
-                                fontSize: '24px',
+                                background: likedMeditations.has(meditation._id) 
+                                  ? 'rgba(255, 107, 107, 0.2)' 
+                                  : 'rgba(255, 255, 255, 0.1)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                color: likedMeditations.has(meditation._id) ? '#ff6b6b' : 'rgba(255, 255, 255, 0.8)',
+                                fontSize: isMobile ? '13px' : '14px',
                                 cursor: 'pointer',
-                                padding: '8px',
-                                borderRadius: '50%',
+                                padding: isMobile ? '8px 12px' : '6px 12px',
+                                borderRadius: '6px',
                                 transition: 'all 0.2s ease',
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0
+                                gap: '4px',
+                                minHeight: isMobile ? '44px' : 'auto'
                               }}
                               onMouseOver={(e) => {
-                                e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-                                e.target.style.transform = 'scale(1.2)';
+                                e.target.style.background = likedMeditations.has(meditation._id)
+                                  ? 'rgba(255, 107, 107, 0.3)'
+                                  : 'rgba(255, 255, 255, 0.15)';
                               }}
                               onMouseOut={(e) => {
-                                e.target.style.background = 'none';
-                                e.target.style.transform = 'scale(1)';
+                                e.target.style.background = likedMeditations.has(meditation._id)
+                                  ? 'rgba(255, 107, 107, 0.2)'
+                                  : 'rgba(255, 255, 255, 0.1)';
                               }}
-                              title={`${t('likeMeditation', 'Like Meditation')} (${meditation.likeCount || 0})`}
                             >
-                              {likedMeditations.has(meditation._id) ? '♥' : '♡'}
+                              {likedMeditations.has(meditation._id) ? '♥' : '♡'} Like
                             </button>
-                            <span style={{
-                              fontSize: '12px',
-                              color: 'rgba(255, 255, 255, 0.6)',
-                              fontWeight: '500'
-                            }}>
-                              {meditation.likeCount || 0}
-                            </span>
                           </div>
-                        </div>
-                        <div style={{
-                          fontSize: '14px',
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          marginBottom: '4px'
-                        }}>
-                          {meditation.author.username || meditation.author} • {languageLabels[meditation.language] || meditation.language}
-                        </div>
-                        <div style={{
-                          fontSize: '12px',
-                          color: 'rgba(255, 255, 255, 0.6)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px'
-                        }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            ▶ {meditation.playCount || 0} {t('played', 'Played')}
-                          </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Full Width Audio Player */}
+                    {/* Enhanced Audio Player */}
                     {meditation.audioFile && (
-                      <audio 
-                        id={`shared-audio-${meditation._id}`}
-                        controls
-                        controlsList="nodownload"
-                        preload="metadata"
-                        style={{
-                          width: '100%',
-                          height: '40px',
-                          borderRadius: '6px',
-                          outline: 'none'
-                        }}
-                        onLoadedMetadata={(e) => {
-                          console.log('Audio loaded for:', meditation._id, 'URL:', e.target.src);
-                        }}
-                        onPlay={(e) => {
-                          console.log('Audio started playing:', meditation._id);
-                          // Pause all other community audios first
-                          document.querySelectorAll('audio[id^="shared-audio-"]').forEach(a => {
-                            if (a.id !== `shared-audio-${meditation._id}`) {
-                              a.pause();
-                            }
-                          });
-                          setPlayingMeditationId(meditation._id);
-                        }}
-                        onPause={(e) => {
-                          console.log('Audio paused:', meditation._id);
-                          setPlayingMeditationId(null);
-                        }}
-                        onEnded={(e) => {
-                          console.log('Audio ended:', meditation._id);
-                          setPlayingMeditationId(null);
-                          // Update play count when audio completes
-                          handlePlayCountUpdate(meditation._id);
-                        }}
-                        onError={(e) => {
-                          console.error('Audio error for:', meditation._id, 'Error:', e.target.error, 'URL:', e.target.src);
-                          console.error('Meditation audioFile:', meditation.audioFile);
-                        }}
-                        onCanPlay={(e) => {
-                          console.log('Audio can play:', meditation._id);
-                        }}
-                      >
-                        <source 
-                          src={getAssetUrl(`/assets/audio/shared/${meditation.audioFile.filename}`)} 
-                          type="audio/mpeg" 
-                        />
-                        {t('audioNotSupported', 'Your browser does not support the audio element.')}
-                      </audio>
+                      <div style={{
+                        background: 'rgba(0, 0, 0, 0.25)',
+                        borderRadius: '12px',
+                        padding: isMobile ? '8px' : '12px',
+                        marginTop: '4px',
+                        border: '1px solid rgba(255, 255, 255, 0.08)'
+                      }}>
+                        <audio 
+                          id={`shared-audio-${meditation._id}`}
+                          controls
+                          controlsList="nodownload"
+                          preload="metadata"
+                          style={{
+                            width: '100%',
+                            height: isMobile ? '44px' : '48px',
+                            borderRadius: '8px',
+                            outline: 'none',
+                            filter: 'brightness(1.1) saturate(1.2)'
+                          }}
+                          onLoadedMetadata={(e) => {
+                            console.log('Audio loaded for:', meditation._id, 'URL:', e.target.src);
+                          }}
+                          onPlay={(e) => {
+                            console.log('Audio started playing:', meditation._id);
+                            // Pause all other community audios first
+                            document.querySelectorAll('audio[id^="shared-audio-"]').forEach(a => {
+                              if (a.id !== `shared-audio-${meditation._id}`) {
+                                a.pause();
+                              }
+                            });
+                            setPlayingMeditationId(meditation._id);
+                          }}
+                          onPause={(e) => {
+                            console.log('Audio paused:', meditation._id);
+                            setPlayingMeditationId(null);
+                          }}
+                          onEnded={(e) => {
+                            console.log('Audio ended:', meditation._id);
+                            setPlayingMeditationId(null);
+                            // Update play count when audio completes
+                            handlePlayCountUpdate(meditation._id);
+                          }}
+                          onError={(e) => {
+                            console.error('Audio error for:', meditation._id, 'Error:', e.target.error, 'URL:', e.target.src);
+                            console.error('Meditation audioFile:', meditation.audioFile);
+                          }}
+                          onCanPlay={(e) => {
+                            console.log('Audio can play:', meditation._id);
+                          }}
+                        >
+                          <source 
+                            src={getAssetUrl(`/assets/audio/shared/${meditation.audioFile.filename}`)} 
+                            type="audio/mpeg" 
+                          />
+                          {t('audioNotSupported', 'Your browser does not support the audio element.')}
+                        </audio>
+                      </div>
                     )}
                   </div>
                 ))}
