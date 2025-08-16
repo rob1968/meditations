@@ -100,32 +100,6 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
     <div className="profile-info-section">
       <div className="profile-section-header">
         <h3>👤 {t('profile', 'Profile')}</h3>
-        {!isEditMode ? (
-          <button className="edit-profile-btn" onClick={startEdit}>
-            <span className="edit-icon">✏️</span>
-            {t('edit', 'Edit')}
-          </button>
-        ) : (
-          <div className="edit-actions">
-            <button className="save-btn" onClick={saveProfile} disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <span className="spinner-small"></span>
-                  {t('saving', 'Saving...')}
-                </>
-              ) : (
-                <>
-                  <span className="save-icon">✓</span>
-                  {t('save', 'Save')}
-                </>
-              )}
-            </button>
-            <button className="cancel-btn" onClick={cancelEdit} disabled={isSaving}>
-              <span className="cancel-icon">✕</span>
-              {t('cancel', 'Cancel')}
-            </button>
-          </div>
-        )}
       </div>
 
       {saveMessage && (
@@ -232,16 +206,18 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
             <label className="field-label">{t('bio', 'Bio')}</label>
             {isEditMode ? (
               <div className="bio-input-container">
-                <textarea
-                  value={editedUser.bio}
-                  onChange={(e) => setEditedUser(prev => ({ ...prev, bio: e.target.value }))}
-                  placeholder={t('bioPlaceholder', 'Tell us about yourself...')}
-                  maxLength={500}
-                  rows={3}
-                  className="field-input bio-textarea"
-                />
-                <div className="character-count">
-                  {500 - editedUser.bio.length} {t('charactersRemaining', 'characters remaining')}
+                <div className="bio-textarea-wrapper">
+                  <textarea
+                    value={editedUser.bio}
+                    onChange={(e) => setEditedUser(prev => ({ ...prev, bio: e.target.value }))}
+                    placeholder={t('bioPlaceholder', 'Tell us about yourself...')}
+                    maxLength={500}
+                    rows={3}
+                    className="field-input bio-textarea"
+                  />
+                  <div className="character-count">
+                    {500 - editedUser.bio.length} {t('charactersRemaining', 'characters remaining')}
+                  </div>
                 </div>
               </div>
             ) : (
@@ -252,6 +228,59 @@ const ProfileInfo = ({ user, onUserUpdate }) => {
           </div>
         </div>
       </div>
+
+      {/* Action buttons at the bottom */}
+      <div className="profile-actions-bottom">
+        {!isEditMode ? (
+          <button className="edit-profile-btn" onClick={startEdit}>
+            <span className="edit-icon">✏️</span>
+            {t('edit', 'Edit')}
+          </button>
+        ) : (
+          <div className="edit-actions">
+            <button className="save-btn" onClick={saveProfile} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <span className="spinner-small"></span>
+                  {t('saving', 'Saving...')}
+                </>
+              ) : (
+                <>
+                  <span className="save-icon">✓</span>
+                  {t('save', 'Save')}
+                </>
+              )}
+            </button>
+            <button className="cancel-btn" onClick={cancelEdit} disabled={isSaving}>
+              <span className="cancel-icon">✕</span>
+              {t('cancel', 'Cancel')}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <style jsx>{`
+        .bio-textarea-wrapper {
+          position: relative;
+        }
+
+        .character-count {
+          position: absolute;
+          bottom: 8px;
+          right: 12px;
+          font-size: 12px;
+          color: var(--text-secondary, #666);
+          background: rgba(255, 255, 255, 0.9);
+          padding: 2px 6px;
+          border-radius: 4px;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .bio-textarea {
+          padding-bottom: 28px !important;
+        }
+      `}</style>
     </div>
   );
 };

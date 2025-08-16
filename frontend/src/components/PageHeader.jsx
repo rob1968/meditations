@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getLocalizedLanguages } from '../data/languages';
+import { getFullUrl } from '../config/api';
 
 const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = false, onBackClick, unreadCount = 0, onInboxClick, onCreateClick }) => {
   const { t, i18n } = useTranslation();
@@ -149,7 +150,23 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
                   <div className="profile-panel-header">
                     <div className="profile-panel-avatar">
                       <div className="panel-avatar-circle">
-                        <span className="panel-avatar-initial">{user?.username?.charAt(0)?.toUpperCase()}</span>
+                        {user?.profileImage ? (
+                          <img 
+                            src={getFullUrl(user.profileImage)} 
+                            alt={user?.username}
+                            className="panel-avatar-image"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <span 
+                          className="panel-avatar-initial" 
+                          style={{ display: user?.profileImage ? 'none' : 'flex' }}
+                        >
+                          {user?.username?.charAt(0)?.toUpperCase()}
+                        </span>
                       </div>
                       <div className="panel-user-info">
                         <h3 className="panel-username">{user?.username}</h3>
@@ -291,6 +308,29 @@ const PageHeader = ({ user, onProfileClick, title, subtitle, showBackButton = fa
       <div className="page-header-right">
         {/* Language selector removed - now in profile page */}
       </div>
+
+      <style jsx>{`
+        .panel-avatar-image {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .panel-avatar-initial {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          color: white;
+          font-size: 24px;
+          font-weight: bold;
+        }
+      `}</style>
     </div>
   );
 };
