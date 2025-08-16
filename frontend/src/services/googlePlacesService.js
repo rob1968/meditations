@@ -68,7 +68,8 @@ class GooglePlacesService {
       };
 
       script.onerror = (error) => {
-        console.error('[GooglePlaces] Failed to load Google Maps script:', error);
+        console.log('[GooglePlaces] Failed to load Google Maps script - location features disabled:', error);
+        this.isLoaded = false;
         reject(new Error('Failed to load Google Maps script'));
       };
 

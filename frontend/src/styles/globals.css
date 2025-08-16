@@ -5714,3 +5714,83 @@ body {
   color: #f59e0b;
   font-weight: 600;
 }
+
+/* Close Window Button - Standard X style */
+.close-window-btn {
+  position: absolute;
+  top: var(--space-lg);
+  right: var(--space-lg);
+  width: 32px;
+  height: 32px;
+  background: var(--glass-medium);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.close-window-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ff4757;
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+  .close-window-btn {
+    top: var(--space-sm);
+    right: var(--space-sm);
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+}
+
+/* Inbox Header with Close Button */
+.inbox-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-lg) var(--space-lg) var(--space-md) var(--space-lg);
+  background: var(--glass-light);
+  border-radius: 16px;
+  margin-bottom: var(--space-lg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-medium);
+  position: relative;
+}
+
+.inbox-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.inbox-header .close-window-btn {
+  position: relative;
+  top: unset;
+  right: unset;
+}
+
+@media (max-width: 768px) {
+  .inbox-header {
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+  }
+  
+  .inbox-title {
+    font-size: 20px;
+  }
+}

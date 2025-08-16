@@ -79,11 +79,11 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
       <div className="profile-header">
         <div className="profile-header-top">
           <button 
-            className="back-to-create-btn" 
+            className="close-window-btn" 
             onClick={onBackToCreate}
-            title={t('backToCreate', 'Back to Create')}
+            title={t('close', 'Close')}
           >
-            ← {t('backToCreate', 'Back')}
+            ✕
           </button>
         </div>
         

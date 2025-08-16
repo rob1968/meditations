@@ -169,13 +169,16 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
 
   return (
     <div className="inbox-container">
-      <PageHeader 
-        user={user}
-        onProfileClick={onProfileClick}
-        unreadCount={headerUnreadCount}
-        onInboxClick={onInboxClick}
-        onCreateClick={onCreateClick}
-      />
+      <div className="inbox-header">
+        <h2 className="inbox-title">💌 {t('inbox', 'Inbox')}</h2>
+        <button 
+          className="close-window-btn" 
+          onClick={onCreateClick}
+          title={t('close', 'Close')}
+        >
+          ✕
+        </button>
+      </div>
 
       <div className="inbox-controls">
         <div className="filter-buttons">
