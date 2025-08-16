@@ -9,8 +9,14 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
   const [error, setError] = useState(null);
   const [showOptions, setShowOptions] = useState(false);
   const [confirmState, setConfirmState] = useState({ show: false, message: '', onConfirm: null, confirmText: '', cancelText: '' });
+  const [localImage, setLocalImage] = useState(profileImage);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  
+  // Update local image when prop changes
+  React.useEffect(() => {
+    setLocalImage(profileImage);
+  }, [profileImage]);
 
   const showConfirmDialog = (message, onConfirm, confirmText = t('confirm', 'Confirm'), cancelText = t('cancel', 'Cancel')) => {
     setConfirmState({ show: true, message, onConfirm, confirmText, cancelText });
@@ -55,7 +61,14 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
       if (!response.ok) {
         throw new Error(data.error || 'Upload failed');
       }
-
+      
+      console.log('Upload successful, updating image:', data.profileImage);
+      
+      // Update local state immediately
+      setLocalImage(data.profileImage);
+      
+      // Then notify parent
+      console.log('Calling onImageUpdate with:', data.profileImage);
       onImageUpdate(data.profileImage);
       setShowOptions(false);
     } catch (error) {
@@ -84,6 +97,7 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
             throw new Error(data.error || 'Delete failed');
           }
 
+          setLocalImage(null);
           onImageUpdate(null);
           setShowOptions(false);
         } catch (error) {
@@ -97,25 +111,48 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
   };
 
   const getImageUrl = () => {
-    if (profileImage) {
-      return getFullUrl(profileImage);
+    const imageToUse = localImage || profileImage;
+    if (imageToUse) {
+      // If image starts with http, use it directly
+      if (imageToUse.startsWith('http')) {
+        console.log('Using direct URL:', imageToUse);
+        return imageToUse;
+      }
+      // Otherwise build the full URL
+      const fullUrl = getFullUrl(imageToUse);
+      console.log('Built profile image URL:', fullUrl, 'from:', imageToUse);
+      return fullUrl;
     }
+    console.log('No profile image to display');
     return null;
   };
 
   return (
     <div className="profile-image-upload">
       <div className="profile-image-container">
-        {profileImage ? (
-          <img 
-            src={getImageUrl()} 
-            alt={t('profileImage', 'Profile')}
-            className="profile-image"
-            onError={(e) => {
-              e.target.src = '';
-              e.target.style.display = 'none';
-            }}
-          />
+        {(localImage || profileImage) ? (
+          <>
+            <img 
+              src={getImageUrl()} 
+              alt={t('profileImage', 'Profile')}
+              className="profile-image"
+              style={{
+                width: '100px',
+                height: '100px',
+                objectFit: 'cover',
+                borderRadius: '50%',
+                display: 'block'
+              }}
+              onError={(e) => {
+                // Replace with placeholder instead of showing broken image
+                e.target.style.display = 'none';
+                e.target.nextElementSibling?.style?.setProperty('display', 'flex');
+              }}
+            />
+            <div className="profile-image-placeholder" style={{display: 'none'}}>
+              <span className="placeholder-icon">👤</span>
+            </div>
+          </>
         ) : (
           <div className="profile-image-placeholder">
             <span className="placeholder-icon">👤</span>
@@ -147,7 +184,7 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
             📸 {t('takePhoto', 'Take Photo')}
           </button>
           
-          {profileImage && (
+          {(localImage || profileImage) && (
             <button
               className="option-btn delete-btn"
               onClick={handleDeleteImage}

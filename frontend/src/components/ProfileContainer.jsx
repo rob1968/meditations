@@ -16,6 +16,11 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
   const [alertState, setAlertState] = useState({ show: false, message: '', type: 'success' });
   const [profileImage, setProfileImage] = useState(user?.profileImage || null);
   
+  // Update profileImage when user prop changes
+  React.useEffect(() => {
+    setProfileImage(user?.profileImage || null);
+  }, [user?.profileImage]);
+  
   // Helper function to show alerts
   const showAlert = (message, type = 'success') => {
     setAlertState({ show: true, message, type });

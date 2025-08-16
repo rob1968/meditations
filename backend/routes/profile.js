@@ -5,16 +5,17 @@ const path = require('path');
 const fs = require('fs').promises;
 const User = require('../models/User');
 
-// Create profile images directory if it doesn't exist
-const profileImagesDir = path.join(__dirname, '..', 'profile-images');
+// Create profile images directory in static folder
+const profileImagesDir = path.join(__dirname, '..', '..', 'static', 'profile-images');
 fs.mkdir(profileImagesDir, { recursive: true }).catch(console.error);
 
 // Configure multer for profile image uploads
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const userDir = path.join(profileImagesDir, req.body.userId || 'temp');
-    await fs.mkdir(userDir, { recursive: true });
-    cb(null, userDir);
+    // Use temp directory first, we'll move the file later
+    const tempDir = path.join(profileImagesDir, 'temp');
+    await fs.mkdir(tempDir, { recursive: true });
+    cb(null, tempDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -28,13 +29,24 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB max
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    console.log('File filter check:', {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      fieldname: file.fieldname
+    });
     
-    if (mimetype && extname) {
+    // Much more permissive - allow any file that looks like an image
+    const isImage = file.mimetype && file.mimetype.startsWith('image/');
+    const hasImageExt = /\.(jpeg|jpg|png|gif|webp|avif|bmp|tiff)$/i.test(file.originalname);
+    
+    console.log('Validation results:', { isImage, hasImageExt, mimetype: file.mimetype });
+    
+    // Accept if either MIME type suggests image OR file extension suggests image
+    if (isImage || hasImageExt) {
+      console.log('File accepted:', file.originalname);
       return cb(null, true);
     } else {
+      console.log('File rejected:', file.originalname, file.mimetype);
       cb(new Error('Only image files are allowed'));
     }
   }
@@ -62,9 +74,19 @@ router.post('/upload-image', upload.single('profileImage'), async (req, res) => 
       return res.status(404).json({ error: 'User not found' });
     }
     
+    // Create user-specific directory
+    const userDir = path.join(profileImagesDir, userId);
+    await fs.mkdir(userDir, { recursive: true });
+    
+    // Move file from temp to user directory
+    const finalPath = path.join(userDir, req.file.filename);
+    await fs.rename(req.file.path, finalPath);
+    
     // Delete old profile image if exists
     if (user.profileImage) {
-      const oldImagePath = path.join(__dirname, '..', user.profileImage);
+      // Remove /static prefix to get actual file path
+      const cleanPath = user.profileImage.replace('/static/', '');
+      const oldImagePath = path.join(__dirname, '..', '..', cleanPath);
       try {
         await fs.unlink(oldImagePath);
       } catch (err) {
@@ -73,9 +95,15 @@ router.post('/upload-image', upload.single('profileImage'), async (req, res) => 
     }
     
     // Save relative path to database
-    const relativePath = `/profile-images/${userId}/${req.file.filename}`;
+    const relativePath = `/static/profile-images/${userId}/${req.file.filename}`;
     user.profileImage = relativePath;
     await user.save();
+    
+    console.log('Profile image upload successful:', { 
+      userId, 
+      relativePath, 
+      filename: req.file.filename 
+    });
     
     res.json({ 
       success: true, 
@@ -85,6 +113,12 @@ router.post('/upload-image', upload.single('profileImage'), async (req, res) => 
     
   } catch (error) {
     console.error('Profile image upload error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      userId,
+      file: req.file ? req.file.filename : 'no file'
+    });
     
     // Clean up uploaded file on error
     if (req.file) {
