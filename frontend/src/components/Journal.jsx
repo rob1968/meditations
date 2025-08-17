@@ -1923,7 +1923,7 @@ const handleSaveEntry = async () => {
 
   if (isLoading) {
     return (
-      <div className="journal-container">
+      <div className="journal-container" data-calendar-version="2025.01.17.2">
         <div className="loading-spinner">
           <div className="spinner"></div>
           {t('loading', 'Loading...')}
@@ -1932,7 +1932,7 @@ const handleSaveEntry = async () => {
     );
   }
 
-  // Generate calendar days for selected month
+  // Generate calendar days for selected month - COMPLETE GRID
   const generateCalendarDays = () => {
     const today = new Date();
     const todayDateString = today.getFullYear() + '-' + 
@@ -1945,6 +1945,7 @@ const handleSaveEntry = async () => {
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
     const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
     const firstDayWeekday = firstDayOfMonth.getDay();
+    const daysInMonth = lastDayOfMonth.getDate();
     
     const days = [];
     
@@ -1953,9 +1954,8 @@ const handleSaveEntry = async () => {
       days.push(null);
     }
     
-    // Add days of the month
-    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
-      // Create date string in local timezone format
+    // Add all days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
       const dateString = currentYear + '-' + 
         String(currentMonth + 1).padStart(2, '0') + '-' + 
         String(day).padStart(2, '0');
@@ -1964,8 +1964,8 @@ const handleSaveEntry = async () => {
       const dayDate = new Date(currentYear, currentMonth, day);
       const isPast = dayDate < today && !isToday;
       
-      // Check if there's an entry for this date
-      const hasEntry = entries.some(entry => {
+      // Check if there's an entry for this date and get its mood
+      const entryForDate = entries.find(entry => {
         const entryDate = new Date(entry.date);
         const entryDateString = entryDate.getFullYear() + '-' + 
           String(entryDate.getMonth() + 1).padStart(2, '0') + '-' + 
@@ -1973,13 +1973,17 @@ const handleSaveEntry = async () => {
         return entryDateString === dateString;
       });
       
+      const hasEntry = !!entryForDate;
+      const entryMood = entryForDate?.mood || null;
+      
       days.push({
         day,
         date: dateString,
         isToday,
         isPast,
         hasEntry,
-        isClickable: isPast || isToday // Past dates and today are clickable
+        mood: entryMood,
+        isClickable: isPast || isToday
       });
     }
     
@@ -2037,7 +2041,7 @@ const handleSaveEntry = async () => {
   };
 
   return (
-    <div className="journal-container">
+    <div className="journal-container" data-calendar-version="2025.01.17.2">
       {/* CSS for mood description tooltip */}
       <style>{`
         @keyframes fadeInOut {
@@ -3076,8 +3080,7 @@ const handleSaveEntry = async () => {
         {/* Calendar Tab */}
         {activeTab === 'calendar' && (
           <div className="calendar-tab-content">
-            {/* Always show calendar in calendar tab - no conditional rendering */}
-            <div className="journal-calendar">
+            <div className="journal-calendar-modern">
               <div className="calendar-header">
                 <div className="calendar-navigation">
                   <button 
@@ -3087,7 +3090,7 @@ const handleSaveEntry = async () => {
                   >
                     ‹
                   </button>
-                  <h3 className="calendar-month-year">{formatMonthYear()}</h3>
+                  <span className="calendar-month-year">{formatMonthYear()}</span>
                   <button 
                     className="calendar-nav-btn" 
                     onClick={goToNextMonth}
@@ -3097,24 +3100,23 @@ const handleSaveEntry = async () => {
                     ›
                   </button>
                 </div>
-                <div className="calendar-actions">
-                </div>
-                <p>{t('selectPastDate', 'Klik op een vorige dag om een dagboek in te vullen')}</p>
               </div>
+              
               <div className="calendar-grid">
                 <div className="calendar-weekdays">
                   {[
-                    t('sundayShort', 'S'),
-                    t('mondayShort', 'M'), 
-                    t('tuesdayShort', 'T'),
-                    t('wednesdayShort', 'W'),
-                    t('thursdayShort', 'T'),
-                    t('fridayShort', 'F'),
-                    t('saturdayShort', 'S')
+                    t('sundayShort', 'Zo'),
+                    t('mondayShort', 'Ma'), 
+                    t('tuesdayShort', 'Di'),
+                    t('wednesdayShort', 'Wo'),
+                    t('thursdayShort', 'Do'),
+                    t('fridayShort', 'Vr'),
+                    t('saturdayShort', 'Za')
                   ].map((day, index) => (
-                    <div key={index} className="weekday">{day}</div>
+                    <div key={index} className="calendar-weekday">{day}</div>
                   ))}
                 </div>
+                
                 <div className="calendar-days">
                   {generateCalendarDays().map((dayObj, index) => (
                     <div 
@@ -3127,19 +3129,23 @@ const handleSaveEntry = async () => {
                           'future'
                         ) : 'empty'
                       }`}
+                      data-mood={dayObj?.mood || ''}
                       onClick={() => (dayObj?.isClickable || dayObj?.hasEntry) && handleCalendarDateClick(dayObj.date)}
                       title={
                         dayObj?.hasEntry ? t('editEntry', 'Bewerk dagboek entry') : 
-                        dayObj?.isClickable ? t('clickToEdit', 'Klik om dagboek in te vullen') : ''
+                        dayObj?.isClickable ? t('clickToAddEntry', 'Klik om dagboek toe te voegen') : ''
                       }
                     >
-                      {dayObj ? dayObj.day : ''}
+                      {dayObj && (
+                        <>
+                          <span className="day-number">{dayObj.day}</span>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
             </div>
-            
           </div>
         )}
       </div>
