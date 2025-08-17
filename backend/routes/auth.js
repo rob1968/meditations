@@ -219,12 +219,132 @@ router.post('/login', async (req, res) => {
         bio: user.bio,
         credits: user.credits,
         lastLogin: user.lastLogin,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        isVerified: user.isVerified,
+        verificationMethod: user.verificationMethod,
+        verifiedAt: user.verifiedAt,
+        trustScore: user.trustScore
       }
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Admin route to check and create user "robbie" 
+router.get('/admin/check-robbie', async (req, res) => {
+  try {
+    // Check if user "robbie" exists
+    let user = await User.findOne({ username: 'robbie' });
+    
+    if (!user) {
+      // Create user "robbie" with verification
+      const newUser = new User({
+        username: 'robbie',
+        email: 'robbie@admin.local',
+        isVerified: true,
+        verificationMethod: 'id',
+        verifiedAt: new Date(),
+        trustScore: 95,
+        credits: 1000,
+        role: 'admin',
+        createdAt: new Date()
+      });
+      
+      user = await newUser.save();
+      console.log('✅ User "robbie" created and verified with admin privileges');
+    } else if (!user.isVerified) {
+      // Verify existing user
+      user.isVerified = true;
+      user.verificationMethod = 'id';
+      user.verifiedAt = new Date();
+      user.trustScore = 95;
+      user.credits = Math.max(user.credits || 0, 1000);
+      await user.save();
+      console.log('✅ User "robbie" verified with admin privileges');
+    }
+    
+    res.json({
+      message: 'User "robbie" is verified and ready',
+      user: {
+        id: user._id,
+        username: user.username,
+        isVerified: user.isVerified,
+        verificationMethod: user.verificationMethod,
+        verifiedAt: user.verifiedAt,
+        trustScore: user.trustScore,
+        credits: user.credits
+      }
+    });
+  } catch (error) {
+    console.error('Error with user robbie setup:', error);
+    res.status(500).json({ error: 'Failed to setup user robbie' });
+  }
+});
+
+// Admin route to check user "rob"
+router.get('/admin/check-rob', async (req, res) => {
+  try {
+    // Find user "rob"
+    const user = await User.findOne({ username: 'rob' });
+    
+    if (!user) {
+      // Create user "rob" if not exists
+      const newUser = new User({
+        username: 'rob',
+        isVerified: true,
+        verificationMethod: 'id',
+        verifiedAt: new Date(),
+        trustScore: 95,
+        credits: 1000
+      });
+      
+      await newUser.save();
+      await newUser.initializeCredits();
+      
+      console.log('✅ User "rob" has been created and verified as admin');
+      
+      return res.json({
+        message: 'User "rob" has been created and verified successfully',
+        user: {
+          id: newUser._id,
+          username: newUser.username,
+          isVerified: newUser.isVerified,
+          verificationMethod: newUser.verificationMethod,
+          verifiedAt: newUser.verifiedAt,
+          trustScore: newUser.trustScore,
+          credits: newUser.credits
+        }
+      });
+    }
+    
+    // User exists, verify if needed
+    if (!user.isVerified) {
+      user.isVerified = true;
+      user.verificationMethod = 'id';
+      user.verifiedAt = new Date();
+      user.trustScore = 95;
+      await user.save();
+      
+      console.log('✅ User "rob" has been verified as admin');
+    }
+    
+    res.json({
+      message: 'User "rob" is verified and ready',
+      user: {
+        id: user._id,
+        username: user.username,
+        isVerified: user.isVerified,
+        verificationMethod: user.verificationMethod,
+        verifiedAt: user.verifiedAt,
+        trustScore: user.trustScore,
+        credits: user.credits
+      }
+    });
+  } catch (error) {
+    console.error('Error checking/verifying user "rob":', error);
+    res.status(500).json({ error: 'Failed to verify user', details: error.message });
   }
 });
 

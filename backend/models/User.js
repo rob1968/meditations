@@ -84,6 +84,149 @@ const UserSchema = new mongoose.Schema({
     required: false
   },
   
+  // Activity and Interests (for Meet5-style functionality)
+  interests: [{
+    type: String,
+    trim: true,
+    maxlength: 50
+  }],
+  region: {
+    type: String,
+    trim: true,
+    maxlength: 100
+  },
+  preferredActivityCategories: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ActivityCategory'
+  }],
+  activityHistory: [{
+    activity: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Activity'
+    },
+    status: {
+      type: String,
+      enum: ['attended', 'no_show', 'cancelled'],
+      default: 'attended'
+    },
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5
+    },
+    date: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  activityStats: {
+    totalActivities: {
+      type: Number,
+      default: 0
+    },
+    activitiesOrganized: {
+      type: Number,
+      default: 0
+    },
+    activitiesAttended: {
+      type: Number,
+      default: 0
+    },
+    averageRating: {
+      type: Number,
+      default: 0
+    },
+    noShowCount: {
+      type: Number,
+      default: 0
+    },
+    lastActivityDate: Date
+  },
+  
+  // Verification and Trust
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationMethod: {
+    type: String,
+    enum: ['email', 'phone', 'id', 'social'],
+    required: false
+  },
+  verifiedAt: Date,
+  trustScore: {
+    type: Number,
+    default: 50,
+    min: 0,
+    max: 100
+  },
+  
+  // Social preferences for activities
+  activityPreferences: {
+    maxDistance: {
+      type: Number,
+      default: 25, // kilometers
+      min: 1,
+      max: 100
+    },
+    preferredGroupSize: {
+      min: {
+        type: Number,
+        default: 3
+      },
+      max: {
+        type: Number,
+        default: 10
+      }
+    },
+    preferredAgeRange: {
+      min: {
+        type: Number,
+        default: 18
+      },
+      max: {
+        type: Number,
+        default: 99
+      }
+    },
+    languages: [{
+      type: String,
+      enum: ['en', 'de', 'es', 'fr', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'ar', 'hi', 'nl']
+    }],
+    notificationSettings: {
+      newActivities: {
+        type: Boolean,
+        default: true
+      },
+      activityReminders: {
+        type: Boolean,
+        default: true
+      },
+      activityInvites: {
+        type: Boolean,
+        default: true
+      },
+      activityUpdates: {
+        type: Boolean,
+        default: true
+      }
+    }
+  },
+  
+  // Activity availability
+  availability: {
+    weekdays: {
+      morning: { type: Boolean, default: false },
+      afternoon: { type: Boolean, default: true },
+      evening: { type: Boolean, default: true }
+    },
+    weekends: {
+      morning: { type: Boolean, default: true },
+      afternoon: { type: Boolean, default: true },
+      evening: { type: Boolean, default: true }
+    }
+  },
+  
   // Pi Network integration
   authMethod: {
     type: String,
@@ -370,9 +513,101 @@ UserSchema.methods.getPrimaryEmergencyContact = function() {
   return this.emergencyContacts.find(contact => contact.isPrimary && contact.isActive);
 };
 
+// Activity-related methods for Meet5-style functionality
+UserSchema.methods.updateActivityStats = async function(activityId, status, rating = null) {
+  // Update activity history
+  this.activityHistory.push({
+    activity: activityId,
+    status: status,
+    rating: rating,
+    date: new Date()
+  });
+  
+  // Update stats
+  this.activityStats.totalActivities += 1;
+  this.activityStats.lastActivityDate = new Date();
+  
+  if (status === 'attended') {
+    this.activityStats.activitiesAttended += 1;
+    if (rating) {
+      // Recalculate average rating
+      const totalRating = (this.activityStats.averageRating * (this.activityStats.activitiesAttended - 1)) + rating;
+      this.activityStats.averageRating = totalRating / this.activityStats.activitiesAttended;
+    }
+  } else if (status === 'no_show') {
+    this.activityStats.noShowCount += 1;
+    // Decrease trust score for no-shows
+    this.trustScore = Math.max(0, this.trustScore - 5);
+  }
+  
+  return this.save();
+};
+
+UserSchema.methods.incrementOrganizedActivities = async function() {
+  this.activityStats.activitiesOrganized += 1;
+  // Increase trust score for organizing activities
+  this.trustScore = Math.min(100, this.trustScore + 2);
+  return this.save();
+};
+
+UserSchema.methods.canJoinActivity = function(activity) {
+  // Check age restrictions
+  const userAge = this.age || (this.birthDate ? Math.floor((Date.now() - new Date(this.birthDate)) / (365.25 * 24 * 60 * 60 * 1000)) : null);
+  if (userAge && (userAge < activity.ageRange.min || userAge > activity.ageRange.max)) {
+    return { canJoin: false, reason: 'Age restrictions not met' };
+  }
+  
+  // Check if already participating
+  const isParticipant = activity.participants.some(p => p.user.toString() === this._id.toString());
+  if (isParticipant) {
+    return { canJoin: false, reason: 'Already participating' };
+  }
+  
+  // Check privacy settings
+  if (activity.privacy === 'invite_only' && !activity.invitedUsers.includes(this._id)) {
+    return { canJoin: false, reason: 'Invitation required' };
+  }
+  
+  return { canJoin: true };
+};
+
+UserSchema.methods.getActivityRecommendations = async function() {
+  const Activity = mongoose.model('Activity');
+  
+  // Get activities matching user preferences
+  const query = {
+    status: { $in: ['published', 'upcoming'] },
+    date: { $gte: new Date() },
+    'participants.user': { $ne: this._id }
+  };
+  
+  // Add interest filtering if user has interests
+  if (this.interests && this.interests.length > 0) {
+    query.$or = [
+      { tags: { $in: this.interests } },
+      { requiredInterests: { $in: this.interests } }
+    ];
+  }
+  
+  // Add category filtering if user has preferences
+  if (this.preferredActivityCategories && this.preferredActivityCategories.length > 0) {
+    query.category = { $in: this.preferredActivityCategories };
+  }
+  
+  return Activity.find(query)
+    .populate('organizer', 'username avatar trustScore')
+    .populate('category')
+    .limit(20)
+    .sort({ date: 1 });
+};
+
 // Create indexes for better performance
 UserSchema.index({ username: 1 });
 UserSchema.index({ piUserId: 1 });
 UserSchema.index({ authMethod: 1 });
+UserSchema.index({ interests: 1 });
+UserSchema.index({ 'location.coordinates': '2dsphere' });
+UserSchema.index({ isVerified: 1 });
+UserSchema.index({ trustScore: -1 });
 
 module.exports = mongoose.model('User', UserSchema);

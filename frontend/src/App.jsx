@@ -14,6 +14,7 @@ import AdminDashboard from './components/AdminDashboard';
 import Inbox from './components/Inbox';
 import Journal from './components/Journal';
 import JournalHub from './components/JournalHub';
+import MeetHub from './components/Meet/MeetHub';
 import PageHeader from './components/PageHeader';
 import VoiceSlider from './components/VoiceSlider';
 import MeditationTypeSlider from './components/MeditationTypeSlider';
@@ -1469,6 +1470,8 @@ const App = () => {
         return <UnifiedDashboard user={user} userCredits={userCredits} onCreditsUpdate={fetchUserCredits} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} unreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('dashboard')} />;
       case 'journal':
         return <Journal user={user} userCredits={userCredits} onCreditsUpdate={fetchUserCredits} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} unreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('dashboard')} />;
+      case 'meet':
+        return <MeetHub user={user} />;
       case 'journalHub':
         return <JournalHub user={user} />;
       case 'admin':

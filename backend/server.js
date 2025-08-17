@@ -24,6 +24,7 @@ const aiCoachRoute = require('./routes/aiCoach');
 const emergencyContactsRoute = require('./routes/emergencyContacts');
 const profileRoute = require('./routes/profile');
 const musicRoute = require('./routes/music');
+const meetRoute = require('./routes/meet');
 const app = express();
 
 // Create a write stream (in append mode) for logging
@@ -79,6 +80,8 @@ app.use('/api/ai-coach', aiCoachRoute);
 app.use('/api/emergency-contacts', emergencyContactsRoute);
 app.use('/api/profile', profileRoute);
 app.use('/api/music', musicRoute);
+app.use('/api/meet', meetRoute);
+app.use('/api/activities', require('./routes/activities')); // Meet5-style activities
 
 // Serve profile images
 app.use('/profile-images', express.static(path.join(__dirname, 'profile-images')));
@@ -99,9 +102,49 @@ mongoose.connect(process.env.MONGODB_URI, {
 const PORT = process.env.PORT || 5004;
 const HOST = process.env.HOST || '0.0.0.0'; // Listen on all interfaces
 
-app.listen(PORT, HOST, () => {
+// Create HTTP server for Socket.io
+const { createServer } = require('http');
+const { Server } = require('socket.io');
+const server = createServer(app);
+
+// Configure Socket.io with CORS
+const io = new Server(server, {
+  cors: corsOptions,
+  transports: ['websocket', 'polling'], // Fallback for mobile
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
+
+// Socket.io authentication middleware
+io.use(async (socket, next) => {
+  try {
+    const userId = socket.handshake.auth.userId;
+    if (!userId) {
+      return next(new Error('Authentication error'));
+    }
+    
+    const User = require('./models/User');
+    const user = await User.findById(userId);
+    if (!user) {
+      return next(new Error('User not found'));
+    }
+    
+    socket.userId = userId;
+    socket.username = user.username;
+    next();
+  } catch (error) {
+    console.error('Socket authentication error:', error);
+    next(new Error('Authentication failed'));
+  }
+});
+
+// Socket.io connection handling
+require('./socket/socketHandlers')(io);
+
+server.listen(PORT, HOST, () => {
   console.log(`🚀 Server running on http://${HOST}:${PORT}`);
   console.log(`🌐 Network access: http://192.168.68.111:${PORT}`);
+  console.log(`⚡ Socket.io enabled for real-time messaging`);
 });
 
 // Centralized error handling middleware
