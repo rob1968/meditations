@@ -909,10 +909,12 @@
 .calendar-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 1px;
+  grid-auto-rows: minmax(50px, auto);
+  gap: 2px;
+  width: 100%;
   background: var(--glass-dark);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .meet-hub .calendar-day {
@@ -1291,16 +1293,40 @@
   letter-spacing: 1px !important;
 }
 
+/* CACHE BUST v2025.08.17.6 - FORCE 6 WEEK CALENDAR */
 .journal-calendar-modern .calendar-days {
   display: grid !important;
   grid-template-columns: repeat(7, 1fr) !important;
-  gap: 8px !important;
-  grid-auto-rows: minmax(60px, auto) !important;
-  min-height: 360px !important;
+  grid-auto-rows: 50px !important;
+  gap: 4px !important;
+  width: 100% !important;
+  min-height: 320px !important;
+  max-height: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  /* FORCE ALL 42 CELLS TO DISPLAY */
+}
+
+/* ENSURE ALL CELLS ARE VISIBLE */
+.journal-calendar-modern .calendar-days > * {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* EXTRA STRONG RULE FOR CALENDAR VISIBILITY */
+body .journal-calendar-modern .calendar-days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  grid-auto-rows: 50px !important;
+  min-height: 320px !important;
+  height: auto !important;
+  overflow: visible !important;
 }
 
 .journal-calendar-modern .calendar-day {
-  aspect-ratio: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
   background: rgba(30, 41, 59, 0.4) !important;
   border-radius: 12px !important;
   display: flex !important;
@@ -1455,13 +1481,16 @@
   }
   
   body .journal-calendar-modern .calendar-days {
-    gap: 4px !important;
-    grid-auto-rows: minmax(45px, auto) !important;
-    min-height: 270px !important;
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    grid-auto-rows: 40px !important;
+    gap: 2px !important;
+    min-height: 260px !important;
   }
   
   body .journal-calendar-modern .calendar-day {
-    min-height: 45px !important;
+    width: 100% !important;
+    height: 100% !important;
     border-radius: 8px !important;
     background: rgba(30, 41, 59, 0.4) !important;
     border: 1px solid rgba(59, 130, 246, 0.1) !important;

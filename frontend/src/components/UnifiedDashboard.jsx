@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import { getFullUrl, getAssetUrl, API_ENDPOINTS } from '../config/api';
+import { getFullUrl, getAssetUrl, API_ENDPOINTS, getAuthHeaders } from '../config/api';
 import PageHeader from './PageHeader';
 import Alert from './Alert';
 import ConfirmDialog from './ConfirmDialog';
@@ -149,8 +149,10 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     setBackgroundsLoading(true);
     
     try {
-      const url = getFullUrl(`/api/meditation/custom-backgrounds/${user.id}`);
-      const response = await axios.get(url);
+      const url = getFullUrl(`/api/meditation/custom-backgrounds`);
+      const response = await axios.get(url, {
+        headers: getAuthHeaders(user.id)
+      });
       setSavedCustomBackgrounds(response.data.backgrounds || []);
     } catch (error) {
       console.error('Error fetching saved custom backgrounds:', error);
@@ -211,7 +213,9 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
 
   const loadMyMeditations = async () => {
     try {
-      const response = await axios.get(getFullUrl(API_ENDPOINTS.USER_MEDITATIONS(user.id)));
+      const response = await axios.get(getFullUrl(API_ENDPOINTS.USER_MEDITATIONS(user.id)), {
+        headers: getAuthHeaders(user.id)
+      });
       console.log('My meditations response:', response.data);
       setMyMeditations(response.data.meditations || []);
     } catch (error) {
@@ -291,6 +295,8 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     try {
       const response = await axios.post(getFullUrl(`/api/community/meditations/${meditationId}/play`), {
         userId: user?.id
+      }, {
+        headers: getAuthHeaders(user?.id)
       });
       
       // Only update if play was actually counted (backend returns success)
@@ -324,6 +330,8 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     try {
       const response = await axios.post(getFullUrl(`/api/community/meditations/${meditationId}/like`), {
         userId: user.id
+      }, {
+        headers: getAuthHeaders(user.id)
       });
 
       // Update local state
@@ -396,7 +404,8 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
   const deleteCustomImage = async (meditationId) => {
     try {
       await axios.delete(getFullUrl(API_ENDPOINTS.DELETE_IMAGE(meditationId)), {
-        params: { userId: user.id }
+        params: { userId: user.id },
+        headers: getAuthHeaders(user.id)
       });
       await loadMyMeditations();
       setShowImageOptions(null);
@@ -552,7 +561,10 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       formData.append('userId', user.id);
       
       await axios.post(getFullUrl(`/api/user-meditations/meditation/${meditationId}/upload-image`), formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          'x-user-id': user.id
+        }
       });
       
       await loadMyMeditations();
@@ -634,6 +646,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       const response = await axios.post(getFullUrl('/api/community/share'), formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'x-user-id': user.id
         },
       });
 
@@ -642,6 +655,8 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
         await axios.patch(getFullUrl(`/api/user-meditations/${user.id}/${meditationId}/share`), {
           sharedMeditationId: response.data.meditation._id,
           isShared: true
+        }, {
+          headers: getAuthHeaders(user.id)
         });
         
         // Refresh meditations and credits
@@ -670,6 +685,8 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
           await axios.patch(getFullUrl(`/api/user-meditations/${user.id}/${meditation._id || meditation.id}/share`), {
             isShared: false,
             sharedMeditationId: null
+          }, {
+            headers: getAuthHeaders(user.id)
           });
           await loadMyMeditations();
           showAlert(t('meditationUnshared', 'Meditation unshared successfully!'), 'success');
@@ -688,7 +705,9 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       t('confirmDeleteMeditation', 'Are you sure you want to delete this meditation? This action cannot be undone.'),
       async () => {
         try {
-          await axios.delete(getFullUrl(`/api/user-meditations/${user.id}/${meditationId}`));
+          await axios.delete(getFullUrl(`/api/user-meditations/${user.id}/${meditationId}`), {
+            headers: getAuthHeaders(user.id)
+          });
           await loadMyMeditations();
           showAlert(t('meditationDeleted', 'Meditation deleted successfully!'), 'success');
         } catch (error) {
@@ -799,6 +818,8 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       const response = await axios.post(getFullUrl(API_ENDPOINTS.GENERATE_TEXT), {
         type,
         language: currentLanguage
+      }, {
+        headers: getAuthHeaders(user?.id)
       });
       
       return response.data.text;

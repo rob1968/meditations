@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const Notification = require('../models/Notification');
+const auth = require('../middleware/auth');
 
 // Get all notifications for a user
-router.get('/user/:userId', async (req, res) => {
+router.get('/user', auth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user._id;
     const { limit = 50, offset = 0, unreadOnly = false } = req.query;
     
     let query = { userId };
@@ -37,10 +38,10 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // Mark notification as read
-router.patch('/:notificationId/read', async (req, res) => {
+router.patch('/:notificationId/read', auth, async (req, res) => {
   try {
     const { notificationId } = req.params;
-    const { userId } = req.body;
+    const userId = req.user._id;
     
     const notification = await Notification.findOneAndUpdate(
       { _id: notificationId, userId },
@@ -73,9 +74,9 @@ router.patch('/:notificationId/read', async (req, res) => {
 });
 
 // Mark all notifications as read for a user
-router.patch('/user/:userId/read-all', async (req, res) => {
+router.patch('/user/read-all', auth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user._id;
     
     await Notification.updateMany(
       { userId, isRead: false },
@@ -96,10 +97,10 @@ router.patch('/user/:userId/read-all', async (req, res) => {
 });
 
 // Delete a notification
-router.delete('/:notificationId', async (req, res) => {
+router.delete('/:notificationId', auth, async (req, res) => {
   try {
     const { notificationId } = req.params;
-    const { userId } = req.body;
+    const userId = req.user._id;
     
     const notification = await Notification.findOneAndDelete({
       _id: notificationId,

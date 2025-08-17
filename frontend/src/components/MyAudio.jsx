@@ -286,6 +286,7 @@ const MyAudioComponent = ({ user, userCredits, isGenerating, onCreditsUpdate, on
       const response = await axios.post(getFullUrl('/api/community/share'), formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'x-user-id': user.id
         },
       });
 

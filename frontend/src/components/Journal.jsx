@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import axios from 'axios';
-import { getFullUrl, getAssetUrl, API_ENDPOINTS, API_BASE_URL } from '../config/api';
+import { getFullUrl, getAssetUrl, API_ENDPOINTS, API_BASE_URL, getAuthHeaders, apiRequest } from '../config/api';
 import PageHeader from './PageHeader';
 import Alert from './Alert';
 import ConfirmDialog from './ConfirmDialog';
@@ -10,6 +10,7 @@ import AICoachChat from './AICoachChat';
 import TriggerAlert from './TriggerAlert';
 import SpellingChecker from './GrammarChecker';
 import TriggerPatternChart from './TriggerPatternChart';
+import SimpleCalendar from './SimpleCalendar';
 
 const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
   const [entries, setEntries] = useState([]);
@@ -81,7 +82,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
   
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState('write'); // 'write', 'calendar', 'archive', 'addictions', 'coach'
+  const [activeTab, setActiveTab] = useState('calendar'); // 'write', 'calendar', 'archive', 'addictions', 'coach'
   
   // Ref to track if calendar has been initialized to prevent re-loading today's entry
   const calendarInitialized = useRef(false);
@@ -321,7 +322,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     
     // Fetch today's entry directly
     try {
-      const response = await axios.get(getFullUrl(`/api/journal/user/${user.id}/today`));
+      const response = await axios.get(getFullUrl(`/api/journal/user/today`), {
+        headers: getAuthHeaders(user.id)
+      });
       console.log('Calendar: Fetched today\'s entry:', response.data);
       
       if (response.data.hasEntry && response.data.entry) {
@@ -415,7 +418,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       const params = new URLSearchParams();
       if (searchText) params.append('searchText', searchText);
       
-      const response = await axios.get(getFullUrl(`/api/journal/user/${user.id}?${params}`));
+      const response = await axios.get(getFullUrl(`/api/journal/user/entries?${params}`), {
+        headers: getAuthHeaders(user.id)
+      });
       // Sort entries from oldest to newest for horizontal scroll (left = old, right = new)
       const sortedEntries = response.data.entries.sort((a, b) => new Date(a.date) - new Date(b.date));
       setEntries(sortedEntries);
@@ -431,7 +436,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
 
   const fetchTodaysEntry = async () => {
     try {
-      const response = await axios.get(getFullUrl(`/api/journal/user/${user.id}/today`));
+      const response = await axios.get(getFullUrl(`/api/journal/user/today`), {
+        headers: getAuthHeaders(user.id)
+      });
       setTodaysEntry(response.data.entry);
       setHasTodaysEntry(response.data.hasEntry);
     } catch (error) {
@@ -449,7 +456,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       const startOfDay = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
       const endOfDay = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
       
-      const response = await axios.get(getFullUrl(`/api/journal/user/${user.id}?startDate=${startOfDay.toISOString()}&endDate=${endOfDay.toISOString()}`));
+      const response = await axios.get(getFullUrl(`/api/journal/user/entries?startDate=${startOfDay.toISOString()}&endDate=${endOfDay.toISOString()}`), {
+        headers: getAuthHeaders(user.id)
+      });
       
       if (response.data.entries && response.data.entries.length > 0) {
         setSelectedDateEntry(response.data.entries[0]);
@@ -532,7 +541,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const fetchUserVoices = async () => {
     try {
       console.log('Fetching user voices for user:', user.id);
-      const response = await axios.get(getFullUrl(`/api/journal/voice-clone/list/${user.id}`));
+      const response = await axios.get(getFullUrl(`/api/journal/voice-clone/list/${user.id}`), {
+        headers: getAuthHeaders(user.id)
+      });
       console.log('Voice list response:', response.data);
       if (response.data.success) {
         const voices = response.data.voices || [];
@@ -721,6 +732,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       const response = await axios.post(getFullUrl('/api/journal/voice-clone/upload'), formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'x-user-id': user.id
         },
         timeout: 60000, // 60 second timeout for voice cloning
       });
@@ -760,7 +772,9 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       t('confirmDeleteVoice', 'Are you sure you want to delete this custom voice?'),
       async () => {
         try {
-          await axios.delete(getFullUrl(`/api/journal/voice-clone/${voiceId}?userId=${user.id}`));
+          await axios.delete(getFullUrl(`/api/journal/voice-clone/${voiceId}?userId=${user.id}`), {
+            headers: getAuthHeaders(user.id)
+          });
           await fetchUserVoices(); // Refresh voices list
           
           // If deleted voice was selected, switch back to default
@@ -874,7 +888,8 @@ const performPreSaveChecks = async () => {
     const response = await axios.post(getFullUrl('/api/ai-coach/check-nonsense'), {
       text: formData.content.trim()
     }, {
-      timeout: 15000 // 15 second timeout
+      timeout: 15000, // 15 second timeout
+      headers: getAuthHeaders(user.id)
     });
     
     console.log('API Response status:', response.status);
@@ -968,10 +983,14 @@ const proceedWithSave = async () => {
       let response;
       if (editingEntry && editingEntry._id) {
         // Use PUT for explicit editing
-        response = await axios.put(getFullUrl(`/api/journal/${editingEntry._id}`), payload);
+        response = await axios.put(getFullUrl(`/api/journal/${editingEntry._id}`), payload, {
+          headers: getAuthHeaders(user.id)
+        });
       } else {
         // Use POST for create/append (will handle one-per-day logic)
-        response = await axios.post(getFullUrl('/api/journal/create'), payload);
+        response = await axios.post(getFullUrl('/api/journal/create'), payload, {
+          headers: getAuthHeaders(user.id)
+        });
       }
 
       console.log('Save response:', response.data);
@@ -1148,7 +1167,9 @@ const handleSaveEntry = async () => {
           }
           
           // Make the API call to delete from backend
-          await axios.delete(getFullUrl(`/api/journal/${entryId}?userId=${user.id}`));
+          await axios.delete(getFullUrl(`/api/journal/${entryId}?userId=${user.id}`), {
+            headers: getAuthHeaders(user.id)
+          });
           
           // Refresh today's entry to ensure consistency
           await fetchTodaysEntry();
@@ -1183,7 +1204,9 @@ const handleSaveEntry = async () => {
       
       console.log('Sending audio generation request:', requestData);
       
-      const response = await axios.post(getFullUrl(`/api/journal/${entry._id}/generate-audio`), requestData);
+      const response = await axios.post(getFullUrl(`/api/journal/${entry._id}/generate-audio`), requestData, {
+        headers: getAuthHeaders(user.id)
+      });
 
       console.log('Audio generation response:', response.data);
 
@@ -1217,6 +1240,8 @@ const handleSaveEntry = async () => {
     try {
       const response = await axios.post(getFullUrl(`/api/journal/${entry._id}/share`), {
         userId: user.id
+      }, {
+        headers: getAuthHeaders(user.id)
       });
 
       if (response.data.success) {
@@ -1496,6 +1521,7 @@ const handleSaveEntry = async () => {
       const response = await axios.post(getFullUrl('/api/journal/transcribe'), formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'x-user-id': user.id
         },
         timeout: 45000, // 45 second timeout for Google Speech-to-Text
         maxContentLength: Infinity,
@@ -1654,7 +1680,9 @@ const handleSaveEntry = async () => {
   // Addictions functions
   const fetchAddictions = async () => {
     try {
-      const response = await axios.get(getFullUrl(`/api/addictions/user/${user.id}`));
+      const response = await axios.get(getFullUrl(`/api/addictions/user/${user.id}`), {
+        headers: getAuthHeaders(user.id)
+      });
       setAddictions(response.data.addictions);
     } catch (error) {
       console.error('Error fetching addictions:', error);
@@ -1674,9 +1702,13 @@ const handleSaveEntry = async () => {
       
       let response;
       if (editingAddiction) {
-        response = await axios.put(getFullUrl(`/api/addictions/${editingAddiction._id}`), requestData);
+        response = await axios.put(getFullUrl(`/api/addictions/${editingAddiction._id}`), requestData, {
+          headers: getAuthHeaders(user.id)
+        });
       } else {
-        response = await axios.post(getFullUrl('/api/addictions/create'), requestData);
+        response = await axios.post(getFullUrl('/api/addictions/create'), requestData, {
+          headers: getAuthHeaders(user.id)
+        });
       }
       
       if (response.data.success) {
@@ -1723,7 +1755,9 @@ const handleSaveEntry = async () => {
       t('confirmDeleteAddiction', 'Are you sure you want to delete this addiction tracking?'),
       async () => {
         try {
-          await axios.delete(getFullUrl(`/api/addictions/${addictionId}?userId=${user.id}`));
+          await axios.delete(getFullUrl(`/api/addictions/${addictionId}?userId=${user.id}`), {
+            headers: getAuthHeaders(user.id)
+          });
           await fetchAddictions();
         } catch (error) {
           console.error('Error deleting addiction:', error);
@@ -1884,7 +1918,9 @@ const handleSaveEntry = async () => {
         if (showTriggerAlert) return;
 
         console.log('Checking for trigger alerts...');
-        const response = await axios.get(getFullUrl(`/api/ai-coach/check-triggers/${user.id}`));
+        const response = await axios.get(getFullUrl(`/api/ai-coach/check-triggers/${user.id}`), {
+          headers: getAuthHeaders(user.id)
+        });
         
         if (response.data.success && response.data.triggers && response.data.triggers.length > 0) {
           const trigger = response.data.triggers[0]; // Show the first (most recent) trigger
@@ -1985,6 +2021,12 @@ const handleSaveEntry = async () => {
         mood: entryMood,
         isClickable: isPast || isToday
       });
+    }
+    
+    // Fill remaining cells to complete the 6x7 grid (42 total cells)
+    const totalCells = 42;
+    while (days.length < totalCells) {
+      days.push(null);
     }
     
     return days;
@@ -2106,7 +2148,6 @@ const handleSaveEntry = async () => {
         <button 
           className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
           onClick={() => setActiveTab('calendar')}
-          style={{ display: 'none' }}
         >
           <span className="tab-icon">📅</span>
           <span className="tab-label">{t('calendar', 'Kalender')}</span>
@@ -3080,72 +3121,15 @@ const handleSaveEntry = async () => {
         {/* Calendar Tab */}
         {activeTab === 'calendar' && (
           <div className="calendar-tab-content">
-            <div className="journal-calendar-modern">
-              <div className="calendar-header">
-                <div className="calendar-navigation">
-                  <button 
-                    className="calendar-nav-btn" 
-                    onClick={goToPreviousMonth}
-                    title={t('previousMonth', 'Vorige maand')}
-                  >
-                    ‹
-                  </button>
-                  <span className="calendar-month-year">{formatMonthYear()}</span>
-                  <button 
-                    className="calendar-nav-btn" 
-                    onClick={goToNextMonth}
-                    disabled={currentCalendarMonth.getMonth() === new Date().getMonth() && currentCalendarMonth.getFullYear() === new Date().getFullYear()}
-                    title={t('nextMonth', 'Volgende maand')}
-                  >
-                    ›
-                  </button>
-                </div>
-              </div>
-              
-              <div className="calendar-grid">
-                <div className="calendar-weekdays">
-                  {[
-                    t('sundayShort', 'Zo'),
-                    t('mondayShort', 'Ma'), 
-                    t('tuesdayShort', 'Di'),
-                    t('wednesdayShort', 'Wo'),
-                    t('thursdayShort', 'Do'),
-                    t('fridayShort', 'Vr'),
-                    t('saturdayShort', 'Za')
-                  ].map((day, index) => (
-                    <div key={index} className="calendar-weekday">{day}</div>
-                  ))}
-                </div>
-                
-                <div className="calendar-days">
-                  {generateCalendarDays().map((dayObj, index) => (
-                    <div 
-                      key={index} 
-                      className={`calendar-day ${
-                        dayObj ? (
-                          dayObj.isToday ? 'today' : 
-                          dayObj.hasEntry ? 'has-entry' : 
-                          dayObj.isClickable ? 'clickable' : 
-                          'future'
-                        ) : 'empty'
-                      }`}
-                      data-mood={dayObj?.mood || ''}
-                      onClick={() => (dayObj?.isClickable || dayObj?.hasEntry) && handleCalendarDateClick(dayObj.date)}
-                      title={
-                        dayObj?.hasEntry ? t('editEntry', 'Bewerk dagboek entry') : 
-                        dayObj?.isClickable ? t('clickToAddEntry', 'Klik om dagboek toe te voegen') : ''
-                      }
-                    >
-                      {dayObj && (
-                        <>
-                          <span className="day-number">{dayObj.day}</span>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <SimpleCalendar
+              currentMonth={currentCalendarMonth.getMonth()}
+              currentYear={currentCalendarMonth.getFullYear()}
+              entries={entries}
+              onDateClick={handleCalendarDateClick}
+              onPrevMonth={goToPreviousMonth}
+              onNextMonth={goToNextMonth}
+              t={t}
+            />
           </div>
         )}
       </div>

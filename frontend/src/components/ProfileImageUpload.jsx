@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getFullUrl } from '../config/api';
+import { getFullUrl, getAuthHeaders } from '../config/api';
 import ConfirmDialog from './ConfirmDialog';
 
 const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
@@ -46,19 +46,51 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
     setUploading(true);
     setError(null);
 
+    console.log('=== PROFILE UPLOAD DEBUG ===');
+    console.log('File:', file);
+    console.log('User object:', user);
+    console.log('User ID:', user?.id);
+    
+    if (!user || !user.id) {
+      console.error('User or user.id is missing!');
+      setError(t('userNotFound', 'User not found. Please refresh the page.'));
+      setUploading(false);
+      return;
+    }
+
     const formData = new FormData();
     formData.append('profileImage', file);
     formData.append('userId', user.id);
+    
+    console.log('FormData created, making request...');
 
     try {
+      console.log('Request URL:', getFullUrl('/api/profile/upload-image'));
+      console.log('Headers being sent:', { 'x-user-id': user.id });
+      
+      // Add timeout to prevent infinite loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await fetch(getFullUrl('/api/profile/upload-image'), {
         method: 'POST',
-        body: formData
+        headers: {
+          'x-user-id': user.id
+        },
+        body: formData,
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (!response.ok) {
+        console.error('Upload failed with data:', data);
         throw new Error(data.error || 'Upload failed');
       }
       
@@ -73,7 +105,11 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
       setShowOptions(false);
     } catch (error) {
       console.error('Upload error:', error);
-      setError(error.message || t('uploadFailed', 'Failed to upload image'));
+      if (error.name === 'AbortError') {
+        setError(t('uploadTimeout', 'Upload timed out. Please try again.'));
+      } else {
+        setError(error.message || t('uploadFailed', 'Failed to upload image'));
+      }
     } finally {
       setUploading(false);
     }
@@ -87,9 +123,19 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
         setError(null);
 
         try {
-          const response = await fetch(getFullUrl(`/api/profile/delete-image/${user.id}`), {
-            method: 'DELETE'
+          // Add timeout to prevent infinite loading
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+          
+          const response = await fetch(getFullUrl('/api/profile/delete-image'), {
+            method: 'DELETE',
+            headers: {
+              'x-user-id': user.id
+            },
+            signal: controller.signal
           });
+          
+          clearTimeout(timeoutId);
 
           const data = await response.json();
 
@@ -102,7 +148,11 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
           setShowOptions(false);
         } catch (error) {
           console.error('Delete error:', error);
-          setError(error.message || t('deleteFailed', 'Failed to delete image'));
+          if (error.name === 'AbortError') {
+            setError(t('deleteTimeout', 'Delete timed out. Please try again.'));
+          } else {
+            setError(error.message || t('deleteFailed', 'Failed to delete image'));
+          }
         } finally {
           setUploading(false);
         }

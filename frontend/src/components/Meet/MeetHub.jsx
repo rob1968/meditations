@@ -155,8 +155,9 @@ const MeetHub = ({ user }) => {
   // Filter tabs based on user verification status and admin access
   const tabs = allTabs.filter(tab => {
     if (tab.requiresVerification) {
-      const canShow = user?.isVerified === true;
-      console.log(`🔍 Tab "${tab.id}" requires verification - User verified: ${user?.isVerified}, Show tab: ${canShow}`);
+      // VERIFICATION DISABLED: Allow all users to access all tabs
+      const canShow = true; // user?.isVerified === true;
+      console.log(`🔍 Tab "${tab.id}" requires verification - VERIFICATION DISABLED - Show tab: ${canShow}`);
       return canShow;
     }
     if (tab.adminOnly) {
@@ -269,7 +270,7 @@ const MeetHub = ({ user }) => {
         </p>
         
         <div className="meet-header-actions">
-          {user?.isVerified && (
+          {true && (
             <button 
               className="create-activity-button primary-button"
               onClick={() => {
@@ -298,7 +299,7 @@ const MeetHub = ({ user }) => {
             🛡️ {t('safety', 'Veiligheid')}
           </button>
           
-          {!user?.isVerified && (
+          {false && (
             <button 
               className="verification-button secondary-button"
               onClick={() => setShowVerificationModal(true)}
@@ -308,7 +309,7 @@ const MeetHub = ({ user }) => {
             </button>
           )}
           
-          {user?.isVerified && (
+          {false && (
             <div className="verified-badge-header" title={t('verified', 'Geverifieerd')}>
               <span className="verified-icon">✓</span>
               <span className="verified-text">{t('verified', 'Geverifieerd')}</span>

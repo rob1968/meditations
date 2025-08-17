@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import { getFullUrl } from '../config/api';
+import { getFullUrl, getAuthHeaders } from '../config/api';
 import PageHeader from './PageHeader';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -49,8 +49,11 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
       setIsLoading(true);
       const unreadOnly = filter === 'unread';
       const response = await axios.get(
-        getFullUrl(`/api/notifications/user/${user.id}`),
-        { params: { unreadOnly } }
+        getFullUrl(`/api/notifications/user`),
+        { 
+          params: { unreadOnly },
+          headers: getAuthHeaders(user.id)
+        }
       );
       
       setNotifications(response.data.notifications);

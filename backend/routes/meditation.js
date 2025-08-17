@@ -12,6 +12,7 @@ const multer = require('multer');
 const { trackElevenlabsUsage } = require('../utils/elevenlabsTracking');
 const Meditation = require('../models/Meditation');
 const User = require('../models/User');
+const auth = require('../middleware/auth');
 const translationService = require('../services/translationService');
 const Anthropic = require('@anthropic-ai/sdk');
 const { generateGoogleTTS } = require('../services/googleTTSService');
@@ -21,7 +22,8 @@ const CUSTOM_BACKGROUNDS_DIR = path.join(__dirname, '..', 'custom-backgrounds');
 
 // Helper function to consolidate individual metadata files into single metadata.json
 async function consolidateMetadataFiles(userId) {
-  const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userId);
+  const userIdString = userId.toString(); // Convert ObjectId to string
+  const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString);
   
   if (!fs.existsSync(userDir)) {
     return;
@@ -100,7 +102,7 @@ async function getAllBackgroundsForUser(userId) {
           const metadata = JSON.parse(await fsPromises.readFile(metadataPath, 'utf8'));
           
           // Check if system audio file exists in assets directory
-          const assetsDir = path.join(__dirname, '..', '..', 'assets');
+          const assetsDir = path.join(__dirname, '..', 'assets');
           const audioPath = path.join(assetsDir, metadata.filename);
           if (fs.existsSync(audioPath)) {
             backgrounds.push(metadata);
@@ -113,7 +115,8 @@ async function getAllBackgroundsForUser(userId) {
   }
   
   // Then, load user custom backgrounds
-  const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userId);
+  const userIdString = userId.toString(); // Convert ObjectId to string
+  const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString);
   if (fs.existsSync(userDir)) {
     const files = await fsPromises.readdir(userDir);
 
@@ -310,13 +313,14 @@ const getAudioDuration = async (filePath) => {
   });
 };
 
-router.post('/', upload.single('customBackground'), async (req, res) => {
+router.post('/', auth, upload.single('customBackground'), async (req, res) => {
   console.log('=== MEDITATION GENERATION REQUEST ===');
   console.log('req.body:', req.body);
   console.log('req.file:', req.file);
   console.log('=====================================');
   
-  let { text, voiceId, background, language, audioLanguage, meditationType, userId, useBackgroundMusic, voiceProvider = 'elevenlabs', speechTempo = 0.75, saveBackground, customName, savedBackgroundId, savedBackgroundUserId, savedBackgroundFilename } = req.body;
+  let { text, voiceId, background, language, audioLanguage, meditationType, useBackgroundMusic, voiceProvider = 'elevenlabs', speechTempo = 0.75, saveBackground, customName, savedBackgroundId, savedBackgroundUserId, savedBackgroundFilename } = req.body;
+  const userId = req.user._id;
   const apiKey = process.env.ELEVEN_LABS_API_KEY;
   
   // Debug log to verify tempo slider value
@@ -626,7 +630,7 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
         if (!fs.existsSync(backgroundPath)) {
           console.warn(`Saved background audio file not found: ${backgroundPath}, falling back to default background`);
           // Fallback to default ocean background
-          backgroundPath = path.join(__dirname, `../../assets/ocean.mp3`);
+          backgroundPath = path.join(__dirname, `../assets/ocean.mp3`);
           if (!fs.existsSync(backgroundPath)) {
             console.error('Default ocean background not found, proceeding without background music');
             backgroundPath = null;
@@ -638,7 +642,8 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
       // Check if a custom background file was uploaded
       else if (req.file) {
         // File is in temp directory, move it to user directory if needed
-        const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userId);
+        const userIdString = userId.toString(); // Convert ObjectId to string
+        const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString);
         if (!fs.existsSync(userDir)) {
           fs.mkdirSync(userDir, { recursive: true });
         }
@@ -667,10 +672,10 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
           backgroundFilename = 'ocean';
         }
         
-        backgroundPath = path.join(__dirname, `../../assets/${backgroundFilename}.mp3`);
+        backgroundPath = path.join(__dirname, `../assets/${backgroundFilename}.mp3`);
         if (!fs.existsSync(backgroundPath)) {
           console.warn(`Background audio file not found: ${backgroundPath}, falling back to ocean background`);
-          backgroundPath = path.join(__dirname, `../../assets/ocean.mp3`);
+          backgroundPath = path.join(__dirname, `../assets/ocean.mp3`);
           if (!fs.existsSync(backgroundPath)) {
             console.error('Default ocean background not found, proceeding without background music');
             backgroundPath = null;
@@ -686,7 +691,7 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
     const filename = `meditation_${speechLanguage}_${timestamp}_${textHash.substring(0, 8)}.mp3`;
     
     // Save to assets/meditations directory
-    const meditationsDir = path.join(__dirname, '../../assets/meditations');
+    const meditationsDir = path.join(__dirname, '../assets/meditations');
     await fsPromises.mkdir(meditationsDir, { recursive: true });
     outputPath = path.join(meditationsDir, filename);
 
@@ -830,7 +835,8 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
           fileSize: req.file.size
         };
 
-        const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userId);
+        const userIdString = userId.toString(); // Convert ObjectId to string
+        const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString);
         console.log('User directory:', userDir);
         console.log('User directory exists:', fs.existsSync(userDir));
         
@@ -889,7 +895,7 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
     // Also save to user meditations system if userId is provided
     if (userId) {
       try {
-        const userMeditationsDir = path.join(__dirname, '..', 'user-meditations', userId);
+        const userMeditationsDir = path.join(__dirname, '..', 'user-meditations', userId.toString());
         await fsPromises.mkdir(userMeditationsDir, { recursive: true });
         
         const userMeditationId = crypto.randomBytes(16).toString('hex');
@@ -1000,7 +1006,7 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
 // Import meditation templates for primary text generation
 const { generateMeditation } = require('../templates/meditationTemplates');
 
-router.post('/generate-text', async (req, res) => {
+router.post('/generate-text', auth, async (req, res) => {
   const { type, language } = req.body;
   
   try {
@@ -2375,7 +2381,7 @@ router.get('/voices', async (req, res) => {
 });
 
 // Route to generate voice preview in specified language
-router.post('/voice-preview', async (req, res) => {
+router.post('/voice-preview', auth, async (req, res) => {
   const { voiceId, language, speechTempo = 0.75 } = req.body;
   const apiKey = process.env.ELEVEN_LABS_API_KEY;
   
@@ -2493,7 +2499,7 @@ router.post('/voice-preview', async (req, res) => {
 // Route to get all saved meditations
 router.get('/saved', async (req, res) => {
   try {
-    const meditationsDir = path.join(__dirname, '../../assets/meditations');
+    const meditationsDir = path.join(__dirname, '../assets/meditations');
     
     // Check if directory exists
     if (!fs.existsSync(meditationsDir)) {
@@ -2528,7 +2534,7 @@ router.get('/saved', async (req, res) => {
 });
 
 // Save draft endpoint
-router.post('/draft/save', async (req, res) => {
+router.post('/draft/save', auth, async (req, res) => {
   try {
     const { meditationId, text, language, meditationType, duration } = req.body;
     
@@ -2630,16 +2636,18 @@ router.get('/drafts', async (req, res) => {
 });
 
 // Save custom background metadata
-router.post('/custom-background/save', async (req, res) => {
+router.post('/custom-background/save', auth, async (req, res) => {
   try {
-    const { userId, filename, originalName, customName } = req.body;
+    const { filename, originalName, customName } = req.body;
+    const userId = req.user._id;
     
-    if (!userId || !filename || !customName) {
+    if (!filename || !customName) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Create metadata file
-    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString);
     
     // Ensure the user directory exists
     if (!fs.existsSync(CUSTOM_BACKGROUNDS_DIR)) {
@@ -2684,9 +2692,9 @@ router.post('/custom-background/save', async (req, res) => {
 });
 
 // Get user's custom backgrounds
-router.get('/custom-backgrounds/:userId', async (req, res) => {
+router.get('/custom-backgrounds', auth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user._id;
     const backgrounds = [];
     
     // First, load system backgrounds (always available)
@@ -2701,7 +2709,7 @@ router.get('/custom-backgrounds/:userId', async (req, res) => {
             const metadata = JSON.parse(await fsPromises.readFile(metadataPath, 'utf8'));
             
             // Check if system audio file exists in assets directory (system files stay in assets)
-            const assetsDir = path.join(__dirname, '..', '..', 'assets');
+            const assetsDir = path.join(__dirname, '..', 'assets');
             const audioPath = path.join(assetsDir, metadata.filename);
             if (fs.existsSync(audioPath)) {
               backgrounds.push(metadata);
@@ -2714,7 +2722,8 @@ router.get('/custom-backgrounds/:userId', async (req, res) => {
     }
     
     // Then, load user custom backgrounds
-    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString);
     if (fs.existsSync(userDir)) {
       const files = await fsPromises.readdir(userDir);
 
@@ -2729,8 +2738,8 @@ router.get('/custom-backgrounds/:userId', async (req, res) => {
             if (fs.existsSync(audioPath)) {
               backgrounds.push(metadata);
             } else {
-              // Clean up orphaned metadata
-              await fsPromises.unlink(metadataPath);
+              // REMOVED: Clean up orphaned metadata - this was causing the error
+              console.log(`Skipping orphaned metadata: ${file}`);
             }
           } catch (error) {
             console.error(`Error reading metadata file ${file}:`, error);
@@ -2744,16 +2753,20 @@ router.get('/custom-backgrounds/:userId', async (req, res) => {
 
     res.json({ backgrounds });
   } catch (error) {
-    console.error('Error getting custom backgrounds:', error);
+    console.error('❌ CUSTOM BACKGROUNDS ERROR:', error.message);
+    console.error('❌ STACK:', error.stack);
     res.status(500).json({ error: 'Failed to get custom backgrounds' });
   }
 });
 
+
 // Delete custom background
-router.delete('/custom-background/:userId/:backgroundId', async (req, res) => {
+router.delete('/custom-background/:backgroundId', auth, async (req, res) => {
   try {
-    const { userId, backgroundId } = req.params;
-    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userId);
+    const { backgroundId } = req.params;
+    const userId = req.user._id;
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString);
     
     if (!fs.existsSync(userDir)) {
       return res.status(404).json({ error: 'User directory not found' });
@@ -2798,12 +2811,13 @@ router.delete('/custom-background/:userId/:backgroundId', async (req, res) => {
 });
 
 // Upload and save custom background immediately
-router.post('/custom-background/upload', upload.single('customBackground'), async (req, res) => {
+router.post('/custom-background/upload', auth, upload.single('customBackground'), async (req, res) => {
   try {
-    const { userId, customName, customDescription } = req.body;
+    const { customName, customDescription } = req.body;
+    const userId = req.user._id;
     
-    if (!req.file || !userId || !customName) {
-      return res.status(400).json({ error: 'Missing required fields: file, userId, or customName' });
+    if (!req.file || !customName) {
+      return res.status(400).json({ error: 'Missing required fields: file or customName' });
     }
 
     console.log('=== UPLOADING CUSTOM BACKGROUND ===');
@@ -2813,7 +2827,7 @@ router.post('/custom-background/upload', upload.single('customBackground'), asyn
     console.log('customDescription:', customDescription);
 
     // Check for duplicate names across all backgrounds (system + user)
-    const allBackgrounds = await getAllBackgroundsForUser(userId);
+    const allBackgrounds = await getAllBackgroundsForUser(userId.toString());
     const nameExists = allBackgrounds.some(bg => 
       bg.customName.toLowerCase() === customName.toLowerCase()
     );
@@ -2844,7 +2858,8 @@ router.post('/custom-background/upload', upload.single('customBackground'), asyn
     }
 
     // Create user directory in custom-backgrounds (same structure as system)
-    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString);
     if (!fs.existsSync(userDir)) {
       await fsPromises.mkdir(userDir, { recursive: true });
       console.log(`Created user directory: ${userDir}`);
@@ -2905,13 +2920,14 @@ router.post('/custom-background/upload', upload.single('customBackground'), asyn
 });
 
 // Serve custom background files
-router.get('/custom-background-file/:userId/:filename', (req, res) => {
+router.get('/custom-background-file/:filename', auth, (req, res) => {
   try {
-    const { userId, filename } = req.params;
+    const { filename } = req.params;
+    const userId = req.user._id;
     
     // Handle system files differently - serve from assets directory
     if (userId === 'system' || userId === 'undefined') {
-      const assetsDir = path.join(__dirname, '..', '..', 'assets');
+      const assetsDir = path.join(__dirname, '..', 'assets');
       const filePath = path.join(assetsDir, filename);
       
       if (!fs.existsSync(filePath)) {
@@ -2922,7 +2938,8 @@ router.get('/custom-background-file/:userId/:filename', (req, res) => {
     }
     
     // Handle user custom files
-    const filePath = path.join(CUSTOM_BACKGROUNDS_DIR, userId, filename);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const filePath = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString, filename);
     
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'File not found' });
@@ -2942,21 +2959,16 @@ router.get('/delete-test', (req, res) => {
 });
 
 // Delete custom background (both routes for compatibility)
-router.delete('/custom-backgrounds/:backgroundId', async (req, res) => {
+router.delete('/custom-backgrounds/:backgroundId', auth, async (req, res) => {
   try {
     const { backgroundId } = req.params;
-    
-    // Get userId from request headers or body
-    let userId = req.headers['x-user-id'] || req.body.userId;
+    const userId = req.user._id;
     
     console.log('Delete background request:', { backgroundId, userId, headers: req.headers });
     
-    if (!userId) {
-      console.log('No userId provided');
-      return res.status(401).json({ error: 'User ID required' });
-    }
     
-    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString);
     
     // Check if user directory exists
     if (!fs.existsSync(userDir)) {
@@ -2990,7 +3002,7 @@ router.delete('/custom-backgrounds/:backgroundId', async (req, res) => {
     }
     
     // Delete the file
-    const filePath = path.join(CUSTOM_BACKGROUNDS_DIR, userId, background.filename);
+    const filePath = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString, background.filename);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
@@ -3005,6 +3017,79 @@ router.delete('/custom-backgrounds/:backgroundId', async (req, res) => {
       success: true, 
       message: 'Background deleted successfully',
       backgrounds: metadata.backgrounds
+    });
+    
+  } catch (error) {
+    console.error('Error deleting custom background:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: 'Failed to delete background', details: error.message });
+  }
+});
+
+// Delete custom background with userId and backgroundId in URL (for frontend compatibility)
+router.delete('/custom-background/:userId/:backgroundId', auth, async (req, res) => {
+  try {
+    const { userId: urlUserId, backgroundId } = req.params;
+    const userId = req.user._id;
+    
+    console.log('Delete background request with URL userId:', { urlUserId, backgroundId, authUserId: userId, headers: req.headers });
+    
+    // Verify that the URL userId matches the authenticated user ID
+    if (urlUserId !== userId.toString()) {
+      return res.status(403).json({ error: 'Unauthorized: Cannot delete other users\' backgrounds' });
+    }
+    
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString);
+    
+    // Check if user directory exists
+    if (!fs.existsSync(userDir)) {
+      return res.status(404).json({ error: 'No custom backgrounds found for user' });
+    }
+    
+    // First, consolidate individual metadata files into single metadata.json
+    await consolidateMetadataFiles(userId);
+    
+    // Now work with the consolidated metadata.json
+    const metadataPath = path.join(userDir, 'metadata.json');
+    
+    if (!fs.existsSync(metadataPath)) {
+      return res.status(404).json({ error: 'No custom backgrounds found' });
+    }
+    
+    let metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    
+    // Find the background to delete
+    const backgroundIndex = metadata.backgrounds.findIndex(bg => bg.id === backgroundId);
+    
+    if (backgroundIndex === -1) {
+      return res.status(404).json({ error: 'Background not found' });
+    }
+    
+    const background = metadata.backgrounds[backgroundIndex];
+    
+    // Don't allow deletion of system backgrounds
+    if (background.isSystemBackground) {
+      return res.status(403).json({ error: 'Cannot delete system backgrounds' });
+    }
+    
+    // Delete the file
+    const filePath = path.join(CUSTOM_BACKGROUNDS_DIR, userIdString, background.filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    // Remove from metadata
+    metadata.backgrounds.splice(backgroundIndex, 1);
+    
+    // Save updated metadata
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    
+    console.log('Successfully deleted background:', backgroundId);
+    res.json({ 
+      success: true, 
+      message: 'Background deleted successfully',
+      deletedBackgroundId: backgroundId 
     });
     
   } catch (error) {

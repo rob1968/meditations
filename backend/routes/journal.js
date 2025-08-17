@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const JournalEntry = require('../models/JournalEntry');
 const User = require('../models/User');
+const auth = require('../middleware/auth');
 const aiCoachService = require('../services/aiCoachService');
 const fs = require('fs');
 const path = require('path');
@@ -794,9 +795,9 @@ const upload = multer({
 });
 
 // Get today's journal entry for user
-router.get('/user/:userId/today', async (req, res) => {
+router.get('/user/today', auth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user._id;
     
     console.log('Fetching today\'s journal entry for user:', userId);
     
@@ -826,9 +827,9 @@ router.get('/user/:userId/today', async (req, res) => {
 });
 
 // Get user's journal entries
-router.get('/user/:userId', async (req, res) => {
+router.get('/user/entries', auth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user._id;
     const { page = 1, limit = 20, mood, tags, startDate, endDate, searchText } = req.query;
     
     console.log('Fetching journal entries for user:', userId);
@@ -897,14 +898,15 @@ router.get('/user/:userId', async (req, res) => {
 });
 
 // Create new journal entry or update existing daily entry
-router.post('/create', async (req, res) => {
+router.post('/create', auth, async (req, res) => {
   try {
-    const { userId, title, content, mood, tags, date } = req.body;
+    const { title, content, mood, tags, date } = req.body;
+    const userId = req.user._id;
     
-    if (!userId || !title || !content) {
+    if (!title || !content) {
       return res.status(400).json({ 
         success: false, 
-        error: 'User ID, title, and content are required' 
+        error: 'Title and content are required' 
       });
     }
     
@@ -1082,10 +1084,11 @@ router.post('/create', async (req, res) => {
 });
 
 // Update journal entry
-router.put('/:entryId', async (req, res) => {
+router.put('/:entryId', auth, async (req, res) => {
   try {
     const { entryId } = req.params;
-    const { userId, title, content, mood, tags } = req.body;
+    const { title, content, mood, tags } = req.body;
+    const userId = req.user._id;
     
     console.log('Updating journal entry:', {
       entryId,
@@ -1214,10 +1217,10 @@ router.put('/:entryId', async (req, res) => {
 });
 
 // Delete journal entry
-router.delete('/:entryId', async (req, res) => {
+router.delete('/:entryId', auth, async (req, res) => {
   try {
     const { entryId } = req.params;
-    const { userId } = req.query;
+    const userId = req.user._id;
     
     const entry = await JournalEntry.findById(entryId);
     if (!entry) {
@@ -1250,10 +1253,11 @@ router.delete('/:entryId', async (req, res) => {
 });
 
 // Generate audio for journal entry using Eleven Labs
-router.post('/:entryId/generate-audio', async (req, res) => {
+router.post('/:entryId/generate-audio', auth, async (req, res) => {
   try {
     const { entryId } = req.params;
-    const { userId, voiceId = 'EXAVITQu4vr4xnSDxMaL' } = req.body;
+    const { voiceId = 'EXAVITQu4vr4xnSDxMaL' } = req.body;
+    const userId = req.user._id;
     
     console.log('Generate audio request received:', { entryId, userId, voiceId });
     
@@ -1353,10 +1357,10 @@ router.post('/:entryId/generate-audio', async (req, res) => {
 });
 
 // Share journal entry publicly
-router.post('/:entryId/share', async (req, res) => {
+router.post('/:entryId/share', auth, async (req, res) => {
   try {
     const { entryId } = req.params;
-    const { userId } = req.body;
+    const userId = req.user._id;
     
     const entry = await JournalEntry.findById(entryId);
     if (!entry) {
@@ -1456,14 +1460,10 @@ router.get('/shared/:entryId', async (req, res) => {
 });
 
 // Like/unlike journal entry
-router.post('/:entryId/like', async (req, res) => {
+router.post('/:entryId/like', auth, async (req, res) => {
   try {
     const { entryId } = req.params;
-    const { userId } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ success: false, error: 'User ID required' });
-    }
+    const userId = req.user._id;
     
     const entry = await JournalEntry.findById(entryId);
     if (!entry || !entry.isShared) {
@@ -1484,9 +1484,9 @@ router.post('/:entryId/like', async (req, res) => {
 });
 
 // Get journal statistics for user
-router.get('/stats/:userId', async (req, res) => {
+router.get('/stats', auth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user._id;
     
     const totalEntries = await JournalEntry.countDocuments({ userId });
     const sharedEntries = await JournalEntry.countDocuments({ userId, isShared: true });
@@ -1528,7 +1528,7 @@ router.get('/stats/:userId', async (req, res) => {
 });
 
 // Transcribe audio to text using Google Speech-to-Text
-router.post('/transcribe', upload.single('audio'), async (req, res) => {
+router.post('/transcribe', auth, upload.single('audio'), async (req, res) => {
   try {
     const { language = 'nl-NL' } = req.body;
     
@@ -1676,18 +1676,19 @@ router.post('/transcribe', upload.single('audio'), async (req, res) => {
 // Voice Cloning Endpoints
 
 // Upload voice sample for cloning
-router.post('/voice-clone/upload', upload.single('audio'), async (req, res) => {
+router.post('/voice-clone/upload', auth, upload.single('audio'), async (req, res) => {
   try {
-    const { userId, voiceName } = req.body;
+    const { voiceName } = req.body;
+    const userId = req.user._id;
     
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'No voice file provided' });
     }
     
-    if (!userId || !voiceName) {
+    if (!voiceName) {
       return res.status(400).json({ 
         success: false, 
-        error: 'User ID and voice name are required' 
+        error: 'Voice name is required' 
       });
     }
     
@@ -1797,9 +1798,9 @@ router.post('/voice-clone/upload', upload.single('audio'), async (req, res) => {
 });
 
 // Get user's custom voices
-router.get('/voice-clone/list/:userId', async (req, res) => {
+router.get('/voice-clone/list', auth, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user._id;
     
     const user = await User.findById(userId);
     if (!user) {
@@ -1821,14 +1822,11 @@ router.get('/voice-clone/list/:userId', async (req, res) => {
 });
 
 // Delete custom voice
-router.delete('/voice-clone/:voiceId', async (req, res) => {
+router.delete('/voice-clone/:voiceId', auth, async (req, res) => {
   try {
     const { voiceId } = req.params;
-    const { userId } = req.query;
+    const userId = req.user._id;
     
-    if (!userId) {
-      return res.status(400).json({ success: false, error: 'User ID required' });
-    }
     
     const user = await User.findById(userId);
     if (!user) {

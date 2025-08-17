@@ -21,7 +21,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
     try {
       const response = await fetch('/api/activities/user/my-activities', {
         headers: {
-          'x-user-id': user?._id || ''
+          'x-user-id': user?.id || ''
         }
       });
 
@@ -46,7 +46,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user?._id || ''
+          'x-user-id': user?.id || user?._id || ''
         }
       });
 
@@ -77,7 +77,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user?._id || ''
+          'x-user-id': user?.id || user?._id || ''
         },
         body: JSON.stringify({ reason })
       });

@@ -1,0 +1,185 @@
+/* Simple Calendar Styles - Guaranteed to work */
+.simple-calendar {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  background: rgba(30, 41, 59, 0.4);
+  border-radius: 16px;
+  padding: 16px;
+  backdrop-filter: blur(10px);
+}
+
+/* Calendar Header */
+.simple-calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 8px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 12px;
+}
+
+.simple-nav-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.simple-nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.simple-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.simple-month-year {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Weekdays */
+.simple-weekdays {
+  display: flex;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.simple-weekday {
+  flex: 1;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px;
+}
+
+/* Calendar Grid - Using simple flexbox */
+.simple-calendar-grid {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  gap: 4px;
+}
+
+/* Each Day Cell */
+.simple-day {
+  width: calc((100% - 24px) / 7); /* 7 columns with gaps */
+  height: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.simple-day:hover:not(.simple-day-empty) {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Empty Days */
+.simple-day-empty {
+  background: transparent;
+  border: none;
+  cursor: default;
+}
+
+.simple-day-empty:hover {
+  background: transparent;
+  transform: none;
+}
+
+/* Today */
+.simple-day-today {
+  background: rgba(59, 130, 246, 0.3);
+  border: 2px solid rgba(59, 130, 246, 0.8);
+}
+
+.simple-day-today .simple-day-number {
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Has Entry */
+.simple-day-has-entry {
+  background: rgba(251, 191, 36, 0.3);
+  border: 2px solid rgba(251, 191, 36, 0.8);
+}
+
+.simple-day-has-entry .simple-day-number {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+/* Day Number */
+.simple-day-number {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Entry Dot */
+.simple-entry-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  color: #fbbf24;
+  font-size: 16px;
+  line-height: 1;
+}
+
+
+/* Mobile Responsive */
+@media (max-width: 414px) {
+  .simple-calendar {
+    padding: 12px;
+  }
+
+  .simple-day {
+    height: 35px;
+    width: calc((100% - 18px) / 7);
+  }
+
+  .simple-day-number {
+    font-size: 12px;
+  }
+
+  .simple-weekday {
+    font-size: 11px;
+  }
+
+  .simple-month-year {
+    font-size: 16px;
+  }
+}
+
+/* Force visibility for all cells */
+.simple-calendar-grid > * {
+  display: flex !important;
+  visibility: visible !important;
+}
+
+/* Ensure grid always shows 6 rows */
+.simple-calendar-grid {
+  min-height: 260px;
+}

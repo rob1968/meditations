@@ -229,7 +229,8 @@ const CustomMusicUploader = ({
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data'
+            'Content-Type': 'multipart/form-data',
+            'x-user-id': userId
           },
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -354,7 +355,12 @@ const CustomMusicUploader = ({
         try {
           // Call the delete API directly
           const response = await axios.delete(
-            getFullUrl(`/api/meditation/custom-background/${music.userId || userId}/${music.id}`)
+            getFullUrl(`/api/meditation/custom-background/${music.userId || userId}/${music.id}`),
+            {
+              headers: {
+                'x-user-id': userId
+              }
+            }
           );
           
           if (response.status === 200) {
@@ -367,6 +373,9 @@ const CustomMusicUploader = ({
             if (onDelete) {
               await onDelete(music.id);
             }
+            
+            // Show success message
+            showAlert(t('deleteSuccessful', 'Music deleted successfully!'), 'success');
           }
         } catch (error) {
           console.error('Delete error:', error);

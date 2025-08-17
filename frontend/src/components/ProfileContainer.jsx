@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import { getFullUrl } from '../config/api';
+import { getFullUrl, getAuthHeaders } from '../config/api';
 import ProfileInfo from './ProfileInfo';
 import Credits from './Credits';
 import Statistics from './Statistics';
@@ -26,11 +26,40 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
     setAlertState({ show: true, message, type });
   };
 
+  // Auto-save profile data to database
+  const autoSaveProfile = async (updatedUser) => {
+    try {
+      console.log('Auto-saving profile after image change...');
+      const response = await axios.put(getFullUrl(`/api/auth/user/${updatedUser.id}/profile`), {
+        preferredLanguage: updatedUser.preferredLanguage || '',
+        city: updatedUser.location?.city || '',
+        country: updatedUser.location?.country || '',
+        countryCode: updatedUser.location?.countryCode || '',
+        gender: updatedUser.gender || '',
+        bio: updatedUser.bio || ''
+      }, {
+        headers: getAuthHeaders(updatedUser.id)
+      });
+      
+      if (response.data.success) {
+        console.log('Profile auto-saved successfully');
+        showAlert(t('profileAutoSaved', 'Profile saved automatically'), 'success');
+      }
+    } catch (error) {
+      console.error('Auto-save profile error:', error);
+      // Don't show error to user for auto-save failures
+    }
+  };
+
   const handleImageUpdate = (newImagePath) => {
     setProfileImage(newImagePath);
     // Update user object if we have onUserUpdate
     if (onUserUpdate) {
-      onUserUpdate({ ...user, profileImage: newImagePath });
+      const updatedUser = { ...user, profileImage: newImagePath };
+      onUserUpdate(updatedUser);
+      
+      // Auto-save profile to database
+      autoSaveProfile(updatedUser);
     }
   };
 

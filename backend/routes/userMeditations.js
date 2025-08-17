@@ -64,7 +64,8 @@ router.post('/save', async (req, res) => {
     await ensureDirectoryExists();
 
     // Create user directory if it doesn't exist
-    const userDir = path.join(USER_MEDITATIONS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(USER_MEDITATIONS_DIR, userIdString);
     try {
       await fs.access(userDir);
     } catch {
@@ -122,7 +123,8 @@ router.post('/save', async (req, res) => {
 router.get('/list/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const userDir = path.join(USER_MEDITATIONS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(USER_MEDITATIONS_DIR, userIdString);
     
     try {
       await fs.access(userDir);
@@ -162,7 +164,8 @@ router.get('/list/:userId', async (req, res) => {
 router.get('/:userId/:meditationId', async (req, res) => {
   try {
     const { userId, meditationId } = req.params;
-    const userDir = path.join(USER_MEDITATIONS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(USER_MEDITATIONS_DIR, userIdString);
     
     const files = await fs.readdir(userDir);
     
@@ -191,7 +194,8 @@ router.patch('/:userId/:meditationId/share', async (req, res) => {
       return res.status(400).json({ error: 'Missing userId or meditationId' });
     }
 
-    const userDir = path.join(USER_MEDITATIONS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(USER_MEDITATIONS_DIR, userIdString);
     const files = await fs.readdir(userDir);
     
     let targetFile = null;
@@ -228,7 +232,8 @@ router.patch('/:userId/:meditationId/share', async (req, res) => {
 router.delete('/:userId/:meditationId', async (req, res) => {
   try {
     const { userId, meditationId } = req.params;
-    const userDir = path.join(USER_MEDITATIONS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(USER_MEDITATIONS_DIR, userIdString);
     
     const files = await fs.readdir(userDir);
     
@@ -255,7 +260,8 @@ router.get('/:userId/type/:meditationType', async (req, res) => {
   try {
     const { userId, meditationType } = req.params;
     const { language } = req.query;
-    const userDir = path.join(USER_MEDITATIONS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(USER_MEDITATIONS_DIR, userIdString);
     
     try {
       await fs.access(userDir);
@@ -308,7 +314,8 @@ router.post('/meditation/:meditationId/upload-image', upload.single('image'), as
     }
 
     // Find the meditation file
-    const userDir = path.join(USER_MEDITATIONS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(USER_MEDITATIONS_DIR, userIdString);
     const files = await fs.readdir(userDir);
     
     let meditationFile = null;
@@ -370,7 +377,8 @@ router.delete('/meditation/:meditationId/custom-image', async (req, res) => {
     }
 
     // Find the meditation file
-    const userDir = path.join(USER_MEDITATIONS_DIR, userId);
+    const userIdString = userId.toString(); // Convert ObjectId to string
+    const userDir = path.join(USER_MEDITATIONS_DIR, userIdString);
     const files = await fs.readdir(userDir);
     
     let meditationFile = null;

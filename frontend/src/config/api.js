@@ -56,3 +56,32 @@ export const getFullUrl = (endpoint) => {
 export const getAssetUrl = (assetPath) => {
   return `${API_BASE_URL}${assetPath}`;
 };
+
+// Helper function to get authenticated headers
+export const getAuthHeaders = (userId) => {
+  return {
+    'Content-Type': 'application/json',
+    'x-user-id': userId
+  };
+};
+
+// Helper function for authenticated requests
+export const apiRequest = async (url, options = {}, userId) => {
+  const defaultHeaders = userId ? getAuthHeaders(userId) : { 'Content-Type': 'application/json' };
+  
+  const config = {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers
+    }
+  };
+
+  const response = await fetch(getFullUrl(url), config);
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  return response.json();
+};

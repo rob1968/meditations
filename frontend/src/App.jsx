@@ -22,7 +22,7 @@ import CustomMusicUploader from './components/CustomMusicUploader';
 import WizardContainer from './components/WizardContainer';
 import ReviewStep from './components/ReviewStep';
 import Alert from './components/Alert';
-import { getFullUrl, getAssetUrl, API_ENDPOINTS } from './config/api';
+import { getFullUrl, getAssetUrl, API_ENDPOINTS, getAuthHeaders } from './config/api';
 import { isPiBrowser } from './utils/piDetection';
 import piAuthService from './services/piAuth';
 
@@ -75,6 +75,14 @@ const App = () => {
   // User authentication state
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('journal');
+  
+  // Save user to localStorage whenever user state changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+      console.log('User data saved to localStorage:', user.username, 'profileImage:', user.profileImage);
+    }
+  }, [user]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileSection, setProfileSection] = useState('profile');
   const [isPiEnvironment, setIsPiEnvironment] = useState(false);
@@ -182,6 +190,8 @@ const App = () => {
       const response = await axios.post(getFullUrl(API_ENDPOINTS.GENERATE_TEXT), {
         type,
         language: currentLanguage
+      }, {
+        headers: getAuthHeaders(user?.id)
       });
       
       return response.data.text;
@@ -236,6 +246,8 @@ const App = () => {
         language: i18n.language,
         meditationType: meditationType,
         isModified: isTextModified // Send whether this is user-modified text
+      }, {
+        headers: getAuthHeaders(user?.id)
       });
       
       if (response.data.success) {
@@ -539,6 +551,8 @@ const App = () => {
         language: i18n.language,
         userId: user.id,
         isModified: true
+      }, {
+        headers: getAuthHeaders(user.id)
       });
       
       setDraftSaveMessage(t('draftSaved', 'Draft saved'));
@@ -798,8 +812,11 @@ const App = () => {
     
     try {
       const response = await axios.get(
-        getFullUrl(`/api/notifications/user/${user.id}`),
-        { params: { unreadOnly: true } }
+        getFullUrl(`/api/notifications/user`),
+        { 
+          params: { unreadOnly: true },
+          headers: getAuthHeaders(user.id)
+        }
       );
       setUnreadCount(response.data.unreadCount);
     } catch (error) {
@@ -883,7 +900,9 @@ const App = () => {
     if (!user?.id) return;
     
     try {
-      const response = await axios.get(getFullUrl(`/api/auth/user/${user.id}/credits`));
+      const response = await axios.get(getFullUrl(`/api/auth/user/${user.id}/credits`), {
+        headers: getAuthHeaders(user.id)
+      });
       setUserCredits(response.data);
     } catch (error) {
       console.error('Error fetching user credits:', error);
@@ -894,7 +913,9 @@ const App = () => {
     if (!user?.id) return;
     
     try {
-      const response = await axios.get(getFullUrl(`/api/auth/user/${user.id}/elevenlabs-stats`));
+      const response = await axios.get(getFullUrl(`/api/auth/user/${user.id}/elevenlabs-stats`), {
+        headers: getAuthHeaders(user.id)
+      });
       setElevenlabsCredits(response.data);
     } catch (error) {
       console.error('Error fetching ElevenLabs credits:', error);
@@ -945,7 +966,8 @@ const App = () => {
       const res = await axios.post(getFullUrl(API_ENDPOINTS.GENERATE_MEDITATION), formData, { 
         responseType: 'blob',
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'x-user-id': user.id
         }
       });
 
@@ -1137,7 +1159,8 @@ const App = () => {
             
             const response = await axios.post(getFullUrl('/api/meditation/custom-background/upload'), formData, {
               headers: {
-                'Content-Type': 'multipart/form-data'
+                'Content-Type': 'multipart/form-data',
+                'x-user-id': user.id
               }
             });
 
@@ -1198,7 +1221,8 @@ const App = () => {
         
         const response = await axios.post(getFullUrl('/api/meditation/custom-background/upload'), formData, {
           headers: {
-            'Content-Type': 'multipart/form-data'
+            'Content-Type': 'multipart/form-data',
+            'x-user-id': user.id
           }
         });
 
@@ -1254,7 +1278,8 @@ const App = () => {
       
       const response = await axios.post(getFullUrl('/api/meditation/custom-background/upload'), formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'x-user-id': user.id
         }
       });
 
@@ -1294,10 +1319,12 @@ const App = () => {
     setBackgroundsLoading(true);
     
     try {
-      const url = getFullUrl(`/api/meditation/custom-backgrounds/${user.id}`);
+      const url = getFullUrl(`/api/meditation/custom-backgrounds`);
       console.log('fetchSavedCustomBackgrounds: URL:', url);
       
-      const response = await axios.get(url);
+      const response = await axios.get(url, {
+        headers: getAuthHeaders(user.id)
+      });
       console.log('fetchSavedCustomBackgrounds: Response:', response.data);
       
       setSavedCustomBackgrounds(response.data.backgrounds || []);
@@ -1331,7 +1358,9 @@ const App = () => {
     if (!user?.id) return;
     
     try {
-      await axios.delete(getFullUrl(`/api/meditation/custom-background/${user.id}/${backgroundId}`));
+      await axios.delete(getFullUrl(`/api/meditation/custom-background/${user.id}/${backgroundId}`), {
+        headers: getAuthHeaders(user.id)
+      });
       fetchSavedCustomBackgrounds(); // Refresh the list
     } catch (error) {
       console.error('Error deleting saved background:', error);
