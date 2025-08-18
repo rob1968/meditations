@@ -18,8 +18,8 @@ class EnhancedInsightsService {
       console.warn('OpenAI API key not found, Enhanced Insights service will return mock responses');
       this.openai = null;
     }
-    // Using GPT-4o for better performance (GPT-5 has slow response times due to reasoning tokens)
-    this.modelName = "gpt-4o";
+    // GPT-5 working! Fixed token limit issue (needs 1000+ tokens for insights)
+    this.modelName = "gpt-5";
     
     // Enhanced insight categories
     this.insightCategories = {
@@ -56,12 +56,21 @@ class EnhancedInsightsService {
     }
     
     try {
-      const response = await this.openai.chat.completions.create({
+      const requestParams = {
         model: this.modelName,
         messages: [{ role: "user", content: prompt }],
-        temperature: temperature,
-        max_tokens: maxTokens
-      });
+        temperature: temperature
+      };
+
+      if (this.modelName === 'gpt-5') {
+        // GPT-5 needs much higher token limits due to reasoning tokens
+        requestParams.max_completion_tokens = Math.max(maxTokens * 4, 1000);
+        requestParams.temperature = 1; // GPT-5 only supports temperature 1
+      } else {
+        requestParams.max_tokens = maxTokens;
+      }
+
+      const response = await this.openai.chat.completions.create(requestParams);
       return response.choices[0].message.content;
     } catch (error) {
       console.error('OpenAI API error in Enhanced Insights:', error);
@@ -213,12 +222,37 @@ class EnhancedInsightsService {
   }
 
   /**
+   * Get language-specific instructions for AI responses
+   */
+  getLanguageInstructions(languageCode) {
+    const instructions = {
+      'en': 'IMPORTANT: Respond exclusively in English. Use natural English expressions and cultural references.',
+      'nl': 'BELANGRIJK: Reageer uitsluitend in het Nederlands. Gebruik Nederlandse woorden, uitdrukkingen en culturele referenties. Bijvoorbeeld: "Je gezondheid verbetert" in plaats van Engelse woorden.',
+      'de': 'WICHTIG: Antworten Sie ausschließlich auf Deutsch. Verwenden Sie deutsche Wörter, Ausdrücke und kulturelle Referenzen. Beispiel: "Ihre Gesundheit verbessert sich"',
+      'fr': 'IMPORTANT: Répondez exclusivement en français. Utilisez des mots, expressions et références culturelles françaises. Exemple: "Votre santé s\'améliore"',
+      'es': 'IMPORTANTE: Responde exclusivamente en español. Usa palabras, expresiones y referencias culturales españolas. Ejemplo: "Su salud está mejorando"',
+      'it': 'IMPORTANTE: Rispondi esclusivamente in italiano. Usa parole, espressioni e riferimenti culturali italiani. Esempio: "La sua salute sta migliorando"',
+      'pt': 'IMPORTANTE: Responda exclusivamente em português. Use palavras, expressões e referências culturais portuguesas. Exemplo: "Sua saúde está melhorando"',
+      'ru': 'ВАЖНО: Отвечайте исключительно на русском языке. Используйте русские слова, выражения и культурные ссылки. Пример: "Ваше здоровье улучшается"',
+      'zh': '重要：请exclusively用中文回答。使用中文词汇、表达和文化参考。例如："您的健康状况正在改善"',
+      'ja': '重要：日本語のみで回答してください。日本語の単語、表現、文化的参照を使用してください。例："あなたの健康状態は改善しています"',
+      'ko': '중요: 한국어로만 답변하세요. 한국어 단어, 표현 및 문화적 참조를 사용하세요. 예: "당신의 건강이 개선되고 있습니다"',
+      'hi': 'महत्वपूर्ण: केवल हिंदी में उत्तर दें। हिंदी शब्दों, अभिव्यक्तियों और सांस्कृतिक संदर्भों का उपयोग करें। उदाहरण: "आपका स्वास्थ्य सुधार रहा है"',
+      'ar': 'مهم: أجب باللغة العربية فقط. استخدم الكلمات والتعبيرات والمراجع الثقافية العربية. مثال: "صحتك تتحسن"'
+    };
+    
+    return instructions[languageCode] || instructions['en'];
+  }
+
+  /**
    * Generate wellness trends insights
    */
   async generateWellnessTrends(analyticsData, userContext, language = 'en') {
     const { metrics, timeframe } = analyticsData;
     const userLanguage = language;
 
+    const languageInstructions = this.getLanguageInstructions(userLanguage);
+    
     const prompt = `As an advanced wellness AI analyst, analyze these wellness trends over ${timeframe} days:
 
 WELLNESS METRICS:
@@ -228,6 +262,8 @@ WELLNESS METRICS:
 - Growth indicators: ${JSON.stringify(metrics.growth)}
 
 USER CONTEXT: ${JSON.stringify(userContext)}
+
+${languageInstructions}
 
 Provide wellness trend insights in JSON format (language: ${userLanguage}):
 {
@@ -268,6 +304,8 @@ Provide wellness trend insights in JSON format (language: ${userLanguage}):
     const triggerAnalysis = await this.analyzeTriggerPatterns(journalEntries, addictions);
     const recoveryMetrics = this.calculateDetailedRecoveryMetrics(addictions, journalEntries);
 
+    const languageInstructions = this.getLanguageInstructions(userLanguage);
+    
     const prompt = `As a predictive wellness and addiction recovery AI, analyze comprehensive patterns to forecast future trends:
 
 WELLNESS METRICS:
@@ -289,6 +327,8 @@ ${journalEntries.slice(-10).map(entry => ({
 }))}
 
 USER CONTEXT: ${JSON.stringify(userContext)}
+
+${languageInstructions}
 
 Generate comprehensive predictive insights including addiction relapse risk (language: ${userLanguage}):
 {
@@ -342,6 +382,7 @@ Generate comprehensive predictive insights including addiction relapse risk (lan
    */
   async generateActionPlan(insights, userContext, language = 'en') {
     const userLanguage = language;
+    const languageInstructions = this.getLanguageInstructions(userLanguage);
 
     const prompt = `As a personalized wellness coach, create an actionable plan based on these insights:
 
@@ -349,6 +390,8 @@ INSIGHTS SUMMARY:
 ${JSON.stringify(insights, null, 2)}
 
 USER CONTEXT: ${JSON.stringify(userContext)}
+
+${languageInstructions}
 
 Create a comprehensive action plan (language: ${userLanguage}):
 {
@@ -595,6 +638,8 @@ Create a comprehensive action plan (language: ${userLanguage}):
     const recoveryMetrics = this.calculateDetailedRecoveryMetrics(addictions, journalEntries);
     
     // Generate AI analysis
+    const languageInstructions = this.getLanguageInstructions(userLanguage);
+    
     const prompt = `As an addiction recovery specialist AI, analyze this comprehensive recovery data:
 
 ADDICTION DATA:
@@ -620,6 +665,8 @@ ${journalEntries.slice(-15).map(entry => ({
 }))}
 
 USER CONTEXT: ${JSON.stringify(userContext)}
+
+${languageInstructions}
 
 IMPORTANT: Return ONLY valid JSON in the following exact structure. No markdown, no explanations, just JSON (language: ${userLanguage}):
 {

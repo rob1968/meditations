@@ -942,7 +942,12 @@ router.post('/create', auth, async (req, res) => {
     
     try {
       console.log('Analyzing mood from journal content...');
-      detectedMood = await aiCoachService.analyzeMoodFromText(content, userId);
+      // Get user's preferred language for mood analysis
+      const User = require('../models/User');
+      const user = await User.findById(userId);
+      const userLanguage = user?.preferredLanguage || 'en';
+      
+      detectedMood = await aiCoachService.analyzeMoodFromText(content, userId, userLanguage);
       console.log('Detected mood:', detectedMood);
     } catch (error) {
       console.error('Error analyzing mood:', error);
@@ -1154,7 +1159,12 @@ router.put('/:entryId', auth, async (req, res) => {
       try {
         console.log('Re-analyzing mood after content update...');
         const aiCoachService = require('../services/aiCoachService');
-        const detectedMood = await aiCoachService.analyzeMoodFromText(entry.content, userId);
+        // Get user's preferred language for mood analysis
+        const User = require('../models/User');
+        const user = await User.findById(userId);
+        const userLanguage = user?.preferredLanguage || 'en';
+        
+        const detectedMood = await aiCoachService.analyzeMoodFromText(entry.content, userId, userLanguage);
         
         if (detectedMood && detectedMood.primaryMood) {
           entry.mood = detectedMood.primaryMood;

@@ -786,10 +786,15 @@ router.get('/enhanced-insights/:userId', checkAICoachEnabled, async (req, res) =
       includePredictions: includePredictions === 'true'
     };
 
-    console.log('Generating enhanced insights for user:', userId, 'with options:', options);
-    console.log('enhancedInsightsService type:', typeof enhancedInsightsService);
-    console.log('generateEnhancedInsights method type:', typeof enhancedInsightsService.generateEnhancedInsights);
-    console.log('Available methods:', Object.getOwnPropertyNames(enhancedInsightsService).filter(name => typeof enhancedInsightsService[name] === 'function'));
+    // Get user's preferred language
+    const User = require('../models/User');
+    const user = await User.findById(userId);
+    const userLanguage = user?.preferredLanguage || 'en';
+    
+    // Add language to options
+    options.language = userLanguage;
+    
+    console.log('Generating enhanced insights for user:', userId, 'with language:', userLanguage, 'and options:', options);
     
     const insights = await enhancedInsightsService.generateEnhancedInsights(userId, options);
     

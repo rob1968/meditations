@@ -14,7 +14,7 @@ class AICoachService {
       console.warn('OpenAI API key not found, service will return mock responses');
       this.openai = null;
     }
-    this.modelName = "gpt-4o"; // GPT-5 gives empty responses, using GPT-4o
+    this.modelName = "gpt-5"; // GPT-5 working! Fixed token limit issue (needs 500+ tokens for reasoning)
     
     // Coach persona configuration
     this.coachPersona = {
@@ -105,7 +105,9 @@ class AICoachService {
       };
       
       if (this.modelName === 'gpt-5') {
-        requestParams.max_completion_tokens = maxTokens;
+        // GPT-5 needs much higher token limits due to reasoning tokens
+        // Minimum ~250 tokens (reasoning + response), so multiply by 3-5x
+        requestParams.max_completion_tokens = Math.max(maxTokens * 4, 500);
         // GPT-5 only supports default temperature (1)
         requestParams.temperature = 1;
       } else {
@@ -488,7 +490,7 @@ class AICoachService {
   /**
    * Analyze mood from journal entry text using AI
    */
-  async analyzeMoodFromText(text, userId = null) {
+  async analyzeMoodFromText(text, userId = null, language = 'en') {
     try {
       // Check minimum word count (10 words)
       const wordCount = text.trim().split(/\s+/).length;
@@ -510,12 +512,16 @@ class AICoachService {
         }
       }
       
+      const languageInstructions = this.getLanguageInstructions(language);
+      
       const prompt = `
         You are an expert emotional intelligence analyst. Analyze the following journal entry text for emotional state and mood.
         
+        ${languageInstructions}
+        
         ${userContextInfo}
         
-        Journal Entry: "${text}"
+        Journal Entry: "${text}" (Language: ${language})
         
         Analyze for:
         1. Primary mood/emotion
@@ -647,14 +653,19 @@ class AICoachService {
    */
   getLanguageInstructions(languageCode) {
     const instructions = {
+      'en': 'IMPORTANT: Respond exclusively in English. Use natural English expressions and cultural references.',
       'nl': 'BELANGRIJK: Reageer uitsluitend in het Nederlands. Gebruik Nederlandse woorden, uitdrukkingen en culturele referenties. Bijvoorbeeld: "Ik begrijp dat dit moeilijk voor je is..." in plaats van Engelse woorden.',
-      'de': 'WICHTIG: Antworten Sie ausschließlich auf Deutsch. Verwenden Sie deutsche Wörter, Ausdrücke und kulturelle Referenzen.',
-      'fr': 'IMPORTANT: Répondez exclusivement en français. Utilisez des mots, expressions et références culturelles françaises.',
-      'es': 'IMPORTANTE: Responde exclusivamente en español. Usa palabras, expresiones y referencias culturales españolas.',
-      'it': 'IMPORTANTE: Rispondi esclusivamente in italiano. Usa parole, espressioni e riferimenti culturali italiani.',
-      'pt': 'IMPORTANTE: Responda exclusivamente em português. Use palavras, expressões e referências culturais portuguesas.',
-      'ru': 'ВАЖНО: Отвечайте исключительно на русском языке. Используйте русские слова, выражения и культурные ссылки.',
-      'en': 'IMPORTANT: Respond exclusively in English.'
+      'de': 'WICHTIG: Antworten Sie ausschließlich auf Deutsch. Verwenden Sie deutsche Wörter, Ausdrücke und kulturelle Referenzen. Beispiel: "Ich verstehe, dass das schwierig für Sie ist..."',
+      'fr': 'IMPORTANT: Répondez exclusivement en français. Utilisez des mots, expressions et références culturelles françaises. Exemple: "Je comprends que c\'est difficile pour vous..."',
+      'es': 'IMPORTANTE: Responde exclusivamente en español. Usa palabras, expresiones y referencias culturales españolas. Ejemplo: "Entiendo que esto es difícil para ti..."',
+      'it': 'IMPORTANTE: Rispondi esclusivamente in italiano. Usa parole, espressioni e riferimenti culturali italiani. Esempio: "Capisco che questo è difficile per te..."',
+      'pt': 'IMPORTANTE: Responda exclusivamente em português. Use palavras, expressões e referências culturais portuguesas. Exemplo: "Entendo que isso é difícil para você..."',
+      'ru': 'ВАЖНО: Отвечайте исключительно на русском языке. Используйте русские слова, выражения и культурные ссылки. Пример: "Я понимаю, что это трудно для вас..."',
+      'zh': '重要：请exclusively用中文回答。使用中文词汇、表达和文化参考。例如："我理解这对您来说很困难..."',
+      'ja': '重要：日本語のみで回答してください。日本語の単語、表現、文化的参照を使用してください。例："これがあなたにとって困難であることを理解しています..."',
+      'ko': '중요: 한국어로만 답변하세요. 한국어 단어, 표현 및 문화적 참조를 사용하세요. 예: "이것이 당신에게 어려운 일임을 이해합니다..."',
+      'hi': 'महत्वपूर्ण: केवल हिंदी में उत्तर दें। हिंदी शब्दों, अभिव्यक्तियों और सांस्कृतिक संदर्भों का उपयोग करें। उदाहरण: "मैं समझता हूं कि यह आपके लिए कठिन है..."',
+      'ar': 'مهم: أجب باللغة العربية فقط. استخدم الكلمات والتعبيرات والمراجع الثقافية العربية. مثال: "أفهم أن هذا صعب عليك..."'
     };
     
     return instructions[languageCode] || instructions['en'];
@@ -912,6 +923,401 @@ class AICoachService {
       console.error('Error generating intervention:', error);
       throw error;
     }
+  }
+
+  async assessCrisisLevel(message, context = {}) {
+    const messageLower = message.toLowerCase();
+    
+    // Critical crisis indicators
+    const criticalWords = [
+      'suicide', 'kill myself', 'end it all', 'don\'t want to live',
+      'better off dead', 'suicide plan', 'going to die',
+      'can\'t go on', 'hopeless', 'no way out'
+    ];
+    
+    // High crisis indicators
+    const highRiskWords = [
+      'self harm', 'cut myself', 'hurt myself', 'cutting myself', 'feel like cutting',
+      'relapse', 'using again', 'can\'t stop', 'overwhelming urge',
+      'losing control', 'desperate', 'panic attack'
+    ];
+    
+    // Medium crisis indicators  
+    const mediumRiskWords = [
+      'crisis', 'emergency', 'need help now', 'really struggling',
+      'can\'t cope', 'breaking down', 'intense craving',
+      'triggered badly', 'feel unsafe'
+    ];
+
+    let severity = 'low';
+    let indicators = [];
+    let recommendations = [];
+
+    // Check for critical crisis
+    for (const word of criticalWords) {
+      if (messageLower.includes(word)) {
+        severity = 'critical';
+        indicators.push(word);
+        recommendations.push('Immediate professional intervention required');
+        break;
+      }
+    }
+
+    // Check for high crisis if not critical
+    if (severity !== 'critical') {
+      for (const word of highRiskWords) {
+        if (messageLower.includes(word)) {
+          severity = 'high';
+          indicators.push(word);
+          recommendations.push('Crisis support recommended');
+        }
+      }
+    }
+
+    // Check for medium crisis if not high/critical
+    if (severity !== 'critical' && severity !== 'high') {
+      for (const word of mediumRiskWords) {
+        if (messageLower.includes(word)) {
+          severity = 'medium';
+          indicators.push(word);
+          recommendations.push('Enhanced support needed');
+        }
+      }
+    }
+
+    return {
+      severity,
+      indicators,
+      recommendations,
+      requiresEmergency: severity === 'critical',
+      requiresIntervention: severity === 'high' || severity === 'critical',
+      assessedAt: new Date()
+    };
+  }
+
+  async getCrisisResources(options = {}) {
+    const { crisisType, location = 'US', language = 'en' } = options;
+    
+    try {
+      // Return localized resources based on location and crisis type
+      const resources = this.getEmergencyResources(crisisType, location);
+      
+      // Add additional resources based on language
+      if (language !== 'en') {
+        resources.push({
+          name: 'International Crisis Support',
+          contact: 'Visit findahelpline.com',
+          type: 'support',
+          available: 'Varies',
+          description: 'Find crisis support in your language and location',
+          urgent: false
+        });
+      }
+      
+      return resources;
+      
+    } catch (error) {
+      console.error('Error getting crisis resources:', error);
+      return this.getEmergencyResources(crisisType, location);
+    }
+  }
+
+  getEmergencyResources(crisisType, location = 'US') {
+    // Base emergency resources (US)
+    const baseResources = [
+      {
+        name: 'Crisis Text Line',
+        contact: 'Text HOME to 741741',
+        type: 'emergency',
+        available: '24/7',
+        description: 'Free, confidential crisis support via text',
+        urgent: true,
+        languages: ['English', 'Spanish']
+      },
+      {
+        name: 'National Suicide Prevention Lifeline',
+        contact: '988',
+        type: 'emergency',
+        available: '24/7',
+        description: 'Free and confidential emotional support',
+        urgent: true,
+        languages: ['English', 'Spanish']
+      },
+      {
+        name: 'SAMHSA National Helpline',
+        contact: '1-800-662-HELP (4357)',
+        type: 'support',
+        available: '24/7',
+        description: 'Treatment referral and information service',
+        urgent: false,
+        languages: ['English', 'Spanish']
+      }
+    ];
+
+    // Add emergency services for critical situations
+    if (['suicide', 'self_harm'].includes(crisisType)) {
+      baseResources.unshift({
+        name: 'Emergency Services',
+        contact: '911',
+        type: 'emergency',
+        available: '24/7',
+        description: 'Immediate emergency response',
+        urgent: true,
+        languages: ['Multiple']
+      });
+    }
+
+    // Add crisis-specific resources
+    const crisisSpecificResources = this.getCrisisSpecificResources(crisisType);
+    const locationSpecificResources = this.getLocationSpecificResources(location);
+    
+    return [...baseResources, ...crisisSpecificResources, ...locationSpecificResources];
+  }
+
+  getCrisisSpecificResources(crisisType) {
+    const resources = [];
+
+    switch (crisisType) {
+      case 'suicide':
+        resources.push(
+          {
+            name: 'National Suicide Prevention Chat',
+            contact: 'Visit suicidepreventionlifeline.org',
+            type: 'support',
+            available: '24/7',
+            description: 'Online chat support for suicide prevention',
+            urgent: false,
+            languages: ['English']
+          },
+          {
+            name: 'Veterans Crisis Line',
+            contact: '1-800-273-8255',
+            type: 'emergency',
+            available: '24/7',
+            description: 'Crisis support specifically for veterans',
+            urgent: true,
+            languages: ['English']
+          }
+        );
+        break;
+
+      case 'self_harm':
+        resources.push(
+          {
+            name: 'Self-Injury Outreach & Support',
+            contact: 'Visit sioutreach.org',
+            type: 'support',
+            available: 'Varies',
+            description: 'Support and resources for self-harm recovery',
+            urgent: false,
+            languages: ['English']
+          }
+        );
+        break;
+
+      case 'substance_abuse':
+      case 'relapse':
+        resources.push(
+          {
+            name: 'Substance Abuse Treatment Locator',
+            contact: '1-800-662-4357',
+            type: 'support',
+            available: '24/7',
+            description: 'Find local treatment facilities',
+            urgent: false,
+            languages: ['English', 'Spanish']
+          },
+          {
+            name: 'Alcoholics Anonymous',
+            contact: 'Visit aa.org',
+            type: 'support',
+            available: 'Varies',
+            description: 'Peer support for alcohol recovery',
+            urgent: false,
+            languages: ['Multiple']
+          },
+          {
+            name: 'Narcotics Anonymous',
+            contact: 'Visit na.org',
+            type: 'support',
+            available: 'Varies',
+            description: 'Peer support for substance recovery',
+            urgent: false,
+            languages: ['Multiple']
+          }
+        );
+        break;
+
+      case 'panic':
+      case 'anxiety':
+        resources.push(
+          {
+            name: 'Anxiety & Depression Association',
+            contact: 'Visit adaa.org',
+            type: 'support',
+            available: 'Business hours',
+            description: 'Resources and support for anxiety disorders',
+            urgent: false,
+            languages: ['English']
+          },
+          {
+            name: 'NAMI Helpline',
+            contact: '1-800-950-NAMI (6264)',
+            type: 'support',
+            available: 'M-F 10am-10pm ET',
+            description: 'Mental health support and resources',
+            urgent: false,
+            languages: ['English']
+          }
+        );
+        break;
+
+      default:
+        // General mental health resources
+        resources.push(
+          {
+            name: 'Mental Health America',
+            contact: 'Visit mhanational.org',
+            type: 'support',
+            available: 'Varies',
+            description: 'Mental health resources and screening tools',
+            urgent: false,
+            languages: ['English', 'Spanish']
+          }
+        );
+    }
+
+    return resources;
+  }
+
+  getLocationSpecificResources(location) {
+    const resources = [];
+
+    // International resources
+    if (location && location !== 'US') {
+      resources.push(
+        {
+          name: 'International Association for Suicide Prevention',
+          contact: 'Visit iasp.info/resources/Crisis_Centres',
+          type: 'support',
+          available: 'Varies by location',
+          description: 'Find crisis centers worldwide',
+          urgent: false,
+          languages: ['Multiple']
+        },
+        {
+          name: 'Befrienders Worldwide',
+          contact: 'Visit befrienders.org',
+          type: 'support',
+          available: 'Varies by location',
+          description: 'International emotional support network',
+          urgent: false,
+          languages: ['Multiple']
+        }
+      );
+
+      // Country-specific resources
+      switch (location?.toUpperCase()) {
+        case 'CA':
+        case 'CANADA':
+          resources.push(
+            {
+              name: 'Crisis Services Canada',
+              contact: '1-833-456-4566',
+              type: 'emergency',
+              available: '24/7',
+              description: 'National suicide prevention service',
+              urgent: true,
+              languages: ['English', 'French']
+            },
+            {
+              name: 'Kids Help Phone',
+              contact: '1-800-668-6868',
+              type: 'emergency',
+              available: '24/7',
+              description: 'Support for children and teens',
+              urgent: true,
+              languages: ['English', 'French']
+            }
+          );
+          break;
+
+        case 'UK':
+        case 'GB':
+        case 'UNITED KINGDOM':
+          resources.push(
+            {
+              name: 'Samaritans',
+              contact: '116 123',
+              type: 'emergency',
+              available: '24/7',
+              description: 'Emotional support for anyone in distress',
+              urgent: true,
+              languages: ['English']
+            },
+            {
+              name: 'Mind',
+              contact: '0300 123 3393',
+              type: 'support',
+              available: 'M-F 9am-6pm',
+              description: 'Mental health support and advice',
+              urgent: false,
+              languages: ['English']
+            }
+          );
+          break;
+
+        case 'AU':
+        case 'AUSTRALIA':
+          resources.push(
+            {
+              name: 'Lifeline Australia',
+              contact: '13 11 14',
+              type: 'emergency',
+              available: '24/7',
+              description: 'Crisis support and suicide prevention',
+              urgent: true,
+              languages: ['English']
+            },
+            {
+              name: 'Beyond Blue',
+              contact: '1300 22 4636',
+              type: 'support',
+              available: '24/7',
+              description: 'Support for anxiety and depression',
+              urgent: false,
+              languages: ['English']
+            }
+          );
+          break;
+
+        case 'NL':
+        case 'NETHERLANDS':
+          resources.push(
+            {
+              name: '113 Zelfmoordpreventie',
+              contact: '0800-0113',
+              type: 'emergency',
+              available: '24/7',
+              description: 'Suicide prevention helpline',
+              urgent: true,
+              languages: ['Dutch', 'English']
+            },
+            {
+              name: 'De Luisterlijn',
+              contact: '088 0767 000',
+              type: 'support',
+              available: '24/7',
+              description: 'Emotional support helpline',
+              urgent: false,
+              languages: ['Dutch']
+            }
+          );
+          break;
+      }
+    }
+
+    return resources;
   }
 }
 
