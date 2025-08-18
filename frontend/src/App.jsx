@@ -30,7 +30,7 @@ const App = () => {
   const [text, setText] = useState("");
   const [meditationType, setMeditationType] = useState("sleep");
   const [background, setBackground] = useState("ocean");
-  const [voiceId, setVoiceId] = useState("EXAVITQu4vr4xnSDxMaL");
+  const [voiceId, setVoiceId] = useState("pNInz6obpgDQGcFmaJgB");
   const [useBackgroundMusic, setUseBackgroundMusic] = useState(true);
   const [customBackgroundFile, setCustomBackgroundFile] = useState(null);
   const [customBackgroundName, setCustomBackgroundName] = useState('');
@@ -104,7 +104,7 @@ const App = () => {
   const [wizardData, setWizardData] = useState({
     meditationType: 'sleep',
     text: '',
-    voiceId: 'EXAVITQu4vr4xnSDxMaL',
+    voiceId: 'pNInz6obpgDQGcFmaJgB',
     background: 'ocean',
     useBackgroundMusic: true,
     speechTempo: 1.00,

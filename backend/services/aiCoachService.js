@@ -813,6 +813,12 @@ class AICoachService {
       const response = await this.callOpenAI(prompt, 0.7, 800);
       console.log('📥 OpenAI response received, length:', response.length);
       
+      // Check if response is empty or null
+      if (!response || response.trim().length === 0) {
+        console.warn('⚠️ Empty response from OpenAI, using fallback');
+        throw new Error('Empty response from OpenAI');
+      }
+      
       try {
         // Clean up the response - remove markdown code blocks if present
         let cleanResponse = response.trim();
@@ -821,6 +827,12 @@ class AICoachService {
         }
         if (cleanResponse.endsWith('```')) {
           cleanResponse = cleanResponse.replace(/\s*```$/g, '');
+        }
+        
+        // Check if cleaned response is empty
+        if (!cleanResponse || cleanResponse.length === 0) {
+          console.warn('⚠️ Cleaned response is empty, using fallback');
+          throw new Error('Cleaned response is empty');
         }
         
         // Parse the cleaned JSON response

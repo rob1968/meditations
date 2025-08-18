@@ -1266,7 +1266,7 @@ router.delete('/:entryId', auth, async (req, res) => {
 router.post('/:entryId/generate-audio', auth, async (req, res) => {
   try {
     const { entryId } = req.params;
-    const { voiceId = 'EXAVITQu4vr4xnSDxMaL' } = req.body;
+    const { voiceId = 'pNInz6obpgDQGcFmaJgB' } = req.body;
     const userId = req.user._id;
     
     console.log('Generate audio request received:', { entryId, userId, voiceId });
