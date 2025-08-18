@@ -4,7 +4,7 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 
 // GET /api/users/:userId/credits - Get user credits
-router.get('/credits', auth, async (req, res) => {
+router.get('/:userId/credits', auth, async (req, res) => {
   try {
     const userId = req.user._id;
     
