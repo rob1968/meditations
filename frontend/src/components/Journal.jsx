@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import axios from 'axios';
 import { getFullUrl, getAssetUrl, API_ENDPOINTS, API_BASE_URL, getAuthHeaders, apiRequest } from '../config/api';
+import { loadJournalTab, saveJournalTab } from '../utils/statePersistence';
 import PageHeader from './PageHeader';
 import Alert from './Alert';
 import ConfirmDialog from './ConfirmDialog';
@@ -82,7 +83,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const [currentCalendarMonth, setCurrentCalendarMonth] = useState(new Date());
   
   // Tab navigation state
-  const [activeTab, setActiveTab] = useState('calendar'); // 'write', 'calendar', 'archive', 'addictions', 'coach'
+  const [activeTab, setActiveTab] = useState(() => loadJournalTab()); // 'write', 'calendar', 'archive', 'addictions', 'coach'
   
   // Ref to track if calendar has been initialized to prevent re-loading today's entry
   const calendarInitialized = useRef(false);
@@ -270,6 +271,12 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       // fetchUserVoices(); // Commented out - voice cloning not implemented yet
     }
   }, [user]);
+
+  // Save activeTab to localStorage whenever it changes
+  useEffect(() => {
+    saveJournalTab(activeTab);
+    console.log('📍 Saved Journal tab to localStorage:', activeTab);
+  }, [activeTab]);
 
   // Keyboard navigation for slider
   useEffect(() => {

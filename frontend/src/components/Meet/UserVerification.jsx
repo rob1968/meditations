@@ -21,7 +21,7 @@ const UserVerification = ({ user, onVerificationUpdate }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user?._id || ''
+          'x-user-id': user?._id || user?.id || ''
         },
         body: JSON.stringify({
           type,
@@ -50,7 +50,7 @@ const UserVerification = ({ user, onVerificationUpdate }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user?._id || ''
+          'x-user-id': user?._id || user?.id || ''
         },
         body: JSON.stringify({
           code,

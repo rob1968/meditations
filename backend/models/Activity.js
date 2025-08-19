@@ -123,6 +123,11 @@ const activitySchema = new mongoose.Schema({
       default: 99
     }
   },
+  genderPreference: {
+    type: String,
+    enum: ['any', 'male', 'female', 'other'],
+    default: 'any'
+  },
   language: {
     type: String,
     default: 'nl'
@@ -327,6 +332,24 @@ activitySchema.methods.cancel = async function(reason) {
   return { success: true, message: 'Activity cancelled' };
 };
 
+// Check if activity should be cancelled due to low participants
+activitySchema.methods.checkParticipantRequirement = function() {
+  const confirmedParticipants = this.participants.filter(p => p.status === 'confirmed').length;
+  const now = new Date();
+  const activityDateTime = new Date(this.date);
+  const [hours, minutes] = this.startTime.split(':');
+  activityDateTime.setHours(parseInt(hours), parseInt(minutes));
+  const hoursUntilActivity = (activityDateTime - now) / (1000 * 60 * 60);
+  
+  return {
+    hasEnoughParticipants: confirmedParticipants >= this.minParticipants,
+    participantCount: confirmedParticipants,
+    minRequired: this.minParticipants,
+    hoursUntilStart: hoursUntilActivity,
+    shouldAutoCancel: confirmedParticipants < this.minParticipants && hoursUntilActivity <= 2 && hoursUntilActivity > 0
+  };
+};
+
 activitySchema.methods.updateStatus = async function() {
   const now = new Date();
   const activityDateTime = new Date(this.date);
@@ -334,8 +357,19 @@ activitySchema.methods.updateStatus = async function() {
   activityDateTime.setHours(parseInt(hours), parseInt(minutes));
   
   const endTime = new Date(activityDateTime.getTime() + this.duration * 60000);
+  const hoursUntilActivity = (activityDateTime - now) / (1000 * 60 * 60);
   
   if (this.status === 'cancelled') return;
+  
+  // Auto-cancel if not enough participants and less than 2 hours before start
+  const confirmedParticipants = this.participants.filter(p => p.status === 'confirmed').length;
+  if (confirmedParticipants < this.minParticipants && hoursUntilActivity <= 2 && hoursUntilActivity > 0) {
+    this.status = 'cancelled';
+    this.cancellationReason = `Geannuleerd: niet genoeg deelnemers (${confirmedParticipants}/${this.minParticipants} minimum)`;
+    console.log(`🚫 Auto-cancelled activity "${this.title}" - insufficient participants: ${confirmedParticipants}/${this.minParticipants}`);
+    await this.save();
+    return;
+  }
   
   if (now < activityDateTime) {
     this.status = 'upcoming';

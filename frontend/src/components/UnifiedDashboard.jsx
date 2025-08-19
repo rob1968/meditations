@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { getFullUrl, getAssetUrl, API_ENDPOINTS, getAuthHeaders } from '../config/api';
+import { loadDashboardTab, saveDashboardTab } from '../utils/statePersistence';
 import PageHeader from './PageHeader';
 import Alert from './Alert';
 import ConfirmDialog from './ConfirmDialog';
@@ -16,8 +17,8 @@ import ReviewStep from './ReviewStep';
 const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
   const { t, i18n } = useTranslation();
   
-  // Tab state management
-  const [activeTab, setActiveTab] = useState('mine'); // 'mine', 'community', 'create'
+  // Tab state management with persistence
+  const [activeTab, setActiveTab] = useState(() => loadDashboardTab());
   
   // Shared states
   const [isLoading, setIsLoading] = useState(true);
@@ -96,6 +97,12 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
   const showConfirmDialog = (message, onConfirm, confirmText = t('confirm', 'Confirm'), cancelText = t('cancel', 'Cancel')) => {
     setConfirmState({ show: true, message, onConfirm, confirmText, cancelText });
   };
+
+  // Save activeTab to localStorage whenever it changes
+  useEffect(() => {
+    saveDashboardTab(activeTab);
+    console.log('📍 Saved Dashboard tab to localStorage:', activeTab);
+  }, [activeTab]);
 
   // Load data based on active tab
   useEffect(() => {

@@ -33,11 +33,11 @@ const MessageSchema = new mongoose.Schema({
       trim: true
     },
     
-    // For meditation shares
-    sharedMeditation: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Meditation'
-    },
+    // For meditation shares - temporarily disabled
+    // sharedMeditation: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: 'SharedMeditation'
+    // },
     
     // For system messages
     systemType: {
@@ -131,6 +131,8 @@ const MessageSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+}, {
+  strictPopulate: false  // Disable strict populate to avoid errors
 });
 
 // Indexes for efficient querying
@@ -213,19 +215,35 @@ MessageSchema.methods.canDelete = function(userId, isAdmin = false) {
 };
 
 // Static methods
-MessageSchema.statics.getConversationMessages = function(conversationId, page = 1, limit = 50) {
+MessageSchema.statics.getConversationMessages = async function(conversationId, page = 1, limit = 50) {
   const skip = (page - 1) * limit;
   
-  return this.find({
-    conversation: conversationId,
-    isDeleted: false
-  })
-  .populate('sender', 'username profileImage')
-  .populate('replyTo', 'content.text sender')
-  .populate('sharedMeditation', 'title type duration')
-  .sort({ createdAt: -1 })
-  .skip(skip)
-  .limit(limit);
+  try {
+    // Direct MongoDB query to avoid all Mongoose populate issues
+    const messages = await this.collection.find({
+      conversation: new require('mongoose').Types.ObjectId(conversationId),
+      isDeleted: false
+    })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .toArray();
+    
+    // Manual populate for sender
+    const User = require('./User');
+    const populatedMessages = await Promise.all(messages.map(async (msg) => {
+      if (msg.sender) {
+        const sender = await User.findById(msg.sender).select('username profileImage').lean();
+        return { ...msg, sender };
+      }
+      return msg;
+    }));
+    
+    return populatedMessages;
+  } catch (error) {
+    console.error('Error in getConversationMessages:', error);
+    return [];
+  }
 };
 
 MessageSchema.statics.getUnreadCount = function(conversationId, userId) {

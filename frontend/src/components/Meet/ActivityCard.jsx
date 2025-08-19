@@ -10,7 +10,18 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
   );
   
   const isOrganizer = activity.organizer?._id === user?._id || activity.organizer === user?._id;
-  const isFull = activity.participants?.filter(p => p.status === 'confirmed').length >= activity.maxParticipants;
+  const isFull = (activity.participants?.filter(p => p.status === 'confirmed')?.length || 0) >= activity.maxParticipants;
+  
+  // Debug logging for button visibility
+  console.log('🔍 ActivityCard Debug:', {
+    activityTitle: activity.title,
+    isParticipant,
+    isOrganizer,
+    isFull,
+    participantCount: activity.participants?.length || 0,
+    userId: user?._id,
+    shouldShowJoinButton: !isParticipant && !isFull
+  });
   
   // Format date and time
   const activityDate = new Date(activity.date);
@@ -48,6 +59,32 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
   const confirmedParticipants = activity.participants?.filter(p => p.status === 'confirmed').length || 0;
   const availableSpots = activity.maxParticipants - confirmedParticipants;
   
+  // Function to get the correct participant status text based on timing
+  const getParticipantStatusText = () => {
+    const now = new Date();
+    const activityDateTime = new Date(activity.date);
+    
+    // Parse start time and set it on activity date
+    if (activity.startTime) {
+      const [hours, minutes] = activity.startTime.split(':');
+      activityDateTime.setHours(parseInt(hours), parseInt(minutes));
+    }
+    
+    const endTime = new Date(activityDateTime.getTime() + (activity.duration || 120) * 60000);
+    
+    // Check activity status based on backend status or time
+    if (activity.status === 'completed' || now > endTime) {
+      return t('participated', 'Deelgenomen');
+    } else if (activity.status === 'ongoing' || (now >= activityDateTime && now <= endTime)) {
+      return t('participating', 'Bezig');
+    } else if (activity.status === 'cancelled') {
+      return t('cancelled', 'Geannuleerd');
+    } else {
+      // Future activity or upcoming
+      return t('joined', 'Aangemeld');
+    }
+  };
+  
   return (
     <div className="activity-card mobile-touch-card" onClick={onSelect}>
       <div className="activity-card-header">
@@ -73,7 +110,7 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
         
         {isParticipant && !isOrganizer && (
           <span className="activity-status-badge joined">
-            {t('joined', 'Aangemeld')}
+            {getParticipantStatusText()}
           </span>
         )}
       </div>
@@ -91,7 +128,7 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
         <h3 className="activity-title">{activity.title}</h3>
         
         <p className="activity-description">
-          {activity.description.length > 100 
+          {(activity.description?.length || 0) > 100 
             ? activity.description.substring(0, 100) + '...' 
             : activity.description}
         </p>
@@ -148,7 +185,7 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
           {activity.organizer?.profileImage && (
             <img 
               src={activity.organizer.profileImage} 
-              alt={activity.organizer.username}
+              alt={activity.organizer?.username || 'Organisator'}
               className="organizer-avatar"
             />
           )}

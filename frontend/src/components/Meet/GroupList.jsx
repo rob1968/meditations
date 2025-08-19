@@ -210,7 +210,7 @@ const GroupList = ({ user }) => {
                   <div className="group-card-footer">
                     <div className="created-by">
                       <span className="creator-label">{t('createdBy', 'Aangemaakt door')}:</span>
-                      <span className="creator-name">{group.createdBy.username}</span>
+                      <span className="creator-name">{group.createdBy?.username || t('unknownUser', 'Onbekend')}</span>
                     </div>
                     <button 
                       className="secondary-button"

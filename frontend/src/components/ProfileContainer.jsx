@@ -6,9 +6,11 @@ import ProfileInfo from './ProfileInfo';
 import Credits from './Credits';
 import Statistics from './Statistics';
 import ProfileImageUpload from './ProfileImageUpload';
+import PrivacyPolicy from './PrivacyPolicy';
+import TermsOfService from './TermsOfService';
 import Alert from './Alert';
 
-const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'profile', onUserUpdate }) => {
+const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'profile', onUserUpdate, onSectionChange }) => {
   const { t } = useTranslation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmUsername, setDeleteConfirmUsername] = useState('');
@@ -97,6 +99,10 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
         return <Credits user={user} />;
       case 'statistics':
         return <Statistics user={user} />;
+      case 'privacy':
+        return <PrivacyPolicy user={user} onLogout={onLogout} />;
+      case 'terms':
+        return <TermsOfService user={user} onLogout={onLogout} />;
       default:
         return <ProfileInfo user={user} />;
     }
@@ -125,6 +131,44 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
           <h2>{user.username}</h2>
           <p>{t('memberSince', 'Member since')} {new Date(user.createdAt).toLocaleDateString()}</p>
         </div>
+      </div>
+
+      <div className="profile-navigation">
+        <button 
+          className={`profile-nav-item ${selectedSection === 'profile' ? 'active' : ''}`}
+          onClick={() => onSectionChange?.('profile')}
+        >
+          <span className="nav-icon">👤</span>
+          <span className="nav-label">{t('profile', 'Profile')}</span>
+        </button>
+        <button 
+          className={`profile-nav-item ${selectedSection === 'credits' ? 'active' : ''}`}
+          onClick={() => onSectionChange?.('credits')}
+        >
+          <span className="nav-icon">💰</span>
+          <span className="nav-label">{t('credits', 'Credits')}</span>
+        </button>
+        <button 
+          className={`profile-nav-item ${selectedSection === 'statistics' ? 'active' : ''}`}
+          onClick={() => onSectionChange?.('statistics')}
+        >
+          <span className="nav-icon">📊</span>
+          <span className="nav-label">{t('statistics', 'Statistics')}</span>
+        </button>
+        <button 
+          className={`profile-nav-item ${selectedSection === 'privacy' ? 'active' : ''}`}
+          onClick={() => onSectionChange?.('privacy')}
+        >
+          <span className="nav-icon">🔒</span>
+          <span className="nav-label">{t('privacyPolicy', 'Privacy Policy')}</span>
+        </button>
+        <button 
+          className={`profile-nav-item ${selectedSection === 'terms' ? 'active' : ''}`}
+          onClick={() => onSectionChange?.('terms')}
+        >
+          <span className="nav-icon">📋</span>
+          <span className="nav-label">{t('termsOfService', 'Terms of Service')}</span>
+        </button>
       </div>
 
       <div className="profile-content">

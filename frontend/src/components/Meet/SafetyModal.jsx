@@ -18,7 +18,7 @@ const SafetyModal = ({ isOpen, onClose, user, activity }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user?._id || ''
+          'x-user-id': user?._id || user?.id || ''
         },
         body: JSON.stringify({
           reportType,

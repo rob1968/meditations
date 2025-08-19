@@ -154,7 +154,7 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
         return 'Bezig';
       }
     }
-    return `${conversation.participants.length} ${t('participants', 'deelnemers')}`;
+    return `${conversation.participants?.length || 0} ${t('participants', 'deelnemers')}`;
   };
 
   const formatLastMessageTime = (timestamp) => {
@@ -207,7 +207,7 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
           >
             <span className="chat-tab-icon">💬</span>
             <span className="chat-tab-label">{t('allChats', 'Alle')}</span>
-            <span className="chat-tab-count">({conversations.length})</span>
+            <span className="chat-tab-count">({conversations?.length || 0})</span>
           </button>
           
           <button
@@ -217,7 +217,7 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
             <span className="chat-tab-icon">📅</span>
             <span className="chat-tab-label">{t('activityChats', 'Activiteiten')}</span>
             <span className="chat-tab-count">
-              ({conversations.filter(c => c.type === 'activity').length})
+              ({conversations?.filter(c => c.type === 'activity')?.length || 0})
             </span>
           </button>
           
@@ -228,7 +228,7 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
             <span className="chat-tab-icon">👤</span>
             <span className="chat-tab-label">{t('directChats', 'Direct')}</span>
             <span className="chat-tab-count">
-              ({conversations.filter(c => c.type === 'direct').length})
+              ({conversations?.filter(c => c.type === 'direct')?.length || 0})
             </span>
           </button>
         </div>
@@ -255,7 +255,7 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
           </div>
         ) : (
           <div className="conversations-list">
-            {filteredConversations.map(conversation => (
+            {filteredConversations?.map(conversation => (
               <div
                 key={conversation._id}
                 className="conversation-item"
@@ -292,10 +292,10 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
                     {conversation.lastMessage && (
                       <span className="last-message">
                         <span className="message-sender">
-                          {conversation.lastMessage.sender.username}:
+                          {conversation.lastMessage.sender?.username || t('unknownUser', 'Onbekend')}:
                         </span>
                         <span className="message-text">
-                          {conversation.lastMessage.text.length > 40
+                          {(conversation.lastMessage?.text?.length || 0) > 40
                             ? conversation.lastMessage.text.substring(0, 40) + '...'
                             : conversation.lastMessage.text
                           }

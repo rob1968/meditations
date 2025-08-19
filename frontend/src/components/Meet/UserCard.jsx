@@ -40,16 +40,16 @@ const UserCard = ({ user, currentUser, onConnect }) => {
       <div className="user-card-header">
         <div className="user-avatar">
           {user.profileImage ? (
-            <img src={user.profileImage} alt={user.username} />
+            <img src={user.profileImage} alt={user.username || 'Gebruiker'} />
           ) : (
             <div className="avatar-placeholder">
-              {user.username.charAt(0).toUpperCase()}
+              {user.username?.charAt(0)?.toUpperCase() || '?'}
             </div>
           )}
           <div className={`user-status status-${user.isOnline ? 'online' : 'offline'}`}></div>
         </div>
         
-        <h3 className="user-name">{user.username}</h3>
+        <h3 className="user-name">{user.username || t('unknownUser', 'Onbekende gebruiker')}</h3>
         <div className="user-location">
           📍 {getLocationDisplay()}
           {getDistanceDisplay() && ` • ${getDistanceDisplay()}`}

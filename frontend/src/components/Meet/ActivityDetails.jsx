@@ -23,7 +23,7 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
       
       const response = await fetch(`/api/activities/${activityId}`, {
         headers: {
-          'x-user-id': user?._id || '',
+          'x-user-id': user?._id || user?.id || '',
           'Content-Type': 'application/json'
         }
       });
@@ -54,7 +54,7 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user?._id || ''
+          'x-user-id': user?._id || user?.id || ''
         }
       });
 
@@ -97,7 +97,7 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user?._id || ''
+          'x-user-id': user?._id || user?.id || ''
         }
       });
 
@@ -159,7 +159,7 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
   // Check user status
   const isParticipant = activity.participants?.some(p => p.user?._id === user?._id || p.user === user?._id);
   const isOrganizer = activity.organizer?._id === user?._id || activity.organizer === user?._id;
-  const isFull = activity.participants?.filter(p => p.status === 'confirmed').length >= activity.maxParticipants;
+  const isFull = (activity.participants?.filter(p => p.status === 'confirmed')?.length || 0) >= activity.maxParticipants;
   const confirmedParticipants = activity.participants?.filter(p => p.status === 'confirmed') || [];
 
   // Format date and time
@@ -304,8 +304,8 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
               <div className="organizer-card">
                 {activity.organizer?.profileImage && (
                   <img 
-                    src={activity.organizer.profileImage} 
-                    alt={activity.organizer.username}
+                    src={activity.organizer?.profileImage} 
+                    alt={activity.organizer?.username || 'Organisator'}
                     className="organizer-avatar"
                   />
                 )}
@@ -318,7 +318,7 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
                   </span>
                   {activity.organizer?.trustScore && (
                     <span className="trust-score">
-                      ⭐ {activity.organizer.trustScore}/100
+                      ⭐ {activity.organizer?.trustScore}/100
                     </span>
                   )}
                 </div>
@@ -334,8 +334,8 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
                   <div key={index} className="participant-item">
                     {participant.user?.profileImage && (
                       <img 
-                        src={participant.user.profileImage} 
-                        alt={participant.user.username}
+                        src={participant.user?.profileImage} 
+                        alt={participant.user?.username || 'Deelnemer'}
                         className="participant-avatar"
                       />
                     )}

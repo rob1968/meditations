@@ -5,6 +5,29 @@ const ActivityCategory = require('../models/ActivityCategory');
 const User = require('../models/User');
 const Conversation = require('../models/Conversation');
 
+// Auto-status checker function
+const updateActivityStatuses = async () => {
+  try {
+    const activities = await Activity.find({
+      status: { $in: ['published', 'upcoming'] },
+      date: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Activities from last 24h to next...
+    });
+    
+    for (const activity of activities) {
+      await activity.updateStatus();
+    }
+    
+    console.log(`📅 Updated status for ${activities.length} activities`);
+  } catch (error) {
+    console.error('❌ Error updating activity statuses:', error);
+  }
+};
+
+// Run status update every 30 minutes
+setInterval(updateActivityStatuses, 30 * 60 * 1000);
+// Run once on startup
+setTimeout(updateActivityStatuses, 5000);
+
 // Middleware to check authentication
 const auth = async (req, res, next) => {
   try {
@@ -45,6 +68,17 @@ router.get('/categories', async (req, res) => {
   } catch (error) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+// Get recommended activities (MUST come before /:id route)
+router.get('/recommendations', auth, async (req, res) => {
+  try {
+    const recommendations = await req.user.getActivityRecommendations();
+    res.json(recommendations);
+  } catch (error) {
+    console.error('Error fetching recommendations:', error);
+    res.status(500).json({ error: 'Failed to fetch recommendations' });
   }
 });
 
@@ -127,9 +161,14 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Get single activity
+// Get single activity (MUST come after specific routes like /recommendations)
 router.get('/:id', auth, async (req, res) => {
   try {
+    // Validate that id is a valid MongoDB ObjectId
+    if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ error: 'Invalid activity ID format' });
+    }
+
     const activity = await Activity.findById(req.params.id)
       .populate('organizer', 'username profileImage bio trustScore isVerified')
       .populate('category')
@@ -166,6 +205,7 @@ router.post('/', auth, async (req, res) => {
       maxParticipants,
       privacy,
       ageRange,
+      genderPreference,
       language,
       tags,
       requiredInterests,
@@ -195,6 +235,7 @@ router.post('/', auth, async (req, res) => {
       maxParticipants: maxParticipants || 10,
       privacy: privacy || 'public',
       ageRange: ageRange || { min: 18, max: 99 },
+      genderPreference: genderPreference || 'any',
       language: language || req.user.preferredLanguage || 'nl',
       tags: tags || [],
       requiredInterests: requiredInterests || [],
@@ -268,7 +309,7 @@ router.put('/:id', auth, async (req, res) => {
     const allowedUpdates = [
       'title', 'description', 'location', 'date', 'startTime', 
       'duration', 'minParticipants', 'maxParticipants', 'privacy',
-      'ageRange', 'language', 'tags', 'requiredInterests', 'cost',
+      'ageRange', 'genderPreference', 'language', 'tags', 'requiredInterests', 'cost',
       'coverPhoto', 'photos'
     ];
     
@@ -298,7 +339,7 @@ router.post('/:id/join', auth, async (req, res) => {
     }
     
     // Check if user can join
-    const canJoinResult = req.user.canJoinActivity(activity);
+    const canJoinResult = await req.user.canJoinActivity(activity);
     if (!canJoinResult.canJoin) {
       return res.status(400).json({ error: canJoinResult.reason });
     }
@@ -336,6 +377,26 @@ router.post('/:id/leave', auth, async (req, res) => {
     if (activity.organizer.toString() === req.user._id.toString()) {
       return res.status(400).json({ error: 'Organizer cannot leave activity' });
     }
+
+    // Check 2-hour deadline for leaving activity
+    const now = new Date();
+    const activityDateTime = new Date(activity.date);
+    const [hours, minutes] = activity.startTime.split(':');
+    activityDateTime.setHours(parseInt(hours), parseInt(minutes));
+    
+    const hoursUntilActivity = (activityDateTime - now) / (1000 * 60 * 60);
+    
+    if (hoursUntilActivity <= 2 && hoursUntilActivity > 0) {
+      return res.status(400).json({ 
+        error: 'Je kunt je niet meer afmelden binnen 2 uur voor de start van de activiteit' 
+      });
+    }
+    
+    if (hoursUntilActivity <= 0) {
+      return res.status(400).json({ 
+        error: 'Je kunt je niet meer afmelden nadat de activiteit is begonnen' 
+      });
+    }
     
     const result = await activity.leave(req.user._id);
     
@@ -356,6 +417,36 @@ router.post('/:id/leave', auth, async (req, res) => {
   } catch (error) {
     console.error('Error leaving activity:', error);
     res.status(500).json({ error: 'Failed to leave activity' });
+  }
+});
+
+// Check participant requirements
+router.get('/:id/participant-check', auth, async (req, res) => {
+  try {
+    const activity = await Activity.findById(req.params.id);
+    
+    if (!activity) {
+      return res.status(404).json({ error: 'Activity not found' });
+    }
+    
+    // Check if user is organizer or participant
+    const isOrganizer = activity.organizer.toString() === req.user._id.toString();
+    const isParticipant = activity.participants.some(p => p.user.toString() === req.user._id.toString());
+    
+    if (!isOrganizer && !isParticipant) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    const participantCheck = activity.checkParticipantRequirement();
+    
+    res.json({
+      ...participantCheck,
+      isOrganizer,
+      canCancel: isOrganizer && activity.status !== 'cancelled'
+    });
+  } catch (error) {
+    console.error('Error checking participants:', error);
+    res.status(500).json({ error: 'Failed to check participants' });
   }
 });
 
@@ -433,16 +524,7 @@ router.get('/user/my-activities', auth, async (req, res) => {
   }
 });
 
-// Get recommended activities
-router.get('/user/recommendations', auth, async (req, res) => {
-  try {
-    const recommendations = await req.user.getActivityRecommendations();
-    res.json(recommendations);
-  } catch (error) {
-    console.error('Error fetching recommendations:', error);
-    res.status(500).json({ error: 'Failed to fetch recommendations' });
-  }
-});
+// Get recommended activities (moved up to avoid route conflict)
 
 // Rate activity (after completion)
 router.post('/:id/rate', auth, async (req, res) => {

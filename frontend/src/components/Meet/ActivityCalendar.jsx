@@ -16,67 +16,16 @@ const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelec
   useEffect(() => {
     console.log('📅 ActivityCalendar received activities:', activities?.length || 0);
     
-    // Use real activities if provided, otherwise fall back to mock data
+    // Use only real activities - no more mock data
     if (activities && activities.length > 0) {
       console.log('📅 Using real activities for calendar');
       setCalendarActivities(activities);
     } else {
-      console.log('📅 No real activities, using mock data');
-      const mockActivities = generateMockActivities();
-      setCalendarActivities(mockActivities);
+      console.log('📅 No activities, showing empty calendar');
+      setCalendarActivities([]);
     }
   }, [activities]);
 
-  // Generate mock activities for calendar demonstration
-  const generateMockActivities = () => {
-    const today = new Date();
-    const mockData = [];
-    
-    // Create activities for the next 30 days
-    for (let i = 0; i < 15; i++) {
-      const activityDate = new Date(today);
-      activityDate.setDate(today.getDate() + i);
-      
-      // Random number of activities per day (0-3)
-      const numActivities = Math.floor(Math.random() * 4);
-      
-      for (let j = 0; j < numActivities; j++) {
-        const categories = [
-          { _id: 'cat1', emoji: '☕', name: { nl: 'Koffie' } },
-          { _id: 'cat2', emoji: '🍽️', name: { nl: 'Dining' } },
-          { _id: 'cat3', emoji: '🌳', name: { nl: 'Wandelen' } },
-          { _id: 'cat4', emoji: '💪', name: { nl: 'Sport' } },
-          { _id: 'cat5', emoji: '🎨', name: { nl: 'Cultuur' } },
-          { _id: 'cat6', emoji: '🍺', name: { nl: 'Borrel' } }
-        ];
-        
-        const category = categories[Math.floor(Math.random() * categories.length)];
-        const startTimes = ['10:00', '14:00', '16:00', '19:00', '20:30'];
-        const locations = [
-          'Café Central', 'Vondelpark', 'Museum Quarter', 
-          'Jordaan District', 'Dam Square', 'Leidseplein'
-        ];
-        
-        mockData.push({
-          _id: `mock-cal-${i}-${j}`,
-          title: `${category.name.nl} meetup`,
-          category: category,
-          date: activityDate.toISOString(),
-          startTime: startTimes[Math.floor(Math.random() * startTimes.length)],
-          location: {
-            name: locations[Math.floor(Math.random() * locations.length)],
-            city: 'Amsterdam'
-          },
-          participants: Array.from({ length: 2 + Math.floor(Math.random() * 4) }, (_, k) => ({
-            user: { _id: `user-${k}`, username: `User${k}` },
-            status: 'confirmed'
-          }))
-        });
-      }
-    }
-    
-    return mockData;
-  };
 
   // Get the first day of the current month
   const getFirstDayOfMonth = (date) => {
@@ -263,7 +212,7 @@ const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelec
       >
         {/* Week day headers */}
         <div className="calendar-weekdays">
-          {weekDays.map(day => (
+          {weekDays?.map(day => (
             <div key={day} className="weekday-header mobile-calendar-header">
               {day}
             </div>
@@ -272,7 +221,7 @@ const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelec
 
         {/* Calendar days */}
         <div className={`calendar-days ${viewMode === 'week' ? 'week-view' : 'month-view'}`}>
-          {(viewMode === 'week' ? getWeekDays() : calendarDays).map((date, index) => {
+          {(viewMode === 'week' ? getWeekDays() : calendarDays)?.map((date, index) => {
             const dayActivities = getActivitiesForDate(date);
             const isCurrentMonthDay = viewMode === 'week' || isCurrentMonth(date);
             const isTodayDay = isToday(date);
@@ -293,7 +242,7 @@ const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelec
                   <div className="day-activities mobile-day-activities">
                     {viewMode === 'week' ? (
                       <div className="activity-preview">
-                        {dayActivities.slice(0, 2).map((activity, actIndex) => (
+                        {dayActivities?.slice(0, 2)?.map((activity, actIndex) => (
                           <div
                             key={activity._id}
                             className="activity-preview-item"
@@ -309,7 +258,7 @@ const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelec
                       </div>
                     ) : (
                       <>
-                        {dayActivities.slice(0, 2).map((activity, actIndex) => (
+                        {dayActivities?.slice(0, 2)?.map((activity, actIndex) => (
                           <div
                             key={activity._id}
                             className="activity-dot mobile-activity-dot"
@@ -365,7 +314,7 @@ const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelec
                 </div>
               ) : (
                 <div className="date-activities-list">
-                  {getActivitiesForDate(selectedDate).map(activity => (
+                  {getActivitiesForDate(selectedDate)?.map(activity => (
                     <div
                       key={activity._id}
                       className="calendar-activity-item mobile-activity-card"

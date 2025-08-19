@@ -550,11 +550,17 @@ UserSchema.methods.incrementOrganizedActivities = async function() {
   return this.save();
 };
 
-UserSchema.methods.canJoinActivity = function(activity) {
+UserSchema.methods.canJoinActivity = async function(activity) {
   // Check age restrictions
   const userAge = this.age || (this.birthDate ? Math.floor((Date.now() - new Date(this.birthDate)) / (365.25 * 24 * 60 * 60 * 1000)) : null);
   if (userAge && (userAge < activity.ageRange.min || userAge > activity.ageRange.max)) {
     return { canJoin: false, reason: 'Age restrictions not met' };
+  }
+  
+  // Check gender preferences
+  if (activity.genderPreference && activity.genderPreference !== 'any' && 
+      this.gender && this.gender !== activity.genderPreference) {
+    return { canJoin: false, reason: 'Gender preferences not met' };
   }
   
   // Check if already participating
@@ -566,6 +572,28 @@ UserSchema.methods.canJoinActivity = function(activity) {
   // Check privacy settings
   if (activity.privacy === 'invite_only' && !activity.invitedUsers.includes(this._id)) {
     return { canJoin: false, reason: 'Invitation required' };
+  }
+  
+  // Check same-day activity restriction
+  const Activity = mongoose.model('Activity');
+  const activityDate = new Date(activity.date);
+  const startOfDay = new Date(activityDate);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(activityDate);
+  endOfDay.setHours(23, 59, 59, 999);
+  
+  const sameDayActivity = await Activity.findOne({
+    date: {
+      $gte: startOfDay,
+      $lte: endOfDay
+    },
+    'participants.user': this._id,
+    status: { $nin: ['cancelled', 'rejected'] },
+    _id: { $ne: activity._id } // Exclude the current activity
+  });
+  
+  if (sameDayActivity) {
+    return { canJoin: false, reason: 'Je hebt al een activiteit op deze dag' };
   }
   
   return { canJoin: true };

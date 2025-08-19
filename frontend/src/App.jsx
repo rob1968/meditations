@@ -23,9 +23,12 @@ import CustomMusicUploader from './components/CustomMusicUploader';
 import WizardContainer from './components/WizardContainer';
 import ReviewStep from './components/ReviewStep';
 import Alert from './components/Alert';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
 import { getFullUrl, getAssetUrl, API_ENDPOINTS, getAuthHeaders } from './config/api';
 import { isPiBrowser } from './utils/piDetection';
 import piAuthService from './services/piAuth';
+import { loadMainTab, saveMainTab } from './utils/statePersistence';
 
 const App = () => {
   const [text, setText] = useState("");
@@ -91,7 +94,7 @@ const App = () => {
   
   // User authentication state
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('journal');
+  const [activeTab, setActiveTab] = useState(() => loadMainTab());
   
   // Save user to localStorage whenever user state changes
   useEffect(() => {
@@ -100,6 +103,12 @@ const App = () => {
       console.log('User data saved to localStorage:', user.username, 'profileImage:', user.profileImage);
     }
   }, [user]);
+
+  // Save activeTab to localStorage whenever it changes
+  useEffect(() => {
+    saveMainTab(activeTab);
+    console.log('📍 Saved main tab to localStorage:', activeTab);
+  }, [activeTab]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileSection, setProfileSection] = useState('profile');
   const [isPiEnvironment, setIsPiEnvironment] = useState(false);
@@ -873,7 +882,7 @@ const App = () => {
     }
     
     console.log('User logged in:', userData.authMethod || 'traditional', userData.username);
-    handleTabChange('journal'); // Start with journal instead of dashboard
+    // Don't force tab change - respect user's saved preference
   };
 
   const handleLogout = () => {
@@ -1525,7 +1534,7 @@ const App = () => {
       case 'inbox':
         return <Inbox user={user} onUnreadCountChange={setUnreadCount} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} headerUnreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('dashboard')} />;
       case 'profile':
-        return <ProfileContainer user={user} onLogout={handleLogout} onBackToCreate={() => handleTabChange('dashboard')} selectedSection={profileSection} onUserUpdate={setUser} />;
+        return <ProfileContainer user={user} onLogout={handleLogout} onBackToCreate={() => handleTabChange('dashboard')} selectedSection={profileSection} onUserUpdate={setUser} onSectionChange={setProfileSection} />;
       default:
         return (
           <div className="create-content">

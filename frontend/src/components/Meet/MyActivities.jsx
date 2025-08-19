@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import ActivityCard from './ActivityCard';
 import ConfirmDialog from '../ConfirmDialog';
 import Alert from '../Alert';
+import CreateActivity from './CreateActivity';
 
 const MyActivities = ({ user, onSelectActivity }) => {
   const { t } = useTranslation();
@@ -20,17 +21,33 @@ const MyActivities = ({ user, onSelectActivity }) => {
   const [cancelReason, setCancelReason] = useState('');
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [editingActivity, setEditingActivity] = useState(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     loadMyActivities();
+    loadCategories();
   }, [user]);
+  
+  const loadCategories = async () => {
+    try {
+      const response = await fetch('/api/activities/categories');
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data);
+      }
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  };
 
   const loadMyActivities = async () => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/activities/user/my-activities', {
         headers: {
-          'x-user-id': user?.id || ''
+          'x-user-id': user?._id || user?.id || ''
         }
       });
 
@@ -62,7 +79,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user?.id || user?._id || ''
+          'x-user-id': user?._id || user?.id || ''
         }
       });
 
@@ -96,7 +113,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user?.id || user?._id || ''
+          'x-user-id': user?._id || user?.id || ''
         },
         body: JSON.stringify({ reason: cancelReason })
       });
@@ -107,7 +124,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
           ...prev,
           organizing: prev.organizing.map(a => 
             a._id === activityId 
-              ? { ...a, status: 'cancelled', cancellationReason: reason }
+              ? { ...a, status: 'cancelled', cancellationReason: cancelReason }
               : a
           )
         }));
@@ -123,26 +140,63 @@ const MyActivities = ({ user, onSelectActivity }) => {
     }
   };
 
+  const handleEditActivity = (activity) => {
+    setEditingActivity(activity);
+    setShowEditDialog(true);
+  };
+
+  const handleActivityUpdated = (updatedActivity) => {
+    // Update the activity in the organizing list
+    setActivities(prev => ({
+      ...prev,
+      organizing: prev.organizing.map(a => 
+        a._id === updatedActivity._id ? updatedActivity : a
+      )
+    }));
+    
+    setShowEditDialog(false);
+    setEditingActivity(null);
+    showAlertMessage(t('activityUpdated', 'Activiteit is bijgewerkt'));
+    
+    // Refresh the list to make sure we have the latest data
+    loadMyActivities();
+  };
+
   const tabs = [
     { 
       id: 'participating', 
       label: t('participating', 'Deelnemend'), 
-      count: activities.participating.length,
+      count: activities.participating?.length || 0,
       icon: '🤝'
     },
     { 
       id: 'organizing', 
       label: t('organizing', 'Organiserend'), 
-      count: activities.organizing.length,
+      count: activities.organizing?.length || 0,
       icon: '👑'
     },
     { 
       id: 'past', 
       label: t('pastActivities', 'Vorige'), 
-      count: activities.past.length,
+      count: activities.past?.length || 0,
       icon: '📜'
     }
   ];
+
+  const canLeaveActivity = (activity) => {
+    const now = new Date();
+    const activityDateTime = new Date(activity.date);
+    
+    if (activity.startTime) {
+      const [hours, minutes] = activity.startTime.split(':');
+      activityDateTime.setHours(parseInt(hours), parseInt(minutes));
+    }
+    
+    const hoursUntilActivity = (activityDateTime - now) / (1000 * 60 * 60);
+    
+    // Can leave if more than 2 hours before start
+    return hoursUntilActivity > 2;
+  };
 
   const renderActivityActions = (activity, isOrganizing) => {
     if (activity.status === 'cancelled') {
@@ -164,8 +218,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
             className="edit-activity-button secondary-button mobile-touch-target"
             onClick={(e) => {
               e.stopPropagation();
-              // TODO: Implement edit functionality
-              showAlertMessage(t('editFeatureComingSoon', 'Bewerken komt binnenkort beschikbaar'));
+              handleEditActivity(activity);
             }}
           >
             <span className="button-icon">✏️</span>
@@ -185,18 +238,29 @@ const MyActivities = ({ user, onSelectActivity }) => {
         </div>
       );
     } else {
+      const canLeave = canLeaveActivity(activity);
+      
       return (
         <div className="activity-participant-actions">
-          <button 
-            className="leave-activity-button secondary-button mobile-touch-target"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLeaveActivity(activity._id);
-            }}
-          >
-            <span className="button-icon">👋</span>
-            <span className="button-text">{t('leave', 'Afmelden')}</span>
-          </button>
+          {canLeave ? (
+            <button 
+              className="leave-activity-button secondary-button mobile-touch-target"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLeaveActivity(activity._id);
+              }}
+            >
+              <span className="button-icon">👋</span>
+              <span className="button-text">{t('leave', 'Afmelden')}</span>
+            </button>
+          ) : (
+            <div className="leave-deadline-passed">
+              <span className="deadline-icon">⏰</span>
+              <span className="deadline-text">
+                {t('leaveDeadlinePassed', 'Afmelden niet meer mogelijk (binnen 2 uur)')}
+              </span>
+            </div>
+          )}
         </div>
       );
     }
@@ -349,6 +413,33 @@ const MyActivities = ({ user, onSelectActivity }) => {
         message={alertMessage}
         type="info"
       />
+
+      {/* Edit Activity Dialog */}
+      {showEditDialog && editingActivity && (
+        <div className="edit-activity-modal">
+          <div className="modal-overlay" onClick={() => setShowEditDialog(false)}></div>
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>{t('editActivity', 'Activiteit Bewerken')}</h2>
+              <button 
+                className="modal-close"
+                onClick={() => setShowEditDialog(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              <CreateActivity 
+                user={user}
+                categories={categories}
+                editingActivity={editingActivity}
+                onActivityCreated={handleActivityUpdated}
+                onCancel={() => setShowEditDialog(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

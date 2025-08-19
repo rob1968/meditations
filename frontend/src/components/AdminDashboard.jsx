@@ -2,19 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { getFullUrl, getAssetUrl, API_ENDPOINTS, API_BASE_URL } from '../config/api';
+import { loadAdminTab, saveAdminTab } from '../utils/statePersistence';
 import PageHeader from './PageHeader';
 
 const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxClick, onCreateClick }) => {
   const [pendingMeditations, setPendingMeditations] = useState([]);
   const [approvedMeditations, setApprovedMeditations] = useState([]);
   const [rejectedMeditations, setRejectedMeditations] = useState([]);
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState(() => loadAdminTab());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedMeditation, setSelectedMeditation] = useState(null);
   const [moderationNote, setModerationNote] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { t } = useTranslation();
+
+  // Save activeTab to localStorage whenever it changes
+  useEffect(() => {
+    saveAdminTab(activeTab);
+    console.log('📍 Saved Admin tab to localStorage:', activeTab);
+  }, [activeTab]);
 
   useEffect(() => {
     if (user && user.username === 'rob') {

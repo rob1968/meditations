@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import socketService from '../../services/socketService';
+import { loadMeetTab, saveMeetTab } from '../../utils/statePersistence';
 import ActivityList from './ActivityList';
 import MyActivities from './MyActivities';
 import CreateActivity from './CreateActivity';
 import ChatList from './ChatList';
-import ActivityCalendar from './ActivityCalendar';
 import SafetyModal from './SafetyModal';
 import UserVerification from './UserVerification';
 import AdminActivities from './AdminActivities';
+import PageHeader from '../PageHeader';
 
-const MeetHub = ({ user }) => {
+const MeetHub = ({ user, onNavigate }) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('discover');
+  const [activeTab, setActiveTab] = useState(() => loadMeetTab());
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [categories, setCategories] = useState([]);
   const [selectedActivity, setSelectedActivity] = useState(null);
@@ -20,7 +21,6 @@ const MeetHub = ({ user }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showSafetyModal, setShowSafetyModal] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [approvedActivities, setApprovedActivities] = useState([]);
 
   useEffect(() => {
     // Initialize socket connection when MeetHub loads
@@ -34,6 +34,12 @@ const MeetHub = ({ user }) => {
     };
   }, [user?._id]);
 
+  // Save activeTab to localStorage whenever it changes
+  useEffect(() => {
+    saveMeetTab(activeTab);
+    console.log('📍 Saved Meet tab to localStorage:', activeTab);
+  }, [activeTab]);
+
   useEffect(() => {
     // Load activity categories and approved activities
     const loadData = async () => {
@@ -42,43 +48,32 @@ const MeetHub = ({ user }) => {
       try {
         console.log('🔄 Loading categories and activities...');
         
-        // Load categories
-        const categoriesResponse = await fetch('/api/activities/categories');
-        console.log('📡 Categories API status:', categoriesResponse.status);
-        
-        if (categoriesResponse.ok) {
-          const categoriesData = await categoriesResponse.json();
-          console.log('📦 Categories loaded:', categoriesData?.length || 0);
-          setCategories(categoriesData || []);
-        } else {
-          console.error('❌ Categories API failed:', categoriesResponse.status);
-          // Set fallback category
-          setCategories([
-            { _id: 'fallback', name: { nl: 'Algemeen' }, emoji: '✨', color: '#6B46C1' }
-          ]);
+        // Load categories with better error handling
+        try {
+          const categoriesResponse = await fetch('/api/activities/categories');
+          console.log('📡 Categories API status:', categoriesResponse.status);
+          
+          if (categoriesResponse.ok) {
+            const categoriesData = await categoriesResponse.json();
+            console.log('📦 Categories loaded:', categoriesData?.length || 0, categoriesData);
+            
+            if (Array.isArray(categoriesData) && categoriesData.length > 0) {
+              setCategories(categoriesData);
+              console.log('✅ Categories successfully set:', categoriesData.length);
+            } else {
+              console.warn('⚠️ Categories response is empty or not an array');
+              setCategories([]);
+            }
+          } else {
+            const errorText = await categoriesResponse.text();
+            console.error('❌ Categories API failed:', categoriesResponse.status, errorText);
+            setCategories([]);
+          }
+        } catch (catError) {
+          console.error('💥 Categories fetch error:', catError);
+          setCategories([]);
         }
 
-        // Load approved activities for calendar
-        if (user?._id || user?.id) {
-          console.log('🔄 Loading approved activities for calendar...');
-          const activitiesResponse = await fetch('/api/activities?status=approved', {
-            headers: {
-              'x-user-id': user._id || user.id,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          console.log('📡 Activities API status:', activitiesResponse.status);
-          
-          if (activitiesResponse.ok) {
-            const activitiesData = await activitiesResponse.json();
-            console.log('📦 Approved activities loaded:', activitiesData?.activities?.length || 0);
-            setApprovedActivities(activitiesData?.activities || []);
-          } else {
-            console.error('Failed to load activities:', activitiesResponse.status);
-            setApprovedActivities([]);
-          }
-        }
       } catch (error) {
         console.error('❌ Data loading error:', error);
         setCategories([
@@ -116,12 +111,6 @@ const MeetHub = ({ user }) => {
       id: 'discover', 
       icon: '🔍', 
       label: t('discoverActivities', 'Ontdekken'),
-      badge: null
-    },
-    { 
-      id: 'calendar', 
-      icon: '📅', 
-      label: t('calendar', 'Kalender'),
       badge: null
     },
     { 
@@ -194,20 +183,6 @@ const MeetHub = ({ user }) => {
             }}
           />
         );
-      case 'calendar':
-        return (
-          <ActivityCalendar 
-            user={user}
-            activities={approvedActivities}
-            onSelectActivity={(activity) => {
-              setSelectedActivity(activity);
-              setActiveTab('chats');
-            }}
-            onDateSelect={(date) => {
-              console.log('📅 Selected date:', date);
-            }}
-          />
-        );
       case 'my-activities':
         return (
           <MyActivities 
@@ -261,14 +236,23 @@ const MeetHub = ({ user }) => {
     }
   };
 
+  const handleProfileClick = (section) => {
+    console.log('Profile section clicked:', section);
+    if (onNavigate) {
+      onNavigate(section);
+    }
+  };
+
   return (
     <div className="meet-hub">
-      <div className="meet-header">
-        <h1 className="meet-title">{t('meet', 'Ontmoeten')}</h1>
-        <p className="meet-subtitle">
-          {t('meetSubtitle', 'Doe mee aan groepsactiviteiten en ontmoet nieuwe mensen')}
-        </p>
-        
+      <PageHeader 
+        user={user}
+        title={t('meet', 'Ontmoeten')}
+        subtitle={t('meetSubtitle', 'Doe mee aan groepsactiviteiten en ontmoet nieuwe mensen')}
+        unreadCount={unreadMessages}
+        onProfileClick={handleProfileClick}
+      />
+      <div className="meet-header">        
         <div className="meet-header-actions">
           {true && (
             <button 

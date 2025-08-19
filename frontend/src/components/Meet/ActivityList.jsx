@@ -22,6 +22,7 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
   const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
+    // Always load regular activities for the "all" tab count
     loadActivities();
     if (activeView === 'recommended') {
       loadRecommendations();
@@ -29,7 +30,6 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
   }, [filters, page, activeView]);
 
   const loadActivities = async () => {
-    if (activeView === 'recommended') return; // Don't load regular activities in recommended view
     
     setIsLoading(true);
     try {
@@ -67,8 +67,10 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
         
         if (page === 1) {
           setActivities(data.activities || []);
+          setFilteredActivities(data.activities || []);
         } else {
           setActivities(prev => [...prev, ...(data.activities || [])]);
+          setFilteredActivities(prev => [...prev, ...(data.activities || [])]);
         }
         
         setHasMore(data.pagination?.page < data.pagination?.pages);
@@ -76,9 +78,12 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
         console.error('❌ Failed to load activities:', response.status);
         // Fallback to empty activities instead of mock data
         setActivities([]);
+        setFilteredActivities([]);
       }
     } catch (error) {
       console.error('❌ Error loading activities:', error);
+      setActivities([]);
+      setFilteredActivities([]);
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +150,7 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user?._id || ''
+          'x-user-id': user?._id || user?.id || ''
         }
       });
 
@@ -181,10 +186,21 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
     }
   };
 
-  const currentActivities = activeView === 'recommended' ? recommendedActivities : filteredActivities;
+  const currentActivities = activeView === 'recommended' ? (recommendedActivities || []) : (filteredActivities || []);
+  
+  // Debug logging for activity counts
+  console.log('🔍 ActivityList Debug:', {
+    activeView,
+    activitiesCount: activities?.length || 0,
+    filteredActivitiesCount: filteredActivities?.length || 0, 
+    recommendedActivitiesCount: recommendedActivities?.length || 0,
+    currentActivitiesCount: currentActivities?.length || 0
+  });
 
   // Group activities by date
   const groupActivitiesByDate = (activities) => {
+    if (!activities || !Array.isArray(activities)) return {};
+    
     const grouped = {};
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -263,7 +279,7 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
           >
             <span className="view-tab-icon">🗓️</span>
             <span className="view-tab-label">{t('allActivities', 'Alle activiteiten')}</span>
-            <span className="view-tab-count">({activities.length})</span>
+            <span className="view-tab-count">({activities?.length || 0})</span>
           </button>
           
           <button
@@ -272,7 +288,7 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
           >
             <span className="view-tab-icon">✨</span>
             <span className="view-tab-label">{t('recommended', 'Aanbevolen')}</span>
-            <span className="view-tab-count">({recommendedActivities.length})</span>
+            <span className="view-tab-count">({recommendedActivities?.length || 0})</span>
           </button>
         </div>
       </div>

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import LocationAutocomplete from './LocationAutocomplete';
 
-const CreateActivity = ({ user, categories, onActivityCreated }) => {
+const CreateActivity = ({ user, categories, onActivityCreated, editingActivity, onCancel }) => {
   console.log('🏗️ CreateActivity component loaded');
   console.log('👤 User:', user?.username, 'Verified:', user?.isVerified);
   console.log('📦 Categories:', categories?.length || 0);
@@ -30,6 +30,11 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
       }
     },
     privacy: 'public',
+    ageRange: {
+      min: 18,
+      max: 99
+    },
+    genderPreference: 'any',
     language: user?.preferredLanguage || 'nl',
     tags: [],
     cost: {
@@ -40,6 +45,46 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
   });
   const [currentTag, setCurrentTag] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditing = !!editingActivity;
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editingActivity) {
+      const activity = editingActivity;
+      setFormData({
+        title: activity.title || '',
+        description: activity.description || '',
+        category: activity.category?._id || activity.category || '',
+        date: activity.date ? new Date(activity.date).toISOString().split('T')[0] : '',
+        startTime: activity.startTime || '',
+        duration: activity.duration || 120,
+        minParticipants: activity.minParticipants || 3,
+        maxParticipants: activity.maxParticipants || 8,
+        location: activity.location || {
+          name: '',
+          address: '',
+          city: user?.location?.city || '',
+          coordinates: {
+            type: 'Point',
+            coordinates: [
+              user?.location?.coordinates?.longitude || 4.9041,
+              user?.location?.coordinates?.latitude || 52.3676
+            ]
+          }
+        },
+        privacy: activity.privacy || 'public',
+        ageRange: activity.ageRange || { min: 18, max: 99 },
+        genderPreference: activity.genderPreference || 'any',
+        language: activity.language || user?.preferredLanguage || 'nl',
+        tags: activity.tags || [],
+        cost: activity.cost || {
+          amount: 0,
+          description: 'Ieder betaalt zelf',
+          splitMethod: 'pay_own'
+        }
+      });
+    }
+  }, [editingActivity, user]);
 
   const handleInputChange = (field, value) => {
     if (field.includes('.')) {
@@ -81,33 +126,42 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
     setIsSubmitting(true);
     
     const userId = user?.id || user?._id || '';
-    console.log('🔧 Creating activity with user ID:', userId);
-    console.log('🔧 User object:', user);
+    const url = isEditing ? `/api/activities/${editingActivity._id}` : '/api/activities';
+    const method = isEditing ? 'PUT' : 'POST';
+    
+    console.log(`🔧 ${isEditing ? 'Updating' : 'Creating'} activity with user ID:`, userId);
     console.log('🔧 Form data being sent:', JSON.stringify(formData, null, 2));
-    console.log('🔧 Location coordinates:', formData.location?.coordinates);
 
     try {
-      const response = await fetch('/api/activities', {
-        method: 'POST',
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user?.id || user?._id || ''
+          'x-user-id': user?._id || user?.id || ''
         },
         body: JSON.stringify(formData)
       });
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ Activity created successfully:', result);
-        onActivityCreated(result.activity);
+        console.log(`✅ Activity ${isEditing ? 'updated' : 'created'} successfully:`, result);
+        onActivityCreated(result.activity || result);
       } else {
-        const error = await response.json();
-        console.error('❌ Failed to create activity:', error);
-        console.log('Error message:', error.error || 'Kon activiteit niet aanmaken');
+        let error = 'Unknown error';
+        try {
+          const errorData = await response.json();
+          error = errorData;
+          console.error(`❌ Failed to ${isEditing ? 'update' : 'create'} activity:`, errorData);
+        } catch (parseError) {
+          const errorText = await response.text();
+          console.error(`❌ Failed to ${isEditing ? 'update' : 'create'} activity (raw):`, response.status, errorText);
+          error = { error: errorText || `HTTP ${response.status}` };
+        }
+        alert(`Kon activiteit niet ${isEditing ? 'bijwerken' : 'aanmaken'}: ${error.error || JSON.stringify(error)}`);
       }
     } catch (error) {
-      console.error('❌ Error creating activity:', error);
-      console.log('Error message: Er ging iets mis bij het aanmaken');
+      console.error(`❌ Error ${isEditing ? 'updating' : 'creating'} activity:`, error);
+      alert(`Er ging iets mis bij het ${isEditing ? 'bijwerken' : 'aanmaken'}: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -126,9 +180,14 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
         🔧 DEBUG: CreateActivity component is rendering! User: {user?.username}
       </div>
       <div className="create-activity-header">
-        <h2 className="create-activity-title">{t('createNewActivity', 'Nieuwe Activiteit')}</h2>
+        <h2 className="create-activity-title">
+          {isEditing ? t('editActivity', 'Activiteit Bewerken') : t('createNewActivity', 'Nieuwe Activiteit')}
+        </h2>
         <p className="create-activity-subtitle">
-          {t('createActivityDesc', 'Organiseer een activiteit en ontmoet nieuwe mensen!')}
+          {isEditing 
+            ? t('editActivityDesc', 'Pas je activiteit aan en beheer de details') 
+            : t('createActivityDesc', 'Organiseer een activiteit en ontmoet nieuwe mensen!')
+          }
         </p>
       </div>
 
@@ -208,6 +267,9 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
                 className="form-input"
                 required
               />
+              <div className="form-help-text">
+                {t('sameDayRestrictionHelp', 'Let op: gebruikers kunnen slechts aan één activiteit per dag deelnemen')}
+              </div>
             </div>
 
             <div className="form-group">
@@ -335,6 +397,70 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
           </div>
         </div>
 
+        {/* Age Range */}
+        <div className="form-section">
+          <h3 className="section-title">{t('ageRange', 'Leeftijdsrange')}</h3>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">
+                <span className="label-icon">👶</span>
+                {t('minimumAge', 'Minimumleeftijd')}
+              </label>
+              <select
+                value={formData.ageRange.min}
+                onChange={(e) => handleInputChange('ageRange.min', parseInt(e.target.value))}
+                className="form-select"
+              >
+                {[13, 16, 18, 21, 25, 30, 35, 40, 45, 50, 55, 60, 65].map(age => (
+                  <option key={age} value={age}>{age}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                <span className="label-icon">👴</span>
+                {t('maximumAge', 'Maximumleeftijd')}
+              </label>
+              <select
+                value={formData.ageRange.max}
+                onChange={(e) => handleInputChange('ageRange.max', parseInt(e.target.value))}
+                className="form-select"
+              >
+                {[25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 99].map(age => (
+                  <option key={age} value={age}>{age === 99 ? '99+' : age}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Gender Preference */}
+        <div className="form-section">
+          <h3 className="section-title">{t('genderPreference', 'Geslachtsvoorkeur')}</h3>
+          
+          <div className="form-group">
+            <label className="form-label">
+              <span className="label-icon">⚧️</span>
+              {t('genderPreferenceDesc', 'Wie kan deelnemen aan deze activiteit?')}
+            </label>
+            <select
+              value={formData.genderPreference}
+              onChange={(e) => handleInputChange('genderPreference', e.target.value)}
+              className="form-select"
+            >
+              <option value="any">{t('anyGender', 'Iedereen welkom')}</option>
+              <option value="male">{t('maleOnly', 'Alleen mannen')}</option>
+              <option value="female">{t('femaleOnly', 'Alleen vrouwen')}</option>
+              <option value="other">{t('otherOnly', 'Non-binair/anders')}</option>
+            </select>
+            <div className="form-help-text">
+              {t('genderHelp', 'Kies "Iedereen welkom" voor gemengde activiteiten')}
+            </div>
+          </div>
+        </div>
+
         {/* Tags */}
         <div className="form-section">
           <h3 className="section-title">{t('tags', 'Tags')}</h3>
@@ -363,7 +489,7 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
             </div>
           </div>
 
-          {formData.tags.length > 0 && (
+          {(formData.tags?.length || 0) > 0 && (
             <div className="selected-tags">
               {formData.tags.map(tag => (
                 <span key={tag} className="selected-tag">
@@ -458,6 +584,17 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
         </div>
 
         <div className="form-footer">
+          {isEditing && onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="cancel-button secondary-button mobile-touch-target"
+            >
+              <span className="button-icon">❌</span>
+              <span className="button-text">{t('cancel', 'Annuleren')}</span>
+            </button>
+          )}
+          
           <button
             type="submit"
             disabled={isSubmitting}
@@ -466,12 +603,16 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
             {isSubmitting ? (
               <>
                 <span className="button-icon">⏳</span>
-                <span className="button-text">{t('creating', 'Aanmaken...')}</span>
+                <span className="button-text">
+                  {isEditing ? t('updating', 'Bijwerken...') : t('creating', 'Aanmaken...')}
+                </span>
               </>
             ) : (
               <>
-                <span className="button-icon">✨</span>
-                <span className="button-text">{t('createActivity', 'Activiteit Aanmaken')}</span>
+                <span className="button-icon">{isEditing ? '💾' : '✨'}</span>
+                <span className="button-text">
+                  {isEditing ? t('updateActivity', 'Activiteit Bijwerken') : t('createActivity', 'Activiteit Aanmaken')}
+                </span>
               </>
             )}
           </button>
