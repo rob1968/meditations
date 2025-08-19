@@ -3,16 +3,41 @@
  * Expert Pi SDK Implementation - NO BACKEND CREATE CALLS
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getFullUrl } from '../config/api';
+import { getFullUrl, API_ENDPOINTS } from '../config/api';
 import { initializePiSDK, isPiSDKAvailable, waitForPiSDK, authenticateWithPi, isPiBrowser } from '../utils/piDetection';
+import { detectUserCountry, isPiNetworkAvailable } from '../services/countryService';
 
 const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [error, setError] = useState(null);
+  const [countryRestricted, setCountryRestricted] = useState(false);
+  const [userCountry, setUserCountry] = useState(null);
+
+  // Check Pi Network availability for user's country
+  useEffect(() => {
+    const checkCountryRestrictions = async () => {
+      try {
+        const country = await detectUserCountry();
+        setUserCountry(country);
+        const piAvailable = isPiNetworkAvailable(country);
+        setCountryRestricted(!piAvailable);
+        
+        if (!piAvailable) {
+          setError(t('piNetworkNotAvailable', 'Pi Network payments are not available in your country'));
+        }
+      } catch (err) {
+        console.warn('Country detection failed:', err);
+        // Assume Pi Network is available if detection fails
+        setCountryRestricted(false);
+      }
+    };
+
+    checkCountryRestrictions();
+  }, [t]);
 
   // Credit packages
   const creditPackages = [
@@ -96,7 +121,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
           setPaymentStatus(t('approvingPayment', 'Approving payment with Pi Network...'));
           
           try {
-            const response = await fetch(getFullUrl('/api/pi-payments/approve'), {
+            const response = await fetch(getFullUrl(API_ENDPOINTS.PI_PAYMENTS_APPROVE), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId })
@@ -119,7 +144,7 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
           setPaymentStatus(t('completingPayment', 'Completing payment...'));
           
           try {
-            const response = await fetch(getFullUrl('/api/pi-payments/complete'), {
+            const response = await fetch(getFullUrl(API_ENDPOINTS.PI_PAYMENTS_COMPLETE), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -216,8 +241,24 @@ const PiPaymentNew = ({ user, onPaymentComplete, onClose }) => {
           </div>
         )}
 
+        {/* Country Restriction Warning */}
+        {countryRestricted && (
+          <div style={{
+            padding: '16px', backgroundColor: '#FFF3E0',
+            border: '1px solid #FF9800', borderRadius: '8px',
+            marginBottom: '16px', textAlign: 'center'
+          }}>
+            <h3 style={{ margin: '0 0 8px 0', color: '#FF9800' }}>
+              {t('paymentNotAvailable', 'Payment Not Available')}
+            </h3>
+            <p style={{ margin: 0, color: '#666' }}>
+              {t('piNetworkRestricted', `Pi Network payments are currently not available in your region (${userCountry}). Please try alternative payment methods or contact support for assistance.`)}
+            </p>
+          </div>
+        )}
+
         {/* Credit Packages */}
-        {!loading && (
+        {!loading && !countryRestricted && (
           <div>
             <p style={{ textAlign: 'center', marginBottom: '20px', color: '#666' }}>
               {t('selectTokensPackage', 'Select tokens package (NEW Pi SDK implementation):')}

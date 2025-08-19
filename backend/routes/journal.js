@@ -1305,7 +1305,7 @@ router.post('/:entryId/generate-audio', auth, async (req, res) => {
         `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
         {
           text: journalText,
-          model_id: "eleven_multilingual_v2",
+          model_id: "eleven_multilingual_v2_5",
           voice_settings: {
             stability: 0.65,
             similarity_boost: 0.2,

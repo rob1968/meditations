@@ -63,23 +63,15 @@ const SimpleCalendar = ({
            currentYear === today.getFullYear();
   };
 
-  // Format month and year
+  // Format month and year using proper internationalization
   const formatMonthYear = () => {
-    const monthNames = [
-      t('january', 'Januari'),
-      t('february', 'Februari'),
-      t('march', 'Maart'),
-      t('april', 'April'),
-      t('may', 'Mei'),
-      t('june', 'Juni'),
-      t('july', 'Juli'),
-      t('august', 'Augustus'),
-      t('september', 'September'),
-      t('october', 'Oktober'),
-      t('november', 'November'),
-      t('december', 'December')
-    ];
-    return `${monthNames[currentMonth]} ${currentYear}`;
+    const date = new Date(currentYear, currentMonth);
+    // Use browser's built-in localization for month names
+    const formatter = new Intl.DateTimeFormat(navigator.language || 'en', { 
+      month: 'long',
+      year: 'numeric' 
+    });
+    return formatter.format(date);
   };
 
   const calendarDays = generateCalendarDays();
@@ -110,7 +102,15 @@ const SimpleCalendar = ({
 
       {/* Weekday Headers */}
       <div className="simple-weekdays">
-        {['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'].map((day, index) => (
+        {[
+          t('sundayShort', 'Zo'),
+          t('mondayShort', 'Ma'), 
+          t('tuesdayShort', 'Di'),
+          t('wednesdayShort', 'Wo'),
+          t('thursdayShort', 'Do'),
+          t('fridayShort', 'Vr'),
+          t('saturdayShort', 'Za')
+        ].map((day, index) => (
           <div key={index} className="simple-weekday">
             {day}
           </div>

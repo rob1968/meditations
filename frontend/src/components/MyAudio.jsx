@@ -252,8 +252,8 @@ const MyAudioComponent = ({ user, userCredits, isGenerating, onCreditsUpdate, on
       const audioFile = meditation.audioFiles[0];
       if (audioFile) {
         try {
-          // First try to fetch the audio file
-          const audioUrl = getFullUrl(API_ENDPOINTS.MEDITATION_AUDIO(audioFile.filename));
+          // Use assets URL for direct access (same as audio playback)
+          const audioUrl = getAssetUrl(`/assets/meditations/${audioFile.filename}`);
           console.log('Fetching audio from:', audioUrl);
           
           const audioResponse = await fetch(audioUrl);
@@ -266,9 +266,9 @@ const MyAudioComponent = ({ user, userCredits, isGenerating, onCreditsUpdate, on
           formData.append('audio', audioFileToUpload);
         } catch (audioError) {
           console.error('Error fetching audio file:', audioError);
-          // Try alternative path
-          const altAudioUrl = `${window.location.origin}/assets/meditations/${audioFile.filename}`;
-          console.log('Trying alternative audio URL:', altAudioUrl);
+          // Try API endpoint as fallback
+          const altAudioUrl = getFullUrl(API_ENDPOINTS.MEDITATION_AUDIO(audioFile.filename));
+          console.log('Trying API endpoint URL:', altAudioUrl);
           const audioResponse = await fetch(altAudioUrl);
           const audioBlob = await audioResponse.blob();
           const audioFileToUpload = new File([audioBlob], audioFile.filename, { type: 'audio/mpeg' });
@@ -766,7 +766,7 @@ const MyAudioComponent = ({ user, userCredits, isGenerating, onCreditsUpdate, on
                   }}
                 >
                   <source 
-                    src={getAssetUrl(API_ENDPOINTS.MEDITATION_AUDIO(meditation.audioFiles[0].filename))} 
+                    src={getAssetUrl(`/assets/meditations/${meditation.audioFiles[0].filename}`)} 
                     type="audio/mpeg" 
                   />
                   {t('audioNotSupported', 'Your browser does not support the audio element.')}

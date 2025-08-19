@@ -50,7 +50,7 @@ const ChatWindow = ({ conversation, currentUser, onBack }) => {
         `${API_BASE_URL}/meet/conversations/${conversation._id}/messages?page=${page}&limit=50`,
         {
           headers: {
-            'user-id': currentUser._id
+            'x-user-id': currentUser._id
           }
         }
       );

@@ -77,7 +77,7 @@ const SafetyModal = ({ isOpen, onClose, user, activity }) => {
           <h2 className="safety-modal-title">
             🛡️ {t('safetyCenter', 'Veiligheidscentrum')}
           </h2>
-          <button className="safety-modal-close" onClick={onClose}>
+          <button className="safety-modal-close mobile-touch-target" onClick={onClose}>
             ✕
           </button>
         </div>
@@ -159,14 +159,14 @@ const SafetyModal = ({ isOpen, onClose, user, activity }) => {
               <div className="report-buttons">
                 <button 
                   type="button" 
-                  className="cancel-button"
+                  className="cancel-button mobile-touch-target"
                   onClick={onClose}
                 >
                   {t('cancel', 'Annuleren')}
                 </button>
                 <button 
                   type="submit" 
-                  className="submit-report-button"
+                  className="submit-report-button mobile-touch-target"
                   disabled={isSubmitting || !reportType || !reportDescription.trim()}
                 >
                   {isSubmitting ? (

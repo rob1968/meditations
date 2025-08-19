@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Audio URL</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #1a1a1a; color: white; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #444; }
+        code { background: #333; padding: 2px 5px; }
+        audio { width: 100%; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Audio URL Debug</h1>
+    <div id="result"></div>
+    
+    <script>
+        // Exact same logic as React app
+        const getApiUrl = () => {
+            if (process && process.env && process.env.REACT_APP_API_URL) {
+                return process.env.REACT_APP_API_URL;
+            }
+            return window.location.protocol + '//' + window.location.host;
+        };
+        
+        const API_BASE_URL = getApiUrl();
+        
+        const API_ENDPOINTS = {
+            MEDITATION_AUDIO: (filename) => '/api/meditation/audio/' + filename
+        };
+        
+        const getAssetUrl = (assetPath) => {
+            return API_BASE_URL + assetPath;
+        };
+        
+        // Test meditation file
+        const filename = 'meditation_nl_1755548492843_2b01f5c8.mp3';
+        const endpoint = API_ENDPOINTS.MEDITATION_AUDIO(filename);
+        const fullUrl = getAssetUrl(endpoint);
+        
+        document.getElementById('result').innerHTML = `
+            <div class="debug-section">
+                <h2>URL Construction</h2>
+                <p><strong>Protocol:</strong> <code>${window.location.protocol}</code></p>
+                <p><strong>Host:</strong> <code>${window.location.host}</code></p>
+                <p><strong>API_BASE_URL:</strong> <code>${API_BASE_URL}</code></p>
+                <p><strong>Endpoint:</strong> <code>${endpoint}</code></p>
+                <p><strong>Full URL:</strong> <code>${fullUrl}</code></p>
+            </div>
+            
+            <div class="debug-section">
+                <h2>Audio Element Test</h2>
+                <audio id="testAudio" controls>
+                    <source src="${fullUrl}" type="audio/mpeg">
+                </audio>
+                <div id="audioStatus">Loading...</div>
+            </div>
+            
+            <div class="debug-section">
+                <h2>Direct Links</h2>
+                <p><a href="${fullUrl}" target="_blank">Open audio in new tab</a></p>
+                <p><a href="/api/meditation/audio/${filename}" target="_blank">Relative URL test</a></p>
+            </div>
+        `;
+        
+        // Monitor audio events
+        const audio = document.getElementById('testAudio');
+        const status = document.getElementById('audioStatus');
+        
+        audio.addEventListener('loadedmetadata', () => {
+            status.innerHTML = 'Loaded! Duration: ' + audio.duration + ' seconds';
+        });
+        
+        audio.addEventListener('error', (e) => {
+            const error = e.target.error;
+            let msg = 'Error: ';
+            if (error) {
+                switch(error.code) {
+                    case 1: msg += 'MEDIA_ERR_ABORTED'; break;
+                    case 2: msg += 'MEDIA_ERR_NETWORK'; break;
+                    case 3: msg += 'MEDIA_ERR_DECODE'; break;
+                    case 4: msg += 'MEDIA_ERR_SRC_NOT_SUPPORTED'; break;
+                    default: msg += 'Unknown error';
+                }
+            }
+            status.innerHTML = msg;
+            console.error('Audio error:', error);
+        });
+    </script>
+</body>
+</html>

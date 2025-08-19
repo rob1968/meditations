@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## System Access
+- User: flop
+- Sudo password: Floppies@1968
+- Root access: Available via sudo
+
 ## Project Overview
 
 This is a comprehensive full-stack meditation and wellness application that:

@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 // Middleware to check authentication
 const authenticateUser = async (req, res, next) => {
   try {
-    const userId = req.headers['user-id'];
+    const userId = req.headers['x-user-id'] || req.headers['user-id'];
     if (!userId) {
       return res.status(401).json({ error: 'User ID required' });
     }

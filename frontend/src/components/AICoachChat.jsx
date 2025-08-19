@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import { getFullUrl } from '../config/api';
+import { getFullUrl, API_ENDPOINTS } from '../config/api';
 import UnifiedInsightsDashboard from './UnifiedInsightsDashboard';
 import EmergencyModal from './EmergencyModal';
 
@@ -53,7 +53,7 @@ const AICoachChat = ({ user, isVisible, onClose, initialMessage = null, initialT
   // Crisis detection function
   const detectCrisis = async (message) => {
     try {
-      const response = await axios.post(getFullUrl('/api/ai-coach/assess-crisis'), {
+      const response = await axios.post(getFullUrl(API_ENDPOINTS.AI_COACH_ASSESS_CRISIS), {
         userId: user.id,
         message,
         context: { chatSession: true }
@@ -121,7 +121,7 @@ const AICoachChat = ({ user, isVisible, onClose, initialMessage = null, initialT
 
     try {
       // Send to AI Coach API
-      const response = await axios.post(getFullUrl('/api/ai-coach/chat'), {
+      const response = await axios.post(getFullUrl(API_ENDPOINTS.AI_COACH_CHAT), {
         userId: user.id,
         message: userMessage.content,
         context: {

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import ActivityCard from './ActivityCard';
+import ConfirmDialog from '../ConfirmDialog';
+import Alert from '../Alert';
 
 const MyActivities = ({ user, onSelectActivity }) => {
   const { t } = useTranslation();
@@ -11,6 +13,13 @@ const MyActivities = ({ user, onSelectActivity }) => {
   });
   const [activeTab, setActiveTab] = useState('participating');
   const [isLoading, setIsLoading] = useState(true);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
   useEffect(() => {
     loadMyActivities();
@@ -36,11 +45,18 @@ const MyActivities = ({ user, onSelectActivity }) => {
     }
   };
 
-  const handleLeaveActivity = async (activityId) => {
-    if (!window.confirm(t('confirmLeaveActivity', 'Weet je zeker dat je je wilt afmelden voor deze activiteit?'))) {
-      return;
-    }
+  const showAlertMessage = (message) => {
+    setAlertMessage(message);
+    setShowAlert(true);
+  };
 
+  const handleLeaveActivity = (activityId) => {
+    setConfirmMessage(t('confirmLeaveActivity', 'Weet je zeker dat je je wilt afmelden voor deze activiteit?'));
+    setConfirmAction(() => () => performLeaveActivity(activityId));
+    setShowConfirmDialog(true);
+  };
+
+  const performLeaveActivity = async (activityId) => {
     try {
       const response = await fetch(`/api/activities/${activityId}/leave`, {
         method: 'POST',
@@ -57,21 +73,24 @@ const MyActivities = ({ user, onSelectActivity }) => {
           participating: prev.participating.filter(a => a._id !== activityId)
         }));
         
-        alert(t('leftActivity', 'Je hebt je afgemeld voor de activiteit'));
+        showAlertMessage(t('leftActivity', 'Je hebt je afgemeld voor de activiteit'));
       } else {
         const error = await response.json();
-        alert(error.error || t('leaveFailed', 'Kon niet afmelden voor activiteit'));
+        showAlertMessage(error.error || t('leaveFailed', 'Kon niet afmelden voor activiteit'));
       }
     } catch (error) {
       console.error('Error leaving activity:', error);
-      alert(t('leaveError', 'Er ging iets mis bij het afmelden'));
+      showAlertMessage(t('leaveError', 'Er ging iets mis bij het afmelden'));
     }
   };
 
-  const handleCancelActivity = async (activityId) => {
-    const reason = prompt(t('cancelReason', 'Reden voor annulering (optioneel):'));
-    if (reason === null) return; // User clicked cancel
-    
+  const handleCancelActivity = (activityId) => {
+    setCancelReason('');
+    setConfirmAction(() => () => performCancelActivity(activityId));
+    setShowCancelDialog(true);
+  };
+
+  const performCancelActivity = async (activityId) => {
     try {
       const response = await fetch(`/api/activities/${activityId}/cancel`, {
         method: 'POST',
@@ -79,7 +98,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
           'Content-Type': 'application/json',
           'x-user-id': user?.id || user?._id || ''
         },
-        body: JSON.stringify({ reason })
+        body: JSON.stringify({ reason: cancelReason })
       });
 
       if (response.ok) {
@@ -93,14 +112,14 @@ const MyActivities = ({ user, onSelectActivity }) => {
           )
         }));
         
-        alert(t('activityCancelled', 'Activiteit is geannuleerd'));
+        showAlertMessage(t('activityCancelled', 'Activiteit is geannuleerd'));
       } else {
         const error = await response.json();
-        alert(error.error || t('cancelFailed', 'Kon activiteit niet annuleren'));
+        showAlertMessage(error.error || t('cancelFailed', 'Kon activiteit niet annuleren'));
       }
     } catch (error) {
       console.error('Error cancelling activity:', error);
-      alert(t('cancelError', 'Er ging iets mis bij het annuleren'));
+      showAlertMessage(t('cancelError', 'Er ging iets mis bij het annuleren'));
     }
   };
 
@@ -142,11 +161,11 @@ const MyActivities = ({ user, onSelectActivity }) => {
       return (
         <div className="activity-organizer-actions">
           <button 
-            className="edit-activity-button secondary-button"
+            className="edit-activity-button secondary-button mobile-touch-target"
             onClick={(e) => {
               e.stopPropagation();
               // TODO: Implement edit functionality
-              alert(t('editFeatureComingSoon', 'Bewerken komt binnenkort beschikbaar'));
+              showAlertMessage(t('editFeatureComingSoon', 'Bewerken komt binnenkort beschikbaar'));
             }}
           >
             <span className="button-icon">✏️</span>
@@ -154,7 +173,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
           </button>
           
           <button 
-            className="cancel-activity-button danger-button"
+            className="cancel-activity-button danger-button mobile-touch-target"
             onClick={(e) => {
               e.stopPropagation();
               handleCancelActivity(activity._id);
@@ -169,7 +188,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
       return (
         <div className="activity-participant-actions">
           <button 
-            className="leave-activity-button secondary-button"
+            className="leave-activity-button secondary-button mobile-touch-target"
             onClick={(e) => {
               e.stopPropagation();
               handleLeaveActivity(activity._id);
@@ -204,7 +223,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
         {tabs.map(tab => (
           <button
             key={tab.id}
-            className={`my-activities-tab ${activeTab === tab.id ? 'active' : ''}`}
+            className={`my-activity-tab mobile-touch-target ${activeTab === tab.id ? 'active' : ''}`}
             onClick={() => setActiveTab(tab.id)}
           >
             <span className="tab-icon">{tab.icon}</span>
@@ -280,6 +299,56 @@ const MyActivities = ({ user, onSelectActivity }) => {
           </div>
         )}
       </div>
+      
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={() => {
+          confirmAction && confirmAction();
+          setShowConfirmDialog(false);
+        }}
+        title={t('confirm', 'Bevestigen')}
+        message={confirmMessage}
+        confirmText={t('confirm', 'Bevestigen')}
+        cancelText={t('cancel', 'Annuleren')}
+      />
+      
+      {/* Cancel Dialog with Reason Input */}
+      <ConfirmDialog
+        isOpen={showCancelDialog}
+        onClose={() => setShowCancelDialog(false)}
+        onConfirm={() => {
+          confirmAction && confirmAction();
+          setShowCancelDialog(false);
+        }}
+        title={t('cancelActivity', 'Activiteit Annuleren')}
+        message={
+          <div>
+            <p>{t('cancelConfirm', 'Weet je zeker dat je deze activiteit wilt annuleren?')}</p>
+            <div className="form-group" style={{ marginTop: '16px' }}>
+              <label className="form-label">{t('cancelReason', 'Reden voor annulering (optioneel):')}</label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="form-textarea"
+                rows={3}
+                placeholder={t('cancelReasonPlaceholder', 'Bijv. weersomstandigheden, onvoorziene omstandigheden...')}
+              />
+            </div>
+          </div>
+        }
+        confirmText={t('cancelActivity', 'Annuleren')}
+        cancelText={t('cancel', 'Terug')}
+      />
+      
+      {/* Alert */}
+      <Alert
+        isOpen={showAlert}
+        onClose={() => setShowAlert(false)}
+        message={alertMessage}
+        type="info"
+      />
     </div>
   );
 };

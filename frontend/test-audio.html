@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 8px;
+        }
+        audio {
+            width: 100%;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            background: #333;
+            border-radius: 4px;
+        }
+        .error { background: #500; }
+        .success { background: #050; }
+    </style>
+</head>
+<body>
+    <h1>Audio Playback Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Direct Audio URL</h2>
+        <p>Testing: meditation_nl_1755548492843_2b01f5c8.mp3</p>
+        <audio id="audio1" controls>
+            <source src="/api/meditation/audio/meditation_nl_1755548492843_2b01f5c8.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="status1" class="status">Loading...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Full URL Audio</h2>
+        <audio id="audio2" controls>
+            <source src="https://meditations.pihappy.me/api/meditation/audio/meditation_nl_1755548492843_2b01f5c8.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="status2" class="status">Loading...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Dynamic Audio Load</h2>
+        <audio id="audio3" controls></audio>
+        <button onclick="loadAudio()">Load Audio Dynamically</button>
+        <div id="status3" class="status">Click button to load</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Fetch API Test</h2>
+        <button onclick="testFetch()">Test Fetch API</button>
+        <div id="status4" class="status">Click to test fetch</div>
+    </div>
+
+    <script>
+        // Monitor audio events
+        function monitorAudio(audioId, statusId) {
+            const audio = document.getElementById(audioId);
+            const status = document.getElementById(statusId);
+            
+            audio.addEventListener('loadstart', () => {
+                status.textContent = 'Load started...';
+                status.className = 'status';
+            });
+            
+            audio.addEventListener('loadedmetadata', () => {
+                status.textContent = `Metadata loaded - Duration: ${audio.duration} seconds`;
+                status.className = 'status success';
+            });
+            
+            audio.addEventListener('canplay', () => {
+                status.innerHTML += '<br>Can play!';
+            });
+            
+            audio.addEventListener('error', (e) => {
+                const error = e.target.error;
+                let errorMsg = 'Unknown error';
+                if (error) {
+                    switch(error.code) {
+                        case 1: errorMsg = 'MEDIA_ERR_ABORTED'; break;
+                        case 2: errorMsg = 'MEDIA_ERR_NETWORK'; break;
+                        case 3: errorMsg = 'MEDIA_ERR_DECODE'; break;
+                        case 4: errorMsg = 'MEDIA_ERR_SRC_NOT_SUPPORTED'; break;
+                    }
+                }
+                status.textContent = `Error: ${errorMsg}`;
+                status.className = 'status error';
+                console.error('Audio error:', error);
+            });
+            
+            audio.addEventListener('progress', () => {
+                if (audio.buffered.length > 0) {
+                    const buffered = audio.buffered.end(audio.buffered.length - 1);
+                    status.innerHTML = status.innerHTML.replace(/Buffered:.*<br>/, '') + 
+                                      `<br>Buffered: ${buffered.toFixed(2)}s`;
+                }
+            });
+        }
+        
+        // Monitor audio 1 and 2
+        monitorAudio('audio1', 'status1');
+        monitorAudio('audio2', 'status2');
+        
+        // Dynamic load function
+        function loadAudio() {
+            const audio = document.getElementById('audio3');
+            const status = document.getElementById('status3');
+            
+            audio.src = '/api/meditation/audio/meditation_nl_1755548492843_2b01f5c8.mp3';
+            audio.load();
+            
+            monitorAudio('audio3', 'status3');
+            status.textContent = 'Loading dynamically...';
+        }
+        
+        // Test fetch
+        async function testFetch() {
+            const status = document.getElementById('status4');
+            try {
+                status.textContent = 'Fetching...';
+                const response = await fetch('/api/meditation/audio/meditation_nl_1755548492843_2b01f5c8.mp3');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const contentType = response.headers.get('content-type');
+                const contentLength = response.headers.get('content-length');
+                
+                status.innerHTML = `
+                    Success!<br>
+                    Status: ${response.status}<br>
+                    Content-Type: ${contentType}<br>
+                    Content-Length: ${contentLength || 'chunked'}<br>
+                    Headers: ${Array.from(response.headers.entries()).map(([k,v]) => `${k}: ${v}`).join('<br>')}
+                `;
+                status.className = 'status success';
+            } catch (error) {
+                status.textContent = `Fetch error: ${error.message}`;
+                status.className = 'status error';
+                console.error('Fetch error:', error);
+            }
+        }
+        
+        // Log all audio elements on page
+        console.log('Audio elements found:', document.querySelectorAll('audio').length);
+        
+        // Check audio codec support
+        const audio = document.createElement('audio');
+        console.log('MP3 support:', audio.canPlayType('audio/mpeg'));
+        console.log('OGG support:', audio.canPlayType('audio/ogg'));
+        console.log('WAV support:', audio.canPlayType('audio/wav'));
+    </script>
+</body>
+</html>

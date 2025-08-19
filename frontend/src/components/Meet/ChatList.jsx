@@ -45,7 +45,7 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
       }
 
       // Load real conversations from API
-      const response = await fetch('/api/conversations', {
+      const response = await fetch('/api/meet/conversations', {
         headers: {
           'x-user-id': user._id || user.id,
           'Content-Type': 'application/json'

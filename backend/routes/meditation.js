@@ -534,15 +534,15 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
           `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
           {
             text: processedText,
-            model_id: speechLanguage === 'en' ? "eleven_turbo_v2_5" : "eleven_multilingual_v2_5",
+            model_id: "eleven_multilingual_v2",
             voice_settings: { 
               stability: 0.85,
               similarity_boost: 0.75,
               style: 0,
               use_speaker_boost: true,
               speed: elevenLabsSpeed // Use native ElevenLabs speed control
-            },
-            language_code: speechLanguage // Language enforcement for v2.5 models
+            }
+            // Note: eleven_multilingual_v2 model doesn't support language_code parameter
           },
           {
             headers: {
@@ -568,15 +568,15 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
           `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
           {
             text: processedText,
-            model_id: speechLanguage === 'en' ? "eleven_turbo_v2_5" : "eleven_multilingual_v2_5",
+            model_id: "eleven_multilingual_v2",
             voice_settings: { 
               stability: 0.85,
               similarity_boost: 0.75,
               style: 0,
               use_speaker_boost: true,
               speed: elevenLabsSpeed // Use native ElevenLabs speed control
-            },
-            language_code: speechLanguage // Language enforcement for v2.5 models
+            }
+            // Note: eleven_multilingual_v2 model doesn't support language_code parameter
           },
           {
             headers: {
@@ -589,6 +589,17 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
         audioContent = response.data;
       } catch (elevenLabsError) {
         console.error('ElevenLabs TTS failed:', elevenLabsError.response?.status, elevenLabsError.response?.data);
+        
+        // Enhanced error logging to decode the exact error
+        if (elevenLabsError.response?.data) {
+          try {
+            const errorText = elevenLabsError.response.data.toString();
+            console.error('📝 Decoded ElevenLabs error:', errorText);
+            console.error('🎯 Request details - Voice:', voiceId, 'Language:', speechLanguage, 'Model: eleven_multilingual_v2');
+          } catch (decodeError) {
+            console.error('❌ Could not decode error message');
+          }
+        }
         
         // Check if it's a quota/auth error
         if (elevenLabsError.response?.status === 401 || elevenLabsError.response?.status === 429) {
@@ -695,8 +706,8 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
     await fsPromises.mkdir(meditationsDir, { recursive: true });
     outputPath = path.join(meditationsDir, filename);
 
-    // Also create a symlink in public for immediate download
-    const publicPath = path.join(__dirname, `../../public/meditation_result.mp3`);
+    // Also create a copy in root assets for web access  
+    const publicPath = path.join(__dirname, `../assets/meditation_result.mp3`);
     const publicDir = path.dirname(publicPath);
     await fsPromises.mkdir(publicDir, { recursive: true });
 
@@ -815,6 +826,13 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
     await fsPromises.copyFile(outputPath, publicPath);
     console.log(`File saved to: ${outputPath}`);
     console.log(`Copy for download created at: ${publicPath}`);
+    
+    // Also copy to frontend assets directory for direct access
+    const frontendAssetsPath = path.join(__dirname, '../../assets/meditations', filename);
+    const frontendAssetsDir = path.dirname(frontendAssetsPath);
+    await fsPromises.mkdir(frontendAssetsDir, { recursive: true });
+    await fsPromises.copyFile(outputPath, frontendAssetsPath);
+    console.log(`Copy for frontend created at: ${frontendAssetsPath}`);
 
     // Save custom background metadata if custom file was used
     if (req.file && customName && userId) {
@@ -940,7 +958,7 @@ CRITICAL: Always respond with COMPLETE meditation text. NEVER include meta-comme
       }
     }
 
-    res.download(publicPath, filename, async (err) => {
+    res.download(outputPath, filename, async (err) => {
       if (err) {
         console.error("Error during file download:", err);
       }
@@ -2181,7 +2199,17 @@ ${prompt}`
   }
 });
 
-router.get('/voices', async (req, res) => {
+// Optional auth middleware for voices (to include user's custom voices if logged in)
+const optionalAuth = (req, res, next) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (token) {
+    auth(req, res, next);
+  } else {
+    next();
+  }
+};
+
+router.get('/voices', optionalAuth, async (req, res) => {
   const apiKey = process.env.ELEVEN_LABS_API_KEY;
 
   try {
@@ -2288,86 +2316,174 @@ router.get('/voices', async (req, res) => {
       return 'middle-aged';
     };
 
-    // Filter and enhance meditation-appropriate voices
+    // Helper function to get curated meditation voices (optimized per language)
+    const getCuratedMeditationVoices = () => {
+      // Curated selection of the best meditation voices for each language
+      // Each language gets 4 voices optimized for that specific language and meditation context
+      return {
+        // English - Deep meditation voices with available ElevenLabs voices
+        'en': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice  
+          '21m00Tcm4TlvDq8ikWAM'  // Rachel - Female, calm and professional
+        ],
+        
+        // Dutch/Nederlands - Deep meditation voices optimized for Dutch meditation
+        'nl': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation
+          'xbpwjFFJpcRThvL5EyVi', // Ashwat - Male, calming depth perfect for meditative content
+          'pNInz6obpgDQGcFmaJgB', // Sarah - Female, warm multilingual
+          '21m00Tcm4TlvDq8ikWAM'  // Rachel - Female, calm multilingual
+        ],
+        
+        // German/Deutsch - Deep meditation voices optimized for German meditation
+        'de': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice
+          '21m00Tcm4TlvDq8ikWAM'  // Rachel - Female, multilingual (professional German)
+        ],
+        
+        // French/Français - Deep meditation voices optimized for French meditation
+        'fr': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation
+          'xbpwjFFJpcRThvL5EyVi', // Ashwat - Male, calming depth perfect for meditative content
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice
+          '21m00Tcm4TlvDq8ikWAM'  // Rachel - Female, multilingual (sophisticated French)
+        ],
+        
+        // Spanish/Español - Multilingual voices optimized for Spanish meditation
+        'es': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation (clear Spanish)
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice
+          '21m00Tcm4TlvDq8ikWAM', // Rachel - Female, multilingual (professional Spanish)
+          'onwK4e9ZLuTAKqWW03F9'  // Daniel - Male, middle-aged calming voice (gentle Spanish)
+        ],
+        
+        // Italian/Italiano - Multilingual voices optimized for Italian meditation
+        'it': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation (melodic Italian)
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice
+          '21m00Tcm4TlvDq8ikWAM', // Rachel - Female, multilingual (elegant Italian)
+          'onwK4e9ZLuTAKqWW03F9'  // Daniel - Male, middle-aged calming voice (gentle Italian)
+        ],
+        
+        // Portuguese/Português - Multilingual voices optimized for Portuguese meditation
+        'pt': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation (clear Portuguese)
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice
+          '21m00Tcm4TlvDq8ikWAM', // Rachel - Female, multilingual (professional Portuguese)
+          'onwK4e9ZLuTAKqWW03F9'  // Daniel - Male, middle-aged calming voice (gentle Portuguese)
+        ],
+        
+        // Russian/Русский - Multilingual voices optimized for Russian meditation
+        'ru': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation (deep Russian)
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice
+          '21m00Tcm4TlvDq8ikWAM', // Rachel - Female, multilingual (professional Russian)
+          'onwK4e9ZLuTAKqWW03F9'  // Daniel - Male, middle-aged calming voice (gentle Russian)
+        ],
+        
+        // Chinese/中文 - Multilingual voices optimized for Chinese meditation
+        'zh': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation (clear Chinese)
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice
+          '21m00Tcm4TlvDq8ikWAM', // Rachel - Female, multilingual (professional Chinese)
+          'onwK4e9ZLuTAKqWW03F9'  // Daniel - Male, middle-aged calming voice (gentle Chinese)
+        ],
+        
+        // Japanese/日本語 - Multilingual voices optimized for Japanese meditation
+        'ja': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation (respectful Japanese)
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice
+          '21m00Tcm4TlvDq8ikWAM', // Rachel - Female, multilingual (professional Japanese)
+          'onwK4e9ZLuTAKqWW03F9'  // Daniel - Male, middle-aged calming voice (gentle Japanese)
+        ],
+        
+        // Korean/한국어 - Multilingual voices optimized for Korean meditation
+        'ko': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation (clear Korean)
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice
+          '21m00Tcm4TlvDq8ikWAM', // Rachel - Female, multilingual (professional Korean)
+          'onwK4e9ZLuTAKqWW03F9'  // Daniel - Male, middle-aged calming voice (gentle Korean)
+        ],
+        
+        // Hindi/हिंदी - Multilingual voices optimized for Hindi meditation
+        'hi': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation (clear Hindi)
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice
+          '21m00Tcm4TlvDq8ikWAM', // Rachel - Female, multilingual (professional Hindi)
+          'onwK4e9ZLuTAKqWW03F9'  // Daniel - Male, middle-aged calming voice (gentle Hindi)
+        ],
+        
+        // Arabic/العربية - Multilingual voices optimized for Arabic meditation
+        'ar': [
+          'pqHfZKP75CvOlQylNhV4', // Bill - Male, older deeper voice perfect for meditation (respectful Arabic)
+          'onwK4e9ZLuTAKqWW03F9', // Daniel - Male, middle-aged calming voice
+          '21m00Tcm4TlvDq8ikWAM', // Rachel - Female, multilingual (professional Arabic)
+          'onwK4e9ZLuTAKqWW03F9'  // Daniel - Male, middle-aged calming voice (gentle Arabic)
+        ]
+      };
+    };
+
+    // Helper function to determine language support for voices
+    const getVoiceLanguageSupport = (voice) => {
+      const voiceId = voice.voice_id;
+      
+      // Define language support based on ElevenLabs API compatibility
+      const languageSupport = {
+        // Curated deep meditation voices
+        'pqHfZKP75CvOlQylNhV4': ['en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'ar'], // Bill - older deep multilingual voice
+        'onwK4e9ZLuTAKqWW03F9': ['en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'ar'], // Daniel - middle-aged calming multilingual voice
+        '21m00Tcm4TlvDq8ikWAM': ['en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'ar'], // Rachel - professional multilingual female
+      };
+      
+      // Default to multilingual support if not specified
+      return languageSupport[voiceId] || ['en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'ar'];
+    };
+
+    // Get the curated voice list for all languages
+    const curatedVoices = getCuratedMeditationVoices();
+    const allCuratedVoiceIds = [...new Set(Object.values(curatedVoices).flat())];
+    
+    // Filter to only include curated meditation voices
     const meditationVoices = response.data.voices.filter(voice => {
-      const name = voice.name.toLowerCase();
-      const description = (voice.description || '').toLowerCase();
-      const labels = voice.labels || {};
-      
-      // Exclude voices that are explicitly NOT suitable for meditation
-      const unsuitableVoices = 
-        name.includes('hyped') ||
-        name.includes('energetic') ||
-        name.includes('quirky') ||
-        name.includes('sassy') ||
-        description.includes('hyped') ||
-        description.includes('energetic') ||
-        description.includes('quirky') ||
-        description.includes('sassy') ||
-        labels.descriptive === 'hyped' ||
-        labels.descriptive === 'sassy';
-      
-      if (unsuitableVoices) {
-        return false;
-      }
-      
-      // Include all other voices that could work for meditation
-      const isMeditationVoice = 
-        // Specifically good for meditation
-        name.includes('calm') ||
-        name.includes('soft') ||
-        name.includes('gentle') ||
-        name.includes('sooth') ||
-        name.includes('meditat') ||
-        name.includes('relax') ||
-        name.includes('peace') ||
-        name.includes('whisper') ||
-        description.includes('calm') ||
-        description.includes('soft') ||
-        description.includes('gentle') ||
-        description.includes('sooth') ||
-        description.includes('meditat') ||
-        description.includes('relax') ||
-        description.includes('peace') ||
-        description.includes('whisper') ||
-        description.includes('warm') ||
-        description.includes('resonant') ||
-        description.includes('comforting') ||
-        description.includes('professional') ||
-        description.includes('mature') ||
-        description.includes('deep') ||
-        description.includes('smooth') ||
-        description.includes('clear') ||
-        // Good voice characteristics from labels
-        labels.descriptive === 'calm' ||
-        labels.descriptive === 'professional' ||
-        labels.descriptive === 'mature' ||
-        labels.descriptive === 'warm' ||
-        labels.descriptive === 'confident' ||
-        labels.descriptive === 'relaxed' ||
-        labels.descriptive === 'classy' ||
-        labels.descriptive === 'crisp' ||
-        labels.descriptive === 'deep' ||
-        labels.descriptive === 'husky' ||
-        // Include narrative/informative voices
-        labels.use_case === 'narrative_story' ||
-        labels.use_case === 'informative_educational' ||
-        labels.use_case === 'narration' ||
-        // Include any custom/cloned voices
-        voice.category === 'cloned' ||
-        voice.category === 'professional' ||
-        voice.category === 'custom' ||
-        // Include voices without explicit unsuitable characteristics
-        !unsuitableVoices;
-      
-      return isMeditationVoice;
+      // Only include voices that are in our curated list
+      return allCuratedVoiceIds.includes(voice.voice_id);
     }).map(voice => ({
       ...voice,
       gender: getVoiceGender(voice),
       characteristics: getVoiceCharacteristics(voice),
       age: getVoiceAge(voice),
-      preview_url: voice.preview_url || null
+      preview_url: voice.preview_url || null,
+      supportedLanguages: getVoiceLanguageSupport(voice)
     }));
+    
+    // Add user's custom voices if authenticated
+    if (req.user) {
+      try {
+        const user = await User.findById(req.user._id);
+        if (user && user.customVoices && user.customVoices.length > 0) {
+          const customVoices = user.customVoices.map(customVoice => ({
+            voice_id: customVoice.voiceId,
+            name: customVoice.voiceName || 'Custom Voice',
+            category: 'custom',
+            gender: 'neutral', // Default gender for custom voices
+            characteristics: ['custom', 'personal'],
+            age: 'middle-aged',
+            preview_url: null,
+            supportedLanguages: ['en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'hi', 'ar'], // Custom voices support all languages
+            isCustom: true,
+            ownedByUser: true
+          }));
+          
+          meditationVoices.push(...customVoices);
+          console.log(`Added ${customVoices.length} custom voices for user ${user.username}`);
+        }
+      } catch (customVoiceError) {
+        console.error('Error fetching custom voices:', customVoiceError);
+        // Don't fail the entire request if custom voices fail
+      }
+    }
     
     res.json(meditationVoices);
   } catch (error) {
@@ -2433,15 +2549,15 @@ router.post('/voice-preview', auth, async (req, res) => {
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
         text: previewText,
-        model_id: "eleven_multilingual_v2_5",
+        model_id: "eleven_multilingual_v2",
         voice_settings: { 
           stability: 0.7,
           similarity_boost: 0.8,
           style: 0.2,
           use_speaker_boost: true,
           speed: elevenLabsSpeed
-        },
-        language_code: speechLanguage // Language enforcement for v2.5 models
+        }
+        // Note: eleven_multilingual_v2 model doesn't support language_code parameter
       },
       {
         headers: {
@@ -2919,7 +3035,43 @@ router.post('/custom-background/upload', auth, upload.single('customBackground')
   }
 });
 
-// Serve custom background files
+// Serve custom background files (with userId in URL for public access)
+router.get('/custom-background-file/:userId/:filename', (req, res) => {
+  try {
+    const { userId, filename } = req.params;
+    
+    // Handle system files
+    if (userId === 'system') {
+      const assetsDir = path.join(__dirname, '..', 'assets');
+      const filePath = path.join(assetsDir, filename);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'System background file not found' });
+      }
+      
+      return res.sendFile(filePath);
+    }
+    
+    // Handle user custom files
+    const filePath = path.join(CUSTOM_BACKGROUNDS_DIR, userId, filename);
+    
+    if (!fs.existsSync(filePath)) {
+      console.error('Custom background file not found:', filePath);
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Set proper headers for audio streaming
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Accept-Ranges', 'bytes');
+    
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error serving custom background file:', error);
+    res.status(500).json({ error: 'Failed to serve file' });
+  }
+});
+
+// Legacy route (with auth) for backwards compatibility
 router.get('/custom-background-file/:filename', auth, (req, res) => {
   try {
     const { filename } = req.params;
@@ -3096,6 +3248,82 @@ router.delete('/custom-background/:userId/:backgroundId', auth, async (req, res)
     console.error('Error deleting custom background:', error);
     console.error('Error stack:', error.stack);
     res.status(500).json({ error: 'Failed to delete background', details: error.message });
+  }
+});
+
+// Route to serve meditation audio files
+router.get('/audio/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const audioPath = path.join(__dirname, '../assets/meditations', filename);
+    
+    console.log('Audio request for:', filename);
+    console.log('Full path:', audioPath);
+    
+    // Check if file exists
+    if (!fs.existsSync(audioPath)) {
+      console.error('Audio file not found:', audioPath);
+      return res.status(404).json({ error: 'Audio file not found' });
+    }
+    
+    const stat = fs.statSync(audioPath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+    
+    console.log('File size:', fileSize, 'Range header:', range);
+    
+    if (range) {
+      // Handle range requests for better audio streaming
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = (end - start) + 1;
+      
+      console.log('Serving range:', start, '-', end, 'chunk size:', chunksize);
+      
+      const headers = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'audio/mpeg',
+        'Cache-Control': 'public, max-age=3600'
+      };
+      
+      res.writeHead(206, headers);
+      const stream = fs.createReadStream(audioPath, { start, end });
+      stream.pipe(res);
+    } else {
+      // For files under 10MB, send complete file with proper Content-Length
+      if (fileSize < 10 * 1024 * 1024) {
+        console.log('Serving complete file (under 10MB)');
+        const fileBuffer = fs.readFileSync(audioPath);
+        
+        res.writeHead(200, {
+          'Content-Length': fileBuffer.length,
+          'Content-Type': 'audio/mpeg',
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=3600'
+        });
+        
+        res.end(fileBuffer);
+      } else {
+        // Stream larger files
+        console.log('Streaming large file');
+        res.writeHead(200, {
+          'Content-Length': fileSize,
+          'Content-Type': 'audio/mpeg',
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=3600'
+        });
+        
+        const stream = fs.createReadStream(audioPath);
+        stream.pipe(res);
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error serving audio file:', error);
+    res.status(500).json({ error: 'Failed to serve audio file' });
   }
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelect }) => {
@@ -6,6 +6,11 @@ const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelec
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [calendarActivities, setCalendarActivities] = useState([]);
+  const [showBottomSheet, setShowBottomSheet] = useState(false);
+  const [viewMode, setViewMode] = useState('month'); // 'month' or 'week'
+  const calendarRef = useRef(null);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   // Update calendar activities when activities prop changes
   useEffect(() => {
@@ -141,9 +146,58 @@ const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelec
   // Handle date click
   const handleDateClick = (date) => {
     setSelectedDate(date);
+    const dayActivities = getActivitiesForDate(date);
+    if (dayActivities.length > 0) {
+      setShowBottomSheet(true);
+    }
     if (onDateSelect) {
       onDateSelect(date);
     }
+  };
+
+  // Handle swipe gestures
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      goToNextMonth();
+    }
+    if (isRightSwipe) {
+      goToPreviousMonth();
+    }
+  };
+
+  // Toggle view mode
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'month' ? 'week' : 'month');
+  };
+
+  // Get week days for week view
+  const getWeekDays = () => {
+    const startOfWeek = new Date(selectedDate || new Date());
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    startOfWeek.setDate(diff);
+
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      weekDays.push(day);
+    }
+    return weekDays;
   };
 
   // Get month and year string
@@ -178,15 +232,20 @@ const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelec
         <h2 className="calendar-title">{t('calendar', 'Kalender')}</h2>
         <div className="calendar-navigation">
           <button 
-            className="nav-button"
+            className="nav-button mobile-touch-target"
             onClick={goToPreviousMonth}
             title={t('previousMonth', 'Vorige maand')}
           >
             ←
           </button>
-          <span className="current-month">{getMonthYearString()}</span>
+          <span className="current-month" onClick={toggleViewMode}>
+            {getMonthYearString()}
+            <span className="view-mode-indicator">
+              {viewMode === 'month' ? '📅' : '📋'}
+            </span>
+          </span>
           <button 
-            className="nav-button"
+            className="nav-button mobile-touch-target"
             onClick={goToNextMonth}
             title={t('nextMonth', 'Volgende maand')}
           >
@@ -195,53 +254,77 @@ const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelec
         </div>
       </div>
 
-      <div className="calendar-grid">
+      <div 
+        className="calendar-grid"
+        ref={calendarRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Week day headers */}
         <div className="calendar-weekdays">
           {weekDays.map(day => (
-            <div key={day} className="weekday-header">
+            <div key={day} className="weekday-header mobile-calendar-header">
               {day}
             </div>
           ))}
         </div>
 
         {/* Calendar days */}
-        <div className="calendar-days">
-          {calendarDays.map((date, index) => {
+        <div className={`calendar-days ${viewMode === 'week' ? 'week-view' : 'month-view'}`}>
+          {(viewMode === 'week' ? getWeekDays() : calendarDays).map((date, index) => {
             const dayActivities = getActivitiesForDate(date);
-            const isCurrentMonthDay = isCurrentMonth(date);
+            const isCurrentMonthDay = viewMode === 'week' || isCurrentMonth(date);
             const isTodayDay = isToday(date);
             const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
 
             return (
               <div
                 key={index}
-                className={`calendar-day ${!isCurrentMonthDay ? 'other-month' : ''} 
+                className={`calendar-day mobile-calendar-day ${!isCurrentMonthDay ? 'other-month' : ''} 
                            ${isTodayDay ? 'today' : ''} 
                            ${isSelected ? 'selected' : ''}
                            ${dayActivities.length > 0 ? 'has-activities' : ''}`}
                 onClick={() => handleDateClick(date)}
               >
-                <div className="day-number">{date.getDate()}</div>
+                <div className="day-number mobile-day-number">{date.getDate()}</div>
                 
                 {dayActivities.length > 0 && (
-                  <div className="day-activities">
-                    {dayActivities.slice(0, 3).map((activity, actIndex) => (
-                      <div
-                        key={activity._id}
-                        className="activity-dot"
-                        style={{ backgroundColor: getActivityColor(activity) }}
-                        title={activity.title}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectActivity(activity);
-                        }}
-                      />
-                    ))}
-                    {dayActivities.length > 3 && (
-                      <div className="activity-more">
-                        +{dayActivities.length - 3}
+                  <div className="day-activities mobile-day-activities">
+                    {viewMode === 'week' ? (
+                      <div className="activity-preview">
+                        {dayActivities.slice(0, 2).map((activity, actIndex) => (
+                          <div
+                            key={activity._id}
+                            className="activity-preview-item"
+                            style={{ borderLeft: `3px solid ${getActivityColor(activity)}` }}
+                          >
+                            <span className="activity-time">{activity.startTime}</span>
+                            <span className="activity-emoji">{activity.category?.emoji}</span>
+                          </div>
+                        ))}
+                        {dayActivities.length > 2 && (
+                          <div className="activity-more-preview">+{dayActivities.length - 2}</div>
+                        )}
                       </div>
+                    ) : (
+                      <>
+                        {dayActivities.slice(0, 2).map((activity, actIndex) => (
+                          <div
+                            key={activity._id}
+                            className="activity-dot mobile-activity-dot"
+                            style={{ backgroundColor: getActivityColor(activity) }}
+                            title={activity.title}
+                          >
+                            {activity.category?.emoji}
+                          </div>
+                        ))}
+                        {dayActivities.length > 2 && (
+                          <div className="activity-count-badge">
+                            +{dayActivities.length - 2}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
@@ -251,60 +334,102 @@ const ActivityCalendar = ({ user, activities = [], onSelectActivity, onDateSelec
         </div>
       </div>
 
-      {/* Selected date activities */}
-      {selectedDate && (
-        <div className="selected-date-activities">
-          <h3 className="selected-date-title">
-            {selectedDate.toLocaleDateString('nl-NL', { 
-              weekday: 'long', 
-              day: 'numeric', 
-              month: 'long' 
-            })}
-          </h3>
-          
-          {getActivitiesForDate(selectedDate).length === 0 ? (
-            <p className="no-activities-message">
-              {t('noActivitiesThisDay', 'Geen activiteiten op deze dag')}
-            </p>
-          ) : (
-            <div className="date-activities-list">
-              {getActivitiesForDate(selectedDate).map(activity => (
-                <div
-                  key={activity._id}
-                  className="calendar-activity-item"
-                  onClick={() => onSelectActivity(activity)}
-                >
-                  <div className="activity-time">
-                    {activity.startTime}
-                  </div>
-                  <div className="activity-info">
-                    <div className="activity-title">{activity.title}</div>
-                    <div className="activity-location">
-                      📍 {activity.location?.name}
-                    </div>
-                  </div>
-                  <div 
-                    className="activity-category-indicator"
-                    style={{ backgroundColor: getActivityColor(activity) }}
-                  >
-                    {activity.category?.emoji}
-                  </div>
-                </div>
-              ))}
+      {/* Bottom Sheet for Activities */}
+      {showBottomSheet && selectedDate && (
+        <div className="bottom-sheet-overlay" onClick={() => setShowBottomSheet(false)}>
+          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="bottom-sheet-header">
+              <div className="sheet-handle"></div>
+              <h3 className="selected-date-title">
+                {selectedDate.toLocaleDateString('nl-NL', { 
+                  weekday: 'long', 
+                  day: 'numeric', 
+                  month: 'long' 
+                })}
+              </h3>
+              <button 
+                className="close-sheet-button mobile-touch-target"
+                onClick={() => setShowBottomSheet(false)}
+              >
+                ✕
+              </button>
             </div>
-          )}
+            
+            <div className="bottom-sheet-content">
+              {getActivitiesForDate(selectedDate).length === 0 ? (
+                <div className="no-activities-state">
+                  <div className="no-activities-icon">📅</div>
+                  <p className="no-activities-message">
+                    {t('noActivitiesThisDay', 'Geen activiteiten op deze dag')}
+                  </p>
+                </div>
+              ) : (
+                <div className="date-activities-list">
+                  {getActivitiesForDate(selectedDate).map(activity => (
+                    <div
+                      key={activity._id}
+                      className="calendar-activity-item mobile-activity-card"
+                      onClick={() => {
+                        onSelectActivity(activity);
+                        setShowBottomSheet(false);
+                      }}
+                    >
+                      <div className="activity-time-badge">
+                        {activity.startTime}
+                      </div>
+                      <div className="activity-info">
+                        <div className="activity-title">{activity.title}</div>
+                        <div className="activity-location">
+                          📍 {activity.location?.name}
+                        </div>
+                        <div className="activity-participants">
+                          👥 {activity.participants?.length || 0} deelnemers
+                        </div>
+                      </div>
+                      <div 
+                        className="activity-category-indicator"
+                        style={{ backgroundColor: getActivityColor(activity) }}
+                      >
+                        {activity.category?.emoji}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Calendar legend */}
-      <div className="calendar-legend">
-        <div className="legend-item">
-          <div className="legend-dot today-dot"></div>
-          <span>{t('today', 'Vandaag')}</span>
+      {/* Calendar controls */}
+      <div className="calendar-controls">
+        <div className="view-toggle">
+          <button 
+            className={`view-toggle-button mobile-touch-target ${viewMode === 'month' ? 'active' : ''}`}
+            onClick={() => setViewMode('month')}
+          >
+            📅 {t('month', 'Maand')}
+          </button>
+          <button 
+            className={`view-toggle-button mobile-touch-target ${viewMode === 'week' ? 'active' : ''}`}
+            onClick={() => setViewMode('week')}
+          >
+            📋 {t('week', 'Week')}
+          </button>
         </div>
-        <div className="legend-item">
-          <div className="legend-dot activity-dot-sample"></div>
-          <span>{t('hasActivities', 'Heeft activiteiten')}</span>
+        
+        <div className="calendar-legend">
+          <div className="legend-item">
+            <div className="legend-dot today-dot"></div>
+            <span>{t('today', 'Vandaag')}</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-dot activity-dot-sample"></div>
+            <span>{t('hasActivities', 'Heeft activiteiten')}</span>
+          </div>
+          <div className="swipe-hint">
+            ↔️ {t('swipeToNavigate', 'Swipe om te navigeren')}
+          </div>
         </div>
       </div>
     </div>

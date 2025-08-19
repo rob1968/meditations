@@ -356,7 +356,7 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
               <button
                 type="button"
                 onClick={addTag}
-                className="add-tag-button"
+                className="add-tag-button mobile-touch-target"
               >
                 {t('add', 'Toevoegen')}
               </button>
@@ -371,7 +371,7 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
                   <button
                     type="button"
                     onClick={() => removeTag(tag)}
-                    className="remove-tag"
+                    className="remove-tag mobile-touch-target"
                   >
                     ×
                   </button>
@@ -461,7 +461,7 @@ const CreateActivity = ({ user, categories, onActivityCreated }) => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="submit-button primary-button"
+            className="submit-button primary-button mobile-touch-target"
           >
             {isSubmitting ? (
               <>

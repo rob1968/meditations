@@ -49,7 +49,7 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
   const availableSpots = activity.maxParticipants - confirmedParticipants;
   
   return (
-    <div className="activity-card" onClick={onSelect}>
+    <div className="activity-card mobile-touch-card" onClick={onSelect}>
       <div className="activity-card-header">
         <div 
           className="activity-category-badge"
@@ -166,7 +166,7 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
         <div className="activity-actions">
           {!isParticipant && !isFull && (
             <button 
-              className="join-button primary-button"
+              className="join-button primary-button mobile-touch-target"
               onClick={(e) => {
                 e.stopPropagation();
                 onJoin();
@@ -179,7 +179,7 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
           
           {!isParticipant && isFull && (
             <button 
-              className="waitlist-button secondary-button"
+              className="waitlist-button secondary-button mobile-touch-target"
               onClick={(e) => {
                 e.stopPropagation();
                 onJoin();
@@ -192,7 +192,7 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
           
           {isParticipant && (
             <button 
-              className="view-button secondary-button"
+              className="view-button secondary-button mobile-touch-target"
               onClick={(e) => {
                 e.stopPropagation();
                 onSelect();

@@ -152,7 +152,7 @@ const CommunityHub = ({ user, onProfileClick, unreadCount, onInboxClick, onCreat
   const fetchSharedMeditations = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get(getFullUrl('/api/community/shared-meditations'));
+      const response = await axios.get(getFullUrl(API_ENDPOINTS.COMMUNITY_MEDITATIONS));
       const meditations = response.data.meditations || [];
       setSharedMeditations(meditations);
       

@@ -17,6 +17,7 @@ import JournalHub from './components/JournalHub';
 import MeetHub from './components/Meet/MeetHub';
 import PageHeader from './components/PageHeader';
 import VoiceSlider from './components/VoiceSlider';
+import GDPRConsent from './components/GDPRConsent';
 import MeditationTypeSlider from './components/MeditationTypeSlider';
 import CustomMusicUploader from './components/CustomMusicUploader';
 import WizardContainer from './components/WizardContainer';
@@ -30,7 +31,23 @@ const App = () => {
   const [text, setText] = useState("");
   const [meditationType, setMeditationType] = useState("sleep");
   const [background, setBackground] = useState("ocean");
-  const [voiceId, setVoiceId] = useState("pNInz6obpgDQGcFmaJgB");
+  // Voice ID migration - fix old cached voice IDs
+  const [voiceId, setVoiceId] = useState(() => {
+    // Check localStorage for old voice IDs and replace them with working Thomas voice
+    const oldVoiceIds = ['21m00Tcm4TlvDq8ikWAM', 'EXAVITQu4vr4xnSDxMaL', 'pNInz6obpgDQGcFmaJgB', 'GBv7mTt0atIp3Br8iCZE'];
+    const storageKeys = ['voiceId', 'selectedVoiceId', 'preferredVoiceId'];
+    const newVoiceId = 'CwhRBWXzGAHq8TQ4Fs17'; // Roger - multilingual voice
+    
+    // Clean up localStorage
+    storageKeys.forEach(key => {
+      const stored = localStorage.getItem(key);
+      if (stored && oldVoiceIds.includes(stored)) {
+        localStorage.setItem(key, newVoiceId);
+      }
+    });
+    
+    return newVoiceId;
+  });
   const [useBackgroundMusic, setUseBackgroundMusic] = useState(true);
   const [customBackgroundFile, setCustomBackgroundFile] = useState(null);
   const [customBackgroundName, setCustomBackgroundName] = useState('');
@@ -104,7 +121,7 @@ const App = () => {
   const [wizardData, setWizardData] = useState({
     meditationType: 'sleep',
     text: '',
-    voiceId: 'pNInz6obpgDQGcFmaJgB',
+    voiceId: 'CwhRBWXzGAHq8TQ4Fs17', // Roger - multilingual voice
     background: 'ocean',
     useBackgroundMusic: true,
     speechTempo: 1.00,
@@ -239,7 +256,7 @@ const App = () => {
     setDraftSaveMessage('');
     
     try {
-      const response = await axios.post(getFullUrl('/api/user-meditations/save'), {
+      const response = await axios.post(getFullUrl(API_ENDPOINTS.SAVE_MEDITATION), {
         userId: user?.id,
         meditationId: currentMeditationId,
         text: text,
@@ -545,7 +562,7 @@ const App = () => {
     try {
       setIsSavingDraft(true);
       // Use existing saveDraft functionality but with wizard data
-      const response = await axios.post(getFullUrl('/api/user-meditations/save'), {
+      const response = await axios.post(getFullUrl(API_ENDPOINTS.SAVE_MEDITATION), {
         text: wizardData.text,
         meditationType: wizardData.meditationType,
         language: i18n.language,
@@ -900,7 +917,7 @@ const App = () => {
     if (!user?.id) return;
     
     try {
-      const response = await axios.get(getFullUrl(`/api/auth/user/${user.id}/credits`), {
+      const response = await axios.get(getFullUrl(`/api/users/${user.id}/credits`), {
         headers: getAuthHeaders(user.id)
       });
       setUserCredits(response.data);
@@ -1008,7 +1025,7 @@ const App = () => {
       // Reset meditation settings to defaults
       setMeditationType("sleep");
       setBackground("ocean");
-      setVoiceId(voices.length > 0 ? voices[0].voice_id : "EXAVITQu4vr4xnSDxMaL");
+      setVoiceId(voices.length > 0 ? voices[0].voice_id : "pNInz6obpgDQGcFmaJgB");
       handleBackgroundMusicToggle(false);
       setSpeechTempo(1.00);
       setGenderFilter('all');
@@ -1157,7 +1174,7 @@ const App = () => {
 
             console.log('Frontend: Uploading background with name:', name);
             
-            const response = await axios.post(getFullUrl('/api/meditation/custom-background/upload'), formData, {
+            const response = await axios.post(getFullUrl(API_ENDPOINTS.CUSTOM_BACKGROUND_UPLOAD), formData, {
               headers: {
                 'Content-Type': 'multipart/form-data',
                 'x-user-id': user.id
@@ -1219,7 +1236,7 @@ const App = () => {
 
         console.log('Frontend: Uploading background with name:', customBackgroundName);
         
-        const response = await axios.post(getFullUrl('/api/meditation/custom-background/upload'), formData, {
+        const response = await axios.post(getFullUrl(API_ENDPOINTS.CUSTOM_BACKGROUND_UPLOAD), formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
             'x-user-id': user.id
@@ -1571,6 +1588,9 @@ const App = () => {
         onClose={() => setAlertState({ show: false, message: '', type: 'success' })}
         position="fixed"
       />
+      
+      {/* GDPR Consent for EU users */}
+      <GDPRConsent />
     </div>
   );
 };

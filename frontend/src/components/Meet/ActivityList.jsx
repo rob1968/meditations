@@ -242,7 +242,7 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
           }
         </h2>
         <button 
-          className="filter-button"
+          className="filter-button mobile-touch-target"
           onClick={() => setShowFilters(!showFilters)}
         >
           <span className="filter-icon">🔧</span>
@@ -258,7 +258,7 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
       <div className="view-tabs">
         <div className="view-tabs-container">
           <button
-            className={`view-tab ${activeView === 'all' ? 'active' : ''}`}
+            className={`view-tab mobile-touch-target ${activeView === 'all' ? 'active' : ''}`}
             onClick={() => setActiveView('all')}
           >
             <span className="view-tab-icon">🗓️</span>
@@ -267,7 +267,7 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
           </button>
           
           <button
-            className={`view-tab ${activeView === 'recommended' ? 'active' : ''}`}
+            className={`view-tab mobile-touch-target ${activeView === 'recommended' ? 'active' : ''}`}
             onClick={() => setActiveView('recommended')}
           >
             <span className="view-tab-icon">✨</span>
@@ -348,7 +348,7 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
 
       {hasMore && !isLoading && (
         <div className="load-more-container">
-          <button className="load-more-button" onClick={loadMore}>
+          <button className="load-more-button mobile-touch-target" onClick={loadMore}>
             <span className="button-icon">📥</span>
             <span className="button-text">{t('loadMore', 'Meer laden')}</span>
           </button>

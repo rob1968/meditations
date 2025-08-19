@@ -1,4 +1,48 @@
 {
-  "backgroundMusic": {},
-  "categories": {}
+  "backgroundMusic": {
+    "nature": [
+      {
+        "id": "ocean",
+        "name": "Ocean Waves",
+        "filename": "ocean.mp3",
+        "duration": "10:00",
+        "description": "Gentle ocean waves for deep relaxation"
+      }
+    ],
+    "ambient": [
+      {
+        "id": "deep_ocean",
+        "name": "Deep Ocean",
+        "filename": "deep_ocean.mp3",
+        "duration": "8:30",
+        "description": "Deep underwater ambient sounds"
+      },
+      {
+        "id": "gentle_breeze",
+        "name": "Gentle Breeze",
+        "filename": "gentle_breeze.mp3",
+        "duration": "9:15",
+        "description": "Soft wind through trees"
+      },
+      {
+        "id": "peaceful_ambience",
+        "name": "Peaceful Ambience",
+        "filename": "peaceful_ambience.mp3",
+        "duration": "7:45",
+        "description": "Calm peaceful soundscape"
+      }
+    ]
+  },
+  "categories": {
+    "nature": {
+      "name": "Nature Sounds",
+      "icon": "🌊",
+      "description": "Natural ambient sounds for meditation"
+    },
+    "ambient": {
+      "name": "Ambient",
+      "icon": "🎵", 
+      "description": "Atmospheric soundscapes"
+    }
+  }
 }

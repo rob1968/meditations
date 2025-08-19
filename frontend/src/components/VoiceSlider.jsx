@@ -19,10 +19,16 @@ const VoiceSlider = ({ voices, selectedVoiceId, onVoiceSelect, voiceProvider, cu
   const cardRef = useRef(null);
 
 
-  // Filter voices based on gender filter
-  const filteredVoices = voices.filter(voice => 
-    genderFilter === 'all' || voice.gender === genderFilter
-  );
+  // Filter voices based on gender filter and language support
+  const filteredVoices = voices.filter(voice => {
+    // Filter by gender
+    const genderMatch = genderFilter === 'all' || voice.gender === genderFilter;
+    
+    // Filter by language support (if supportedLanguages is available)
+    const languageMatch = !voice.supportedLanguages || voice.supportedLanguages.includes(i18n.language);
+    
+    return genderMatch && languageMatch;
+  });
 
   // Find the index of the selected voice in filtered voices
   useEffect(() => {
@@ -30,11 +36,21 @@ const VoiceSlider = ({ voices, selectedVoiceId, onVoiceSelect, voiceProvider, cu
     if (selectedIndex !== -1) {
       setCurrentIndex(selectedIndex);
     } else if (filteredVoices.length > 0) {
-      // If current voice is not in filtered list, select first available voice
-      setCurrentIndex(0);
-      onVoiceSelect(filteredVoices[0].voice_id);
+      // If current voice is not in filtered list, try to find Bill voice first as fallback (deep meditation voice)
+      const billVoice = filteredVoices.find(voice => voice.voice_id === 'pqHfZKP75CvOlQylNhV4');
+      if (billVoice) {
+        const billIndex = filteredVoices.findIndex(voice => voice.voice_id === 'pqHfZKP75CvOlQylNhV4');
+        setCurrentIndex(billIndex);
+        onVoiceSelect(billVoice.voice_id);
+        console.log(`Switched to Bill voice (deep) for ${i18n.language} language support`);
+      } else {
+        // If Roger is not available, select first available voice
+        setCurrentIndex(0);
+        onVoiceSelect(filteredVoices[0].voice_id);
+        console.log(`Selected ${filteredVoices[0].name} as fallback voice for ${i18n.language}`);
+      }
     }
-  }, [selectedVoiceId, filteredVoices, onVoiceSelect]);
+  }, [selectedVoiceId, filteredVoices, onVoiceSelect, i18n.language]);
 
   // Cleanup cached audio URLs when component unmounts
   useEffect(() => {
@@ -336,12 +352,17 @@ const VoiceSlider = ({ voices, selectedVoiceId, onVoiceSelect, voiceProvider, cu
             <div className="voice-header-simplified">
               <div className="voice-name-centered">
                 <span className="voice-gender-inline">
-                  {getGenderIcon(currentVoice.gender)}
+                  {currentVoice.isCustom ? '🎤' : getGenderIcon(currentVoice.gender)}
                 </span>
                 {voiceProvider === 'google' && currentVoice.friendlyName 
                   ? currentVoice.friendlyName 
                   : currentVoice.name
                 }
+                {currentVoice.isCustom && (
+                  <span className="custom-voice-badge">
+                    Eigen Stem
+                  </span>
+                )}
               </div>
               
               {/* Play Button Below Name */}

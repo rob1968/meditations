@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Test</title>
+</head>
+<body>
+    <h1>Audio Endpoint Test</h1>
+    
+    <h2>Test 1: Direct Backend API</h2>
+    <audio controls>
+        <source src="http://localhost:5004/api/meditation/audio/meditation_nl_1755547325256_2b01f5c8.mp3" type="audio/mpeg">
+    </audio>
+    
+    <h2>Test 2: Via Proxy (Production)</h2>
+    <audio controls>
+        <source src="/api/meditation/audio/meditation_nl_1755547325256_2b01f5c8.mp3" type="audio/mpeg">
+    </audio>
+    
+    <h2>Test 3: Old Assets Path</h2>
+    <audio controls>
+        <source src="/assets/meditations/meditation_nl_1755547325256_2b01f5c8.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // Test fetch from API
+        fetch('/api/meditation/audio/meditation_nl_1755547325256_2b01f5c8.mp3')
+            .then(response => {
+                console.log('API Response:', response.status, response.headers.get('content-type'));
+                return response.blob();
+            })
+            .then(blob => {
+                console.log('Audio blob size:', blob.size);
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+                audio.play().catch(e => console.error('Play error:', e));
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+            });
+    </script>
+</body>
+</html>

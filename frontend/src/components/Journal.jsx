@@ -267,7 +267,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     if (user) {
       fetchEntries();
       fetchTodaysEntry();
-      fetchUserVoices();
+      // fetchUserVoices(); // Commented out - voice cloning not implemented yet
     }
   }, [user]);
 
@@ -729,7 +729,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       formData.append('voiceName', voiceName.trim());
       formData.append('userId', user.id);
 
-      const response = await axios.post(getFullUrl('/api/journal/voice-clone/upload'), formData, {
+      const response = await axios.post(getFullUrl(API_ENDPOINTS.JOURNAL_VOICE_CLONE_UPLOAD), formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'x-user-id': user.id
@@ -885,7 +885,7 @@ const performPreSaveChecks = async () => {
     console.log('Making API call to OpenAI nonsense endpoint...');
     
     // Use axios with timeout for OpenAI nonsense detection
-    const response = await axios.post(getFullUrl('/api/ai-coach/check-nonsense'), {
+    const response = await axios.post(getFullUrl(API_ENDPOINTS.AI_COACH_CHECK_NONSENSE), {
       text: formData.content.trim()
     }, {
       timeout: 15000, // 15 second timeout
@@ -988,7 +988,7 @@ const proceedWithSave = async () => {
         });
       } else {
         // Use POST for create/append (will handle one-per-day logic)
-        response = await axios.post(getFullUrl('/api/journal/create'), payload, {
+        response = await axios.post(getFullUrl(API_ENDPOINTS.JOURNAL_CREATE), payload, {
           headers: getAuthHeaders(user.id)
         });
       }
@@ -1199,7 +1199,7 @@ const handleSaveEntry = async () => {
       
       const requestData = {
         userId: user.id,
-        voiceId: selectedVoiceId === 'default' ? 'EXAVITQu4vr4xnSDxMaL' : selectedVoiceId
+        voiceId: selectedVoiceId === 'default' ? 'pNInz6obpgDQGcFmaJgB' : selectedVoiceId
       };
       
       console.log('Sending audio generation request:', requestData);
@@ -1518,7 +1518,7 @@ const handleSaveEntry = async () => {
       console.log('Using speech language:', speechLanguage, 'for UI language:', currentLanguage);
       formData.append('language', speechLanguage);
 
-      const response = await axios.post(getFullUrl('/api/journal/transcribe'), formData, {
+      const response = await axios.post(getFullUrl(API_ENDPOINTS.JOURNAL_TRANSCRIBE), formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'x-user-id': user.id
@@ -1706,7 +1706,7 @@ const handleSaveEntry = async () => {
           headers: getAuthHeaders(user.id)
         });
       } else {
-        response = await axios.post(getFullUrl('/api/addictions/create'), requestData, {
+        response = await axios.post(getFullUrl(API_ENDPOINTS.ADDICTIONS_CREATE), requestData, {
           headers: getAuthHeaders(user.id)
         });
       }
@@ -2472,9 +2472,9 @@ const handleSaveEntry = async () => {
                   className="voice-select"
                 >
                   <option value="default">{t('defaultVoice', 'Default Voice (Sarah)')}</option>
-                  <option value="EXAVITQu4vr4xnSDxMaL">Sarah - {t('calm', 'Calm')}</option>
+                  <option value="pNInz6obpgDQGcFmaJgB">Sarah - {t('calm', 'Calm')}</option>
                   <option value="pNInz6obpgDQGcFmaJgB">Adam - {t('deep', 'Deep')}</option>
-                  <option value="21m00Tcm4TlvDq8ikWAM">Rachel - {t('warm', 'Warm')}</option>
+                  <option value="pNInz6obpgDQGcFmaJgB">Rachel - {t('warm', 'Warm')}</option>
                   {userCustomVoices.map(voice => (
                     <option key={voice.voiceId} value={voice.voiceId}>
                       {voice.name} - {t('customVoice', 'Custom')}
@@ -3617,9 +3617,9 @@ const handleSaveEntry = async () => {
                             }}
                           >
                             <option value="default">{t('sarahDefault', 'Sarah (Default)')}</option>
-                            <option value="EXAVITQu4vr4xnSDxMaL">{t('sarahCalm', 'Sarah - Calm')}</option>
+                            <option value="pNInz6obpgDQGcFmaJgB">{t('sarahCalm', 'Sarah - Calm')}</option>
                             <option value="pNInz6obpgDQGcFmaJgB">{t('adamDeep', 'Adam - Deep')}</option>
-                            <option value="21m00Tcm4TlvDq8ikWAM">{t('rachelWarm', 'Rachel - Warm')}</option>
+                            <option value="pNInz6obpgDQGcFmaJgB">{t('rachelWarm', 'Rachel - Warm')}</option>
                             {userCustomVoices.map(voice => (
                               <option key={voice.voiceId} value={voice.voiceId}>
                                 {voice.name}

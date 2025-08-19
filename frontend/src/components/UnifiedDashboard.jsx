@@ -70,7 +70,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
   const [wizardData, setWizardData] = useState({
     meditationType: 'sleep',
     text: '',
-    voiceId: 'EXAVITQu4vr4xnSDxMaL',
+    voiceId: 'CwhRBWXzGAHq8TQ4Fs17', // Roger - multilingual voice
     background: 'ocean',
     useBackgroundMusic: false,
     selectedMusic: null,
@@ -607,7 +607,8 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       const audioFile = meditation.audioFiles[0];
       if (audioFile) {
         try {
-          const audioUrl = getFullUrl(API_ENDPOINTS.MEDITATION_AUDIO(audioFile.filename));
+          // Use assets URL for direct access (same as audio playback)
+          const audioUrl = getAssetUrl(`/assets/meditations/${audioFile.filename}`);
           const audioResponse = await fetch(audioUrl);
           if (!audioResponse.ok) {
             throw new Error(`Failed to fetch audio: ${audioResponse.status}`);
@@ -618,8 +619,8 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
           formData.append('audio', audioFileToUpload);
         } catch (audioError) {
           console.error('Error fetching audio file:', audioError);
-          // Try alternative path
-          const altAudioUrl = `${window.location.origin}/assets/meditations/${audioFile.filename}`;
+          // Try API endpoint as fallback
+          const altAudioUrl = getFullUrl(API_ENDPOINTS.MEDITATION_AUDIO(audioFile.filename));
           const audioResponse = await fetch(altAudioUrl);
           const audioBlob = await audioResponse.blob();
           const audioFileToUpload = new File([audioBlob], audioFile.filename, { type: 'audio/mpeg' });
@@ -962,7 +963,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       setWizardData({
         meditationType: 'sleep',
         text: '',
-        voiceId: 'EXAVITQu4vr4xnSDxMaL',
+        voiceId: 'pNInz6obpgDQGcFmaJgB',
         background: 'ocean',
         useBackgroundMusic: true,
         speechTempo: 1.00,

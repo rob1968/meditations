@@ -28,21 +28,51 @@ export const API_ENDPOINTS = {
   GET_VOICES: '/api/meditation/voices',
   VOICE_PREVIEW: '/api/meditation/voice-preview',
   GOOGLE_VOICE_PREVIEW: '/api/google-voice-preview',
+  SAVE_MEDITATION: '/api/user-meditations/save',
+  CUSTOM_BACKGROUND_UPLOAD: '/api/meditation/custom-background/upload',
   
   // AI Coach endpoints
   AI_COACH: '/api/ai-coach',
+  AI_COACH_CHAT: '/api/ai-coach/chat',
+  AI_COACH_ASSESS_CRISIS: '/api/ai-coach/assess-crisis',
+  
+  // Journal endpoints
+  JOURNAL_CREATE: '/api/journal/create',
+  JOURNAL_ENTRIES: (userId) => `/api/journal/entries/${userId}`,
+  JOURNAL_VOICE_CLONE_UPLOAD: '/api/journal/voice-clone/upload',
+  JOURNAL_TRANSCRIBE: '/api/journal/transcribe',
+  AI_COACH_CHECK_NONSENSE: '/api/ai-coach/check-nonsense',
   
   // User endpoints
   USER_CREDITS: (userId) => `/api/users/${userId}/credits`,
+  UPDATE_PROFILE: (userId) => `/api/users/${userId}/update-profile`,
   
   // Community endpoints
   COMMUNITY_MEDITATIONS: '/api/community/shared-meditations',
   COMMUNITY_MEDITATION: (id) => `/api/community/meditation/${id}`,
   COMMUNITY_LIKE: (id) => `/api/community/meditations/${id}/like`,
   COMMUNITY_PLAY: (id) => `/api/community/meditations/${id}/play`,
+  COMMUNITY_SHARE: '/api/community/share',
   
-  // Asset endpoints
-  MEDITATION_AUDIO: (filename) => `/assets/meditations/${filename}`,
+  // Notifications endpoints
+  NOTIFICATIONS_MARK_READ: '/api/notifications/mark-read',
+  NOTIFICATIONS_LIST: (userId) => `/api/notifications/${userId}`,
+  
+  // Addictions endpoints
+  ADDICTIONS_TRACK: '/api/addictions/track',
+  ADDICTIONS_LIST: (userId) => `/api/addictions/${userId}`,
+  ADDICTIONS_CREATE: '/api/addictions/create',
+  
+  // Emergency contacts endpoints
+  EMERGENCY_CONTACTS: '/api/emergency-contacts',
+  EMERGENCY_CONTACTS_USER: (userId) => `/api/emergency-contacts/${userId}`,
+  
+  // Pi Payment endpoints
+  PI_PAYMENTS_APPROVE: '/api/pi-payments/approve',
+  PI_PAYMENTS_COMPLETE: '/api/pi-payments/complete',
+  
+  // Asset endpoints - serve via API to ensure access
+  MEDITATION_AUDIO: (filename) => `/api/meditation/audio/${filename}`,
   CUSTOM_IMAGE: (filename) => `/assets/images/custom/${filename}`,
   DEFAULT_IMAGE: (type) => `/assets/images/${type}.jpg`,
 };
