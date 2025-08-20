@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import { getFullUrl, getAuthHeaders } from '../config/api';
+import { getFullUrl } from '../config/api';
+import { getAuthHeaders } from '../utils/userUtils';
 import PageHeader from './PageHeader';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -52,7 +53,7 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
         getFullUrl(`/api/notifications/user`),
         { 
           params: { unreadOnly },
-          headers: getAuthHeaders(user.id)
+          headers: getAuthHeaders(user)
         }
       );
       
@@ -73,7 +74,10 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
     try {
       await axios.patch(
         getFullUrl(`/api/notifications/${notificationId}/read`),
-        { userId: user.id }
+        {},
+        {
+          headers: getAuthHeaders(user)
+        }
       );
       
       // Update local state
@@ -96,7 +100,13 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
 
   const markAllAsRead = async () => {
     try {
-      await axios.patch(getFullUrl(`/api/notifications/user/${user.id}/read-all`));
+      await axios.patch(
+        getFullUrl(`/api/notifications/user/read-all`),
+        {},
+        {
+          headers: getAuthHeaders(user)
+        }
+      );
       
       // Update local state
       setNotifications(prev => 
@@ -115,7 +125,9 @@ const Inbox = ({ user, onUnreadCountChange, onProfileClick, headerUnreadCount, o
     try {
       const response = await axios.delete(
         getFullUrl(`/api/notifications/${notificationId}`),
-        { data: { userId: user.id } }
+        {
+          headers: getAuthHeaders(user)
+        }
       );
       
       // Update local state

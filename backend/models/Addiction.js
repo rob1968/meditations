@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const AddictionSchema = new mongoose.Schema({
-  userId: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -316,8 +316,8 @@ AddictionSchema.methods.getCruksStatus = function() {
 };
 
 // Indexes for better performance
-AddictionSchema.index({ userId: 1, createdAt: -1 });
-AddictionSchema.index({ userId: 1, type: 1 });
-AddictionSchema.index({ userId: 1, status: 1 });
+AddictionSchema.index({ user: 1, createdAt: -1 });
+AddictionSchema.index({ user: 1, type: 1 });
+AddictionSchema.index({ user: 1, status: 1 });
 
 module.exports = mongoose.model('Addiction', AddictionSchema);

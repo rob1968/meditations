@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import axios from 'axios';
-import { getFullUrl, getAssetUrl, API_ENDPOINTS, API_BASE_URL, getAuthHeaders, apiRequest } from '../config/api';
+import { getFullUrl, getAssetUrl, API_ENDPOINTS, API_BASE_URL, apiRequest } from '../config/api';
+import { getAuthHeaders } from '../utils/userUtils';
 import { loadJournalTab, saveJournalTab } from '../utils/statePersistence';
 import PageHeader from './PageHeader';
 import Alert from './Alert';
@@ -330,7 +331,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     // Fetch today's entry directly
     try {
       const response = await axios.get(getFullUrl(`/api/journal/user/today`), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       console.log('Calendar: Fetched today\'s entry:', response.data);
       
@@ -426,7 +427,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       if (searchText) params.append('searchText', searchText);
       
       const response = await axios.get(getFullUrl(`/api/journal/user/entries?${params}`), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       // Sort entries from oldest to newest for horizontal scroll (left = old, right = new)
       const sortedEntries = response.data.entries.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -444,7 +445,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const fetchTodaysEntry = async () => {
     try {
       const response = await axios.get(getFullUrl(`/api/journal/user/today`), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       setTodaysEntry(response.data.entry);
       setHasTodaysEntry(response.data.hasEntry);
@@ -464,7 +465,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       const endOfDay = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 23, 59, 59, 999);
       
       const response = await axios.get(getFullUrl(`/api/journal/user/entries?startDate=${startOfDay.toISOString()}&endDate=${endOfDay.toISOString()}`), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       
       if (response.data.entries && response.data.entries.length > 0) {
@@ -514,6 +515,31 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   };
 
   const handleDateSelection = async (date) => {
+    console.log('handleDateSelection called with:', date);
+    
+    // Prevent selection of future dates
+    const selectedDate = new Date(date);
+    const today = new Date();
+    const todayNormalized = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const selectedNormalized = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    
+    console.log('Date comparison:', {
+      selectedDate: selectedDate.toDateString(),
+      today: today.toDateString(),
+      selectedNormalized: selectedNormalized.toDateString(),
+      todayNormalized: todayNormalized.toDateString(),
+      isFuture: selectedNormalized > todayNormalized
+    });
+    
+    if (selectedNormalized > todayNormalized) {
+      console.log('Blocking future date selection');
+      setError('Je kunt geen toekomstige datums selecteren voor dagboek entries');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    
+    console.log('Date selection allowed, proceeding...');
+    
     setSelectedDate(date);
     setShowCalendar(false); // Hide calendar when date is selected
     const entry = await fetchEntryForDate(date);
@@ -549,7 +575,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     try {
       console.log('Fetching user voices for user:', user.id);
       const response = await axios.get(getFullUrl(`/api/journal/voice-clone/list/${user.id}`), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       console.log('Voice list response:', response.data);
       if (response.data.success) {
@@ -780,7 +806,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
       async () => {
         try {
           await axios.delete(getFullUrl(`/api/journal/voice-clone/${voiceId}?userId=${user.id}`), {
-            headers: getAuthHeaders(user.id)
+            headers: getAuthHeaders(user)
           });
           await fetchUserVoices(); // Refresh voices list
           
@@ -896,7 +922,7 @@ const performPreSaveChecks = async () => {
       text: formData.content.trim()
     }, {
       timeout: 15000, // 15 second timeout
-      headers: getAuthHeaders(user.id)
+      headers: getAuthHeaders(user)
     });
     
     console.log('API Response status:', response.status);
@@ -991,12 +1017,12 @@ const proceedWithSave = async () => {
       if (editingEntry && editingEntry._id) {
         // Use PUT for explicit editing
         response = await axios.put(getFullUrl(`/api/journal/${editingEntry._id}`), payload, {
-          headers: getAuthHeaders(user.id)
+          headers: getAuthHeaders(user)
         });
       } else {
         // Use POST for create/append (will handle one-per-day logic)
         response = await axios.post(getFullUrl(API_ENDPOINTS.JOURNAL_CREATE), payload, {
-          headers: getAuthHeaders(user.id)
+          headers: getAuthHeaders(user)
         });
       }
 
@@ -1062,7 +1088,15 @@ const proceedWithSave = async () => {
       return false; // Server response indicated failure
     } catch (error) {
       console.error('Error saving journal entry:', error);
-      setError(t('failedToSaveEntry', 'Failed to save journal entry'));
+      
+      // Handle specific error codes from backend
+      if (error.response?.data?.code === 'FUTURE_DATE_NOT_ALLOWED') {
+        setError(error.response.data.error || 'Journal entries kunnen niet worden aangemaakt voor toekomstige datums');
+      } else if (error.response?.data?.error) {
+        setError(error.response.data.error);
+      } else {
+        setError(t('failedToSaveEntry', 'Kon dagboek invoer niet opslaan!'));
+      }
       return false; // Error occurred
     } finally {
       setIsSavingEntry(false); // Always reset saving state
@@ -1175,7 +1209,7 @@ const handleSaveEntry = async () => {
           
           // Make the API call to delete from backend
           await axios.delete(getFullUrl(`/api/journal/${entryId}?userId=${user.id}`), {
-            headers: getAuthHeaders(user.id)
+            headers: getAuthHeaders(user)
           });
           
           // Refresh today's entry to ensure consistency
@@ -1212,7 +1246,7 @@ const handleSaveEntry = async () => {
       console.log('Sending audio generation request:', requestData);
       
       const response = await axios.post(getFullUrl(`/api/journal/${entry._id}/generate-audio`), requestData, {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
 
       console.log('Audio generation response:', response.data);
@@ -1248,7 +1282,7 @@ const handleSaveEntry = async () => {
       const response = await axios.post(getFullUrl(`/api/journal/${entry._id}/share`), {
         userId: user.id
       }, {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
 
       if (response.data.success) {
@@ -1688,7 +1722,7 @@ const handleSaveEntry = async () => {
   const fetchAddictions = async () => {
     try {
       const response = await axios.get(getFullUrl(`/api/addictions/user/${user.id}`), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       setAddictions(response.data.addictions);
     } catch (error) {
@@ -1710,11 +1744,11 @@ const handleSaveEntry = async () => {
       let response;
       if (editingAddiction) {
         response = await axios.put(getFullUrl(`/api/addictions/${editingAddiction._id}`), requestData, {
-          headers: getAuthHeaders(user.id)
+          headers: getAuthHeaders(user)
         });
       } else {
         response = await axios.post(getFullUrl(API_ENDPOINTS.ADDICTIONS_CREATE), requestData, {
-          headers: getAuthHeaders(user.id)
+          headers: getAuthHeaders(user)
         });
       }
       
@@ -1763,7 +1797,7 @@ const handleSaveEntry = async () => {
       async () => {
         try {
           await axios.delete(getFullUrl(`/api/addictions/${addictionId}?userId=${user.id}`), {
-            headers: getAuthHeaders(user.id)
+            headers: getAuthHeaders(user)
           });
           await fetchAddictions();
         } catch (error) {
@@ -1926,7 +1960,7 @@ const handleSaveEntry = async () => {
 
         console.log('Checking for trigger alerts...');
         const response = await axios.get(getFullUrl(`/api/ai-coach/check-triggers/${user.id}`), {
-          headers: getAuthHeaders(user.id)
+          headers: getAuthHeaders(user)
         });
         
         if (response.data.success && response.data.triggers && response.data.triggers.length > 0) {
@@ -2040,6 +2074,7 @@ const handleSaveEntry = async () => {
   };
 
   const handleCalendarDateClick = (dateString) => {
+    console.log('handleCalendarDateClick called with:', dateString);
     if (dateString) {
       handleDateSelection(dateString);
     }

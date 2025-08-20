@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import { getFullUrl, API_ENDPOINTS, getAuthHeaders } from '../config/api';
+import { getFullUrl, API_ENDPOINTS } from '../config/api';
+import { getAuthHeaders } from '../utils/userUtils';
 
 const StepNavigation = ({ 
   currentStep, 
@@ -26,7 +27,7 @@ const StepNavigation = ({
           const user = JSON.parse(localStorage.getItem('user') || '{}');
           if (user.id) {
             const response = await axios.get(getFullUrl(API_ENDPOINTS.USER_CREDITS(user.id)), {
-              headers: getAuthHeaders(user.id)
+              headers: getAuthHeaders(user)
             });
             setUserCredits(response.data.credits);
           }

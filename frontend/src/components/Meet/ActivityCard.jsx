@@ -1,16 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getUserId, isActivityOrganizer, isActivityParticipant } from '../../utils/userUtils';
 
-const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
+const ActivityCard = ({ activity, user, onJoin, onLeave, onSelect, showDirectActions = false }) => {
   const { t } = useTranslation();
+  const [isJoining, setIsJoining] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [message, setMessage] = useState(null); // { text: string, type: 'success'|'error'|'info'|'warning', icon: string }
+  const [actionProgress, setActionProgress] = useState(null); // For detailed progress feedback
   
-  // Check if user is already a participant
-  const isParticipant = activity.participants?.some(
-    p => p.user?._id === user?._id || p.user === user?._id
-  );
-  
-  const isOrganizer = activity.organizer?._id === user?._id || activity.organizer === user?._id;
+  // Check user status using standardized utility functions
+  const isParticipant = isActivityParticipant(activity, user);
+  const isOrganizer = isActivityOrganizer(activity, user);
   const isFull = (activity.participants?.filter(p => p.status === 'confirmed')?.length || 0) >= activity.maxParticipants;
+  const isOnWaitlist = activity.waitlist?.some(w => w.user === user?.id || w.user?._id === user?.id || w.user?.toString() === user?.id);
+  const waitlistPosition = isOnWaitlist ? activity.waitlist?.findIndex(w => w.user === user?.id || w.user?._id === user?.id || w.user?.toString() === user?.id) + 1 : null;
   
   // Debug logging for button visibility
   console.log('🔍 ActivityCard Debug:', {
@@ -18,9 +22,13 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
     isParticipant,
     isOrganizer,
     isFull,
+    isOnWaitlist,
+    waitlistPosition,
     participantCount: activity.participants?.length || 0,
-    userId: user?._id,
-    shouldShowJoinButton: !isParticipant && !isFull
+    waitlistCount: activity.waitlist?.length || 0,
+    userId: user?.id,
+    userObject: user,
+    shouldShowJoinButton: !isParticipant && !isFull && !isOnWaitlist
   });
   
   // Format date and time
@@ -59,6 +67,42 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
   const confirmedParticipants = activity.participants?.filter(p => p.status === 'confirmed').length || 0;
   const availableSpots = activity.maxParticipants - confirmedParticipants;
   
+  // Check if user can leave activity (2-hour deadline)
+  const canLeaveActivity = () => {
+    if (isOrganizer) return false; // Organizers cannot leave
+    
+    const now = new Date();
+    const activityDateTime = new Date(activity.date);
+    
+    if (activity.startTime) {
+      const [hours, minutes] = activity.startTime.split(':');
+      activityDateTime.setHours(parseInt(hours), parseInt(minutes));
+    }
+    
+    const hoursUntilActivity = (activityDateTime - now) / (1000 * 60 * 60);
+    
+    // Can leave if more than 2 hours before start
+    return hoursUntilActivity > 2;
+  };
+
+  // Show message in card with enhanced feedback
+  const showMessage = (text, type = 'success', icon = '✅', duration = 4000) => {
+    setMessage({ text, type, icon });
+    setTimeout(() => {
+      setMessage(null);
+    }, duration);
+  };
+  
+  // Show progress feedback
+  const showProgressMessage = (text, icon = '⏳') => {
+    setActionProgress({ text, icon });
+  };
+  
+  // Clear progress feedback
+  const clearProgressMessage = () => {
+    setActionProgress(null);
+  };
+
   // Function to get the correct participant status text based on timing
   const getParticipantStatusText = () => {
     const now = new Date();
@@ -86,33 +130,48 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
   };
   
   return (
-    <div className="activity-card mobile-touch-card" onClick={onSelect}>
-      <div className="activity-card-header">
+    <div className="activity-card-mobile" onClick={onSelect}>
+      {/* Compact Header Row */}
+      <div className="card-header-row">
         <div 
-          className="activity-category-badge"
+          className="category-badge-compact"
           style={{ backgroundColor: categoryColor + '20', color: categoryColor }}
         >
           <span className="category-emoji">{categoryEmoji}</span>
           <span className="category-name">{categoryName}</span>
         </div>
         
-        {isFull && !isParticipant && (
-          <span className="activity-status-badge full">
-            {t('full', 'Vol')}
-          </span>
-        )}
-        
-        {isOrganizer && (
-          <span className="activity-status-badge organizer">
-            {t('organizing', 'Organisator')}
-          </span>
-        )}
-        
-        {isParticipant && !isOrganizer && (
-          <span className="activity-status-badge joined">
-            {getParticipantStatusText()}
-          </span>
-        )}
+        <div className="status-badges-row">
+          {isFull && !isParticipant && (
+            <span className="status-badge full">
+              {t('full', 'Vol')}
+            </span>
+          )}
+          
+          {isOrganizer && (
+            <span className="status-badge organizer">
+              {t('organizing', 'Organisator')}
+            </span>
+          )}
+          
+          {isParticipant && !isOrganizer && (
+            <span className="status-badge joined">
+              {getParticipantStatusText()}
+            </span>
+          )}
+          
+          {isOnWaitlist && (
+            <span className="status-badge waitlist">
+              {t('waitlistPosition', 'Wachtlijst #{{position}}', { position: waitlistPosition })}
+            </span>
+          )}
+          
+          {isParticipant && activity.conversationId && (
+            <span className="chat-indicator" title={t('chatAvailable', 'Groepschat beschikbaar')}>
+              💬
+            </span>
+          )}
+        </div>
       </div>
       
       {activity.coverPhoto && (
@@ -124,123 +183,308 @@ const ActivityCard = ({ activity, user, onJoin, onSelect }) => {
         </div>
       )}
       
-      <div className="activity-card-body">
-        <h3 className="activity-title">{activity.title}</h3>
-        
-        <p className="activity-description">
-          {(activity.description?.length || 0) > 100 
-            ? activity.description.substring(0, 100) + '...' 
-            : activity.description}
-        </p>
-        
-        <div className="activity-details">
-          <div className="activity-detail">
-            <span className="detail-icon">📅</span>
-            <span className="detail-text">{dateStr}</span>
-          </div>
+      {/* Main Content - Mobile Optimized */}
+      <div className="card-main-content">
+        <div className="content-left">
+          <h3 className="activity-title-mobile">{activity.title}</h3>
           
-          <div className="activity-detail">
-            <span className="detail-icon">🕐</span>
-            <span className="detail-text">{timeStr}</span>
-          </div>
-          
-          <div className="activity-detail">
-            <span className="detail-icon">📍</span>
-            <span className="detail-text">{activity.location?.name || activity.location?.city}</span>
-          </div>
-          
-          <div className="activity-detail">
-            <span className="detail-icon">👥</span>
-            <span className="detail-text">
-              {confirmedParticipants}/{activity.maxParticipants} 
-              {availableSpots > 0 && !isFull && (
-                <span className="spots-available">
-                  {' '}({availableSpots} {t('spotsLeft', 'plekken vrij')})
-                </span>
-              )}
+          {/* Quick Info Row */}
+          <div className="quick-info-row">
+            <span className="quick-info-item">
+              <span className="info-icon">📅</span>
+              <span className="info-text">{dateStr}</span>
             </span>
+            <span className="quick-info-item">
+              <span className="info-icon">🕐</span>
+              <span className="info-text">{timeStr}</span>
+            </span>
+            <span className="quick-info-item">
+              <span className="info-icon">👥</span>
+              <span className="info-text">{confirmedParticipants}/{activity.maxParticipants}</span>
+            </span>
+          </div>
+          
+          <div className="location-row">
+            <span className="location-icon">📍</span>
+            <span className="location-text">{activity.location?.name || activity.location?.city}</span>
+            {availableSpots > 0 && !isFull && (
+              <span className="spots-badge">
+                {availableSpots} {t('spotsLeft', 'vrij')}
+              </span>
+            )}
           </div>
         </div>
         
-        {activity.tags && activity.tags.length > 0 && (
-          <div className="activity-tags">
-            {activity.tags.slice(0, 3).map((tag, index) => (
-              <span key={index} className="activity-tag">#{tag}</span>
-            ))}
+        <div className="content-right">
+          {/* Organizer mini info */}
+          <div className="organizer-mini">
+            {activity.organizer?.profileImage && (
+              <img 
+                src={activity.organizer.profileImage} 
+                alt={activity.organizer?.username || 'Organisator'}
+                className="organizer-mini-avatar"
+              />
+            )}
+            <span className="organizer-mini-name">{activity.organizer?.username}</span>
           </div>
+        </div>
+      </div>
+        
+      {activity.tags && activity.tags.length > 0 && (
+        <div className="activity-tags">
+          {activity.tags.slice(0, 3).map((tag, index) => (
+            <span key={index} className="activity-tag">#{tag}</span>
+          ))}
+        </div>
+      )}
+      
+      {activity.cost?.amount > 0 && (
+        <div className="activity-cost">
+          <span className="cost-icon">💰</span>
+          <span className="cost-text">
+            €{activity.cost.amount} - {activity.cost.description || t('payOwn', 'Ieder betaalt zelf')}
+          </span>
+        </div>
+      )}
+      
+      {/* Smart Action Buttons Row - Mobile First */}
+      <div className="card-actions-row">
+        {/* Primary Join Button - Only show if can join directly */}
+        {!isParticipant && !isOnWaitlist && !isFull && (
+          <button 
+            className="action-btn primary-action"
+            disabled={isJoining || isLeaving || actionProgress}
+            onClick={async (e) => {
+              e.stopPropagation();
+              
+              // Prevent multiple simultaneous actions
+              if (isJoining || isLeaving || actionProgress) {
+                return;
+              }
+              setIsJoining(true);
+              showProgressMessage(t('joiningActivity', 'Aanmelden bij activiteit...'), '🔄');
+              
+              try {
+                const result = await onJoin();
+                clearProgressMessage();
+                
+                if (result?.waitlist) {
+                  showMessage(
+                    t('addedToWaitlistWithDetails', 'Je staat op de wachtlijst! Je krijgt bericht als er plek vrijkomt.'), 
+                    'info', 
+                    '⏳', 
+                    5000
+                  );
+                } else {
+                  showMessage(
+                    t('joinedActivityWithDetails', 'Super! Je hebt je succesvol aangemeld voor deze activiteit.'), 
+                    'success', 
+                    '🎉', 
+                    5000
+                  );
+                }
+              } catch (error) {
+                clearProgressMessage();
+                const errorMessage = error.message || t('joinError', 'Er ging iets mis bij het aanmelden');
+                showMessage(errorMessage, 'error', '❌', 6000);
+              } finally {
+                setIsJoining(false);
+              }
+            }}
+          >
+            {isJoining ? (
+              <>
+                <span className="btn-icon">⏳</span>
+                <span className="btn-text">{t('joining', 'Aanmelden...')}</span>
+              </>
+            ) : (
+              <>
+                <span className="btn-icon">✅</span>
+                <span className="btn-text">{t('join', 'Deelnemen')}</span>
+              </>
+            )}
+          </button>
         )}
         
-        {activity.cost?.amount > 0 && (
-          <div className="activity-cost">
-            <span className="cost-icon">💰</span>
-            <span className="cost-text">
-              €{activity.cost.amount} - {activity.cost.description || t('payOwn', 'Ieder betaalt zelf')}
+        {/* Waitlist Button - Only show if activity is full and not on waitlist */}
+        {!isParticipant && !isOnWaitlist && isFull && (
+          <button 
+            className="action-btn waitlist-action"
+            disabled={isJoining || isLeaving || actionProgress}
+            onClick={async (e) => {
+              e.stopPropagation();
+              
+              // Prevent multiple simultaneous actions
+              if (isJoining || isLeaving || actionProgress) {
+                return;
+              }
+              setIsJoining(true);
+              showProgressMessage(t('joiningActivity', 'Aanmelden bij activiteit...'), '🔄');
+              
+              try {
+                const result = await onJoin();
+                clearProgressMessage();
+                
+                if (result?.waitlist) {
+                  showMessage(
+                    t('addedToWaitlistWithDetails', 'Je staat op de wachtlijst! Je krijgt bericht als er plek vrijkomt.'), 
+                    'info', 
+                    '⏳', 
+                    5000
+                  );
+                } else {
+                  showMessage(
+                    t('joinedActivityWithDetails', 'Super! Je hebt je succesvol aangemeld voor deze activiteit.'), 
+                    'success', 
+                    '🎉', 
+                    5000
+                  );
+                }
+              } catch (error) {
+                clearProgressMessage();
+                const errorMessage = error.message || t('joinError', 'Er ging iets mis bij het aanmelden');
+                showMessage(errorMessage, 'error', '❌', 6000);
+              } finally {
+                setIsJoining(false);
+              }
+            }}
+          >
+            {isJoining ? (
+              <>
+                <span className="btn-icon">⏳</span>
+                <span className="btn-text">{t('joiningWaitlist', 'Toevoegen...')}</span>
+              </>
+            ) : (
+              <>
+                <span className="btn-icon">⏳</span>
+                <span className="btn-text">{t('joinWaitlist', 'Wachtlijst')}</span>
+              </>
+            )}
+          </button>
+        )}
+        
+        {/* Waitlist Status Button - Show current position */}
+        {isOnWaitlist && (
+          <div className="waitlist-status-info">
+            <span className="waitlist-icon">⏳</span>
+            <span className="waitlist-text">
+              {t('waitlistStatus', 'Wachtlijst positie #{{position}}', { position: waitlistPosition })}
             </span>
           </div>
         )}
+        
+        {/* Secondary Actions */}
+        <div className="secondary-actions">
+          {isParticipant && activity.conversationId && (
+            <button 
+              className="action-btn chat-action"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(); // This should navigate to chat
+              }}
+            >
+              <span className="btn-icon">💬</span>
+              <span className="btn-text">{t('chat', 'Chat')}</span>
+            </button>
+          )}
+          
+          <button 
+            className="action-btn view-action"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect();
+            }}
+          >
+            <span className="btn-icon">👁️</span>
+            <span className="btn-text">{t('view', 'Bekijk')}</span>
+          </button>
+          
+          {/* Leave Activity Button */}
+          {(isParticipant || isOnWaitlist) && showDirectActions && canLeaveActivity() && onLeave && (
+            <button 
+              className="action-btn leave-action"
+              disabled={isLeaving || isJoining || actionProgress}
+              onClick={async (e) => {
+                e.stopPropagation();
+                setIsLeaving(true);
+                showProgressMessage(
+                  isOnWaitlist 
+                    ? t('leavingWaitlist', 'Wachtlijst verlaten...') 
+                    : t('leavingActivity', 'Afmelden bij activiteit...'), 
+                  '🔄'
+                );
+                
+                try {
+                  const result = await onLeave();
+                  clearProgressMessage();
+                  
+                  if (result?.waitlist || isOnWaitlist) {
+                    showMessage(
+                      t('leftWaitlistWithDetails', 'Je staat niet meer op de wachtlijst.'), 
+                      'success', 
+                      '👋', 
+                      4000
+                    );
+                  } else {
+                    showMessage(
+                      t('leftActivityWithDetails', 'Je hebt je succesvol afgemeld voor deze activiteit.'), 
+                      'success', 
+                      '👋', 
+                      4000
+                    );
+                  }
+                } catch (error) {
+                  clearProgressMessage();
+                  const errorMessage = error.message || t('leaveError', 'Er ging iets mis bij het afmelden');
+                  showMessage(errorMessage, 'error', '❌', 6000);
+                } finally {
+                  setIsLeaving(false);
+                }
+              }}
+            >
+              {isLeaving ? (
+                <>
+                  <span className="btn-icon">⏳</span>
+                  <span className="btn-text">{t('leaving', 'Afmelden...')}</span>
+                </>
+              ) : (
+                <>
+                  <span className="btn-icon">👋</span>
+                  <span className="btn-text">{isOnWaitlist ? t('leaveWaitlist', 'Verlaat wachtlijst') : t('leave', 'Afmelden')}</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
       
-      <div className="activity-card-footer">
-        <div className="activity-organizer">
-          {activity.organizer?.profileImage && (
-            <img 
-              src={activity.organizer.profileImage} 
-              alt={activity.organizer?.username || 'Organisator'}
-              className="organizer-avatar"
-            />
-          )}
-          <div className="organizer-info">
-            <span className="organizer-label">{t('organizedBy', 'Georganiseerd door')}</span>
-            <span className="organizer-name">
-              {activity.organizer?.username}
-              {activity.organizer?.isVerified && (
-                <span className="verified-badge" title={t('verified', 'Geverifieerd')}>✓</span>
-              )}
-            </span>
-          </div>
+      {(isParticipant || isOnWaitlist) && showDirectActions && !canLeaveActivity() && !isOrganizer && (
+        <div className="deadline-warning">
+          <span className="warning-icon">⏰</span>
+          <span className="warning-text">
+            {isOnWaitlist 
+              ? t('waitlistLeaveDeadlinePassed', 'Wachtlijst verlaten niet meer mogelijk (binnen 2 uur)')
+              : t('leaveDeadlinePassed', 'Afmelden niet meer mogelijk (binnen 2 uur)')
+            }
+          </span>
         </div>
-        
-        <div className="activity-actions">
-          {!isParticipant && !isFull && (
-            <button 
-              className="join-button primary-button mobile-touch-target"
-              onClick={(e) => {
-                e.stopPropagation();
-                onJoin();
-              }}
-            >
-              <span className="button-icon">🤝</span>
-              <span className="button-text">{t('join', 'Deelnemen')}</span>
-            </button>
-          )}
-          
-          {!isParticipant && isFull && (
-            <button 
-              className="waitlist-button secondary-button mobile-touch-target"
-              onClick={(e) => {
-                e.stopPropagation();
-                onJoin();
-              }}
-            >
-              <span className="button-icon">⏳</span>
-              <span className="button-text">{t('joinWaitlist', 'Wachtlijst')}</span>
-            </button>
-          )}
-          
-          {isParticipant && (
-            <button 
-              className="view-button secondary-button mobile-touch-target"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect();
-              }}
-            >
-              <span className="button-icon">👁️</span>
-              <span className="button-text">{t('viewDetails', 'Bekijken')}</span>
-            </button>
-          )}
+      )}
+      
+      {/* Progress message display */}
+      {actionProgress && (
+        <div className="activity-card-progress">
+          <span className="progress-icon">{actionProgress.icon}</span>
+          <span className="progress-text">{actionProgress.text}</span>
         </div>
-      </div>
+      )}
+      
+      {/* In-card message display */}
+      {message && (
+        <div className={`activity-card-message ${message.type}`}>
+          <span className="message-icon">{message.icon}</span>
+          <span className="message-text">{message.text}</span>
+        </div>
+      )}
     </div>
   );
 };

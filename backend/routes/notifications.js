@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Notification = require('../models/Notification');
-const auth = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 
 // Get all notifications for a user
 router.get('/user', auth, async (req, res) => {
@@ -9,7 +9,7 @@ router.get('/user', auth, async (req, res) => {
     const userId = req.user._id;
     const { limit = 50, offset = 0, unreadOnly = false } = req.query;
     
-    let query = { userId };
+    let query = { user: userId };
     if (unreadOnly === 'true') {
       query.isRead = false;
     }
@@ -20,7 +20,7 @@ router.get('/user', auth, async (req, res) => {
       .limit(parseInt(limit))
       .skip(parseInt(offset));
     
-    const unreadCount = await Notification.countDocuments({ userId, isRead: false });
+    const unreadCount = await Notification.countDocuments({ user: userId, isRead: false });
     
     res.json({
       success: true,
@@ -44,7 +44,7 @@ router.patch('/:notificationId/read', auth, async (req, res) => {
     const userId = req.user._id;
     
     const notification = await Notification.findOneAndUpdate(
-      { _id: notificationId, userId },
+      { _id: notificationId, user: userId },
       { isRead: true },
       { new: true }
     );
@@ -57,7 +57,7 @@ router.patch('/:notificationId/read', auth, async (req, res) => {
     }
     
     // Get updated unread count
-    const unreadCount = await Notification.countDocuments({ userId, isRead: false });
+    const unreadCount = await Notification.countDocuments({ user: userId, isRead: false });
     
     res.json({
       success: true,
@@ -79,7 +79,7 @@ router.patch('/user/read-all', auth, async (req, res) => {
     const userId = req.user._id;
     
     await Notification.updateMany(
-      { userId, isRead: false },
+      { user: userId, isRead: false },
       { isRead: true }
     );
     
@@ -104,7 +104,7 @@ router.delete('/:notificationId', auth, async (req, res) => {
     
     const notification = await Notification.findOneAndDelete({
       _id: notificationId,
-      userId
+      user: userId
     });
     
     if (!notification) {
@@ -115,7 +115,7 @@ router.delete('/:notificationId', auth, async (req, res) => {
     }
     
     // Get updated unread count
-    const unreadCount = await Notification.countDocuments({ userId, isRead: false });
+    const unreadCount = await Notification.countDocuments({ user: userId, isRead: false });
     
     res.json({
       success: true,

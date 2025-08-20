@@ -12,7 +12,7 @@ router.get('/user/:userId', async (req, res) => {
     console.log('Fetching addictions for user:', userId);
     
     // Build filter query
-    let filter = { userId };
+    let filter = { user: userId };
     
     if (status && status !== 'all') {
       filter.status = status;
@@ -24,7 +24,7 @@ router.get('/user/:userId', async (req, res) => {
     
     const addictions = await Addiction.find(filter)
       .sort({ createdAt: -1 })
-      .populate('userId', 'username');
+      .populate('user', 'username');
     
     console.log('Found addictions:', addictions.length);
     
@@ -66,7 +66,7 @@ router.post('/create', async (req, res) => {
     console.log('Creating addiction:', { userId, type, customType, startDate, quitDate, status });
     
     const addictionData = {
-      userId,
+      user: userId,
       type: type.trim(),
       description: description?.trim() || '',
       startDate: new Date(startDate),
@@ -107,7 +107,7 @@ router.post('/create', async (req, res) => {
     
     const newAddiction = new Addiction(addictionData);
     await newAddiction.save();
-    await newAddiction.populate('userId', 'username');
+    await newAddiction.populate('user', 'username');
     
     // Add initial milestone if quit date is provided
     if (quitDate) {
@@ -139,7 +139,7 @@ router.put('/:addictionId', async (req, res) => {
     }
     
     // Check if user owns this addiction
-    if (addiction.userId.toString() !== userId) {
+    if (addiction.user.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, error: 'Not authorized to update this addiction' });
     }
     
@@ -204,7 +204,7 @@ router.put('/:addictionId', async (req, res) => {
     }
     
     await addiction.save();
-    await addiction.populate('userId', 'username');
+    await addiction.populate('user', 'username');
     
     res.json({
       success: true,
@@ -229,7 +229,7 @@ router.delete('/:addictionId', async (req, res) => {
     }
     
     // Check if user owns this addiction
-    if (addiction.userId.toString() !== userId) {
+    if (addiction.user.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this addiction' });
     }
     
@@ -264,12 +264,12 @@ router.post('/:addictionId/milestone', async (req, res) => {
     }
     
     // Check if user owns this addiction
-    if (addiction.userId.toString() !== userId) {
+    if (addiction.user.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, error: 'Not authorized to add milestone to this addiction' });
     }
     
     await addiction.addMilestone(type, description);
-    await addiction.populate('userId', 'username');
+    await addiction.populate('user', 'username');
     
     res.json({
       success: true,
@@ -287,21 +287,21 @@ router.get('/stats/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     
-    const totalAddictions = await Addiction.countDocuments({ userId });
-    const activeAddictions = await Addiction.countDocuments({ userId, status: 'active' });
-    const recoveringAddictions = await Addiction.countDocuments({ userId, status: 'recovering' });
-    const cleanAddictions = await Addiction.countDocuments({ userId, status: 'clean' });
+    const totalAddictions = await Addiction.countDocuments({ user: userId });
+    const activeAddictions = await Addiction.countDocuments({ user: userId, status: 'active' });
+    const recoveringAddictions = await Addiction.countDocuments({ user: userId, status: 'recovering' });
+    const cleanAddictions = await Addiction.countDocuments({ user: userId, status: 'clean' });
     
     // Get addiction type distribution
     const typeStats = await Addiction.aggregate([
-      { $match: { userId: new require('mongoose').Types.ObjectId(userId) } },
+      { $match: { user: new require('mongoose').Types.ObjectId(userId) } },
       { $group: { _id: '$type', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
     
     // Calculate total days clean across all recovering addictions
     const recoveringAddictionsData = await Addiction.find({ 
-      userId, 
+      user: userId, 
       status: { $in: ['recovering', 'clean'] }
     });
     

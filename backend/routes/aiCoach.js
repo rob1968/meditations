@@ -158,7 +158,7 @@ router.post('/feedback', checkAICoachEnabled, async (req, res) => {
     }
     
     // Find the coaching session
-    const session = await AICoach.findOne({ userId, sessionId });
+    const session = await AICoach.findOne({ user: userId, sessionId });
     if (!session) {
       return res.status(404).json({ error: 'Coaching session not found' });
     }
@@ -200,7 +200,7 @@ router.get('/status/:userId', checkAICoachEnabled, async (req, res) => {
     const { userId } = req.params;
     
     // Get or create AI Coach preferences
-    let coachSession = await AICoach.findOne({ userId }).sort({ createdAt: -1 });
+    let coachSession = await AICoach.findOne({ user: userId }).sort({ createdAt: -1 });
     
     if (!coachSession) {
       // Create initial session with default preferences
@@ -248,7 +248,7 @@ router.put('/preferences/:userId', checkAICoachEnabled, async (req, res) => {
     }
     
     // Find most recent session or create new one
-    let coachSession = await AICoach.findOne({ userId }).sort({ createdAt: -1 });
+    let coachSession = await AICoach.findOne({ user: userId }).sort({ createdAt: -1 });
     
     if (!coachSession) {
       coachSession = new AICoach({
@@ -290,11 +290,11 @@ router.post('/check-in', checkAICoachEnabled, async (req, res) => {
     }
     
     // Get recent journal entries and addiction status
-    const recentEntries = await JournalEntry.find({ userId })
+    const recentEntries = await JournalEntry.find({ user: userId })
       .sort({ date: -1 })
       .limit(3);
     
-    const addictions = await Addiction.find({ userId, status: { $in: ['active', 'recovering'] } });
+    const addictions = await Addiction.find({ user: userId, status: { $in: ['active', 'recovering'] } });
     
     // Generate check-in message based on recent activity
     let checkInMessage = "How are you feeling today? I'm here to support you.";
@@ -368,13 +368,13 @@ router.get('/insights/:userId', checkAICoachEnabled, async (req, res) => {
     // Get journal entries
     const JournalEntry = require('../models/JournalEntry');
     const journalEntries = await JournalEntry.find({
-      userId,
+      user: userId,
       createdAt: { $gte: startDate }
     }).sort({ createdAt: 1 });
     
     // Get AI Coach sessions
     const coachSessions = await AICoach.find({
-      userId,
+      user: userId,
       createdAt: { $gte: startDate }
     }).sort({ createdAt: 1 });
     
@@ -383,7 +383,7 @@ router.get('/insights/:userId', checkAICoachEnabled, async (req, res) => {
     const User = require('../models/User');
     const Addiction = require('../models/Addiction');
     const user = await User.findById(userId);
-    const addictions = await Addiction.find({ userId }).sort({ createdAt: -1 });
+    const addictions = await Addiction.find({ user: userId }).sort({ createdAt: -1 });
     console.log('📊 Data for insights:', {
       journalEntriesCount: journalEntries.length,
       coachSessionsCount: coachSessions.length,

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const JournalEntry = require('../models/JournalEntry');
 const User = require('../models/User');
-const auth = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 const aiCoachService = require('../services/aiCoachService');
 const fs = require('fs');
 const path = require('path');
@@ -806,12 +806,12 @@ router.get('/user/today', auth, async (req, res) => {
     const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
     
     const todayEntry = await JournalEntry.findOne({
-      userId,
+      user: userId,
       date: {
         $gte: startOfDay,
         $lt: endOfDay
       }
-    }).populate('userId', 'username');
+    }).populate('user', 'username');
     
     console.log('Today\'s entry found:', !!todayEntry);
     
@@ -835,7 +835,7 @@ router.get('/user/entries', auth, async (req, res) => {
     console.log('Fetching journal entries for user:', userId);
     
     // Build filter query
-    let filter = { userId };
+    let filter = { user: userId };
     
     if (mood && mood !== 'all') {
       filter.mood = mood;
@@ -875,7 +875,7 @@ router.get('/user/entries', auth, async (req, res) => {
     const entries = await query
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .populate('userId', 'username');
+      .populate('user', 'username');
     
     const total = await JournalEntry.countDocuments(filter);
     
@@ -934,6 +934,17 @@ router.post('/create', auth, async (req, res) => {
     // Normalize to start of day for consistent comparison
     const normalizedDate = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
     
+    // Prevent future date entries
+    const today = new Date();
+    const todayNormalized = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (normalizedDate > todayNormalized) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Journal entries kunnen niet worden aangemaakt voor toekomstige datums',
+        code: 'FUTURE_DATE_NOT_ALLOWED'
+      });
+    }
+    
     console.log('Creating/updating journal entry for date:', normalizedDate);
     
     // Analyze mood from content using AI
@@ -956,7 +967,7 @@ router.post('/create', auth, async (req, res) => {
     
     // Check if entry already exists for this date
     const existingEntry = await JournalEntry.findOne({
-      userId,
+      user: userId,
       date: {
         $gte: normalizedDate,
         $lt: new Date(normalizedDate.getTime() + 24 * 60 * 60 * 1000)
@@ -1019,7 +1030,7 @@ router.post('/create', auth, async (req, res) => {
       }
       
       await existingEntry.save();
-      await existingEntry.populate('userId', 'username');
+      await existingEntry.populate('user', 'username');
       
       // Trigger AI Coach analysis for updated entry
       triggerAICoachAnalysis(existingEntry);
@@ -1034,7 +1045,7 @@ router.post('/create', auth, async (req, res) => {
     } else {
       // Create new entry
       const entryData = {
-        userId,
+        user: userId,
         title: title.trim(),
         content: content.trim(),
         date: normalizedDate
@@ -1069,7 +1080,7 @@ router.post('/create', auth, async (req, res) => {
       const newEntry = new JournalEntry(entryData);
       
       await newEntry.save();
-      await newEntry.populate('userId', 'username');
+      await newEntry.populate('user', 'username');
       
       // Trigger AI Coach analysis for new entry
       triggerAICoachAnalysis(newEntry);
@@ -1111,10 +1122,10 @@ router.put('/:entryId', auth, async (req, res) => {
     }
     
     // Check if user owns this entry
-    if (entry.userId.toString() !== userId) {
+    if (entry.user.toString() !== userId.toString().toString()) {
       console.log('Unauthorized update attempt:', {
-        entryUserId: entry.userId.toString(),
-        requestUserId: userId
+        entryUserId: entry.user.toString(),
+        requestUserId: userId.toString()
       });
       return res.status(403).json({ success: false, error: 'Not authorized to update this entry' });
     }
@@ -1206,7 +1217,7 @@ router.put('/:entryId', auth, async (req, res) => {
     }
     
     await entry.save();
-    await entry.populate('userId', 'username');
+    await entry.populate('user', 'username');
     
     console.log('After update:', {
       title: entry.title,
@@ -1238,7 +1249,7 @@ router.delete('/:entryId', auth, async (req, res) => {
     }
     
     // Check if user owns this entry
-    if (entry.userId.toString() !== userId) {
+    if (entry.user.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this entry' });
     }
     
@@ -1287,7 +1298,7 @@ router.post('/:entryId/generate-audio', auth, async (req, res) => {
     }
     
     // Check if user owns this entry
-    if (entry.userId.toString() !== userId) {
+    if (entry.user.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, error: 'Not authorized to generate audio for this entry' });
     }
     
@@ -1378,7 +1389,7 @@ router.post('/:entryId/share', auth, async (req, res) => {
     }
     
     // Check if user owns this entry
-    if (entry.userId.toString() !== userId) {
+    if (entry.user.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, error: 'Not authorized to share this entry' });
     }
     
@@ -1388,7 +1399,7 @@ router.post('/:entryId/share', auth, async (req, res) => {
     entry.sharedAt = new Date();
     
     await entry.save();
-    await entry.populate('userId', 'username');
+    await entry.populate('user', 'username');
     
     res.json({
       success: true,
@@ -1426,7 +1437,7 @@ router.get('/shared', async (req, res) => {
       .sort({ sharedAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .populate('userId', 'username')
+      .populate('user', 'username')
       .select('-content'); // Don't expose full content in shared view initially
     
     const total = await JournalEntry.countDocuments(filter);
@@ -1453,7 +1464,7 @@ router.get('/shared/:entryId', async (req, res) => {
     const { entryId } = req.params;
     
     const entry = await JournalEntry.findById(entryId)
-      .populate('userId', 'username');
+      .populate('user', 'username');
     
     if (!entry || !entry.isShared || entry.privacy !== 'public') {
       return res.status(404).json({ success: false, error: 'Shared journal entry not found' });
@@ -1498,8 +1509,8 @@ router.get('/stats', auth, async (req, res) => {
   try {
     const userId = req.user._id;
     
-    const totalEntries = await JournalEntry.countDocuments({ userId });
-    const sharedEntries = await JournalEntry.countDocuments({ userId, isShared: true });
+    const totalEntries = await JournalEntry.countDocuments({ user: userId });
+    const sharedEntries = await JournalEntry.countDocuments({ user: userId, isShared: true });
     const entriesWithAudio = await JournalEntry.countDocuments({ 
       userId, 
       'audioFile.filename': { $exists: true } 
@@ -1507,7 +1518,7 @@ router.get('/stats', auth, async (req, res) => {
     
     // Get mood distribution
     const moodStats = await JournalEntry.aggregate([
-      { $match: { userId: new require('mongoose').Types.ObjectId(userId) } },
+      { $match: { user: new require('mongoose').Types.ObjectId(userId) } },
       { $group: { _id: '$mood', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getUserId, getAuthHeaders, isActivityOrganizer, isActivityParticipant } from '../../utils/userUtils';
+import Alert from '../Alert';
+import ConfirmDialog from '../ConfirmDialog';
 
 const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit }) => {
   const { t } = useTranslation();
@@ -7,6 +10,11 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isJoining, setIsJoining] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
 
   useEffect(() => {
     if (activityId) {
@@ -22,10 +30,7 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
       console.log('🔄 Loading activity details for:', activityId);
       
       const response = await fetch(`/api/activities/${activityId}`, {
-        headers: {
-          'x-user-id': user?._id || user?.id || '',
-          'Content-Type': 'application/json'
-        }
+        headers: getAuthHeaders(user)
       });
 
       console.log('📡 Activity details status:', response.status);
@@ -45,6 +50,11 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
     }
   };
 
+  const showAlertMessage = (message) => {
+    setAlertMessage(message);
+    setShowAlert(true);
+  };
+
   const handleJoinActivity = async () => {
     if (!activity || isJoining) return;
 
@@ -52,10 +62,7 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
     try {
       const response = await fetch(`/api/activities/${activity._id}/join`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user?._id || user?.id || ''
-        }
+        headers: getAuthHeaders(user)
       });
 
       if (response.ok) {
@@ -71,54 +78,56 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
         if (onJoin) onJoin(result);
 
         if (result.waitlist) {
-          alert(t('addedToWaitlist', 'Je staat op de wachtlijst voor deze activiteit'));
+          showAlertMessage(t('addedToWaitlist', 'Je staat op de wachtlijst voor deze activiteit'));
         } else {
-          alert(t('joinedActivity', 'Je hebt je aangemeld voor deze activiteit!'));
+          showAlertMessage(t('joinedActivity', 'Je hebt je aangemeld voor deze activiteit!'));
         }
       } else {
         const error = await response.json();
-        alert(error.error || t('joinFailed', 'Kon niet aanmelden voor activiteit'));
+        showAlertMessage(error.error || t('joinFailed', 'Kon niet aanmelden voor activiteit'));
       }
     } catch (error) {
       console.error('Error joining activity:', error);
-      alert(t('joinError', 'Er ging iets mis bij het aanmelden'));
+      showAlertMessage(t('joinError', 'Er ging iets mis bij het aanmelden'));
     } finally {
       setIsJoining(false);
     }
   };
 
-  const handleLeaveActivity = async () => {
-    if (!activity || !window.confirm(t('confirmLeaveActivity', 'Weet je zeker dat je je wilt afmelden?'))) {
-      return;
-    }
+  const handleLeaveActivity = () => {
+    if (!activity) return;
+    
+    setConfirmMessage(t('confirmLeaveActivity', 'Weet je zeker dat je je wilt afmelden?'));
+    setConfirmAction(() => performLeaveActivity);
+    setShowConfirmDialog(true);
+  };
 
+  const performLeaveActivity = async () => {
     try {
       const response = await fetch(`/api/activities/${activity._id}/leave`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user?._id || user?.id || ''
-        }
+        headers: getAuthHeaders(user)
       });
 
       if (response.ok) {
-        // Update local activity state
+        // Update local activity state using consistent user ID handling
+        const currentUserId = getUserId(user);
         setActivity(prev => ({
           ...prev,
-          participants: prev.participants.filter(p => p.user._id !== user._id)
+          participants: prev.participants.filter(p => getUserId(p.user) !== currentUserId)
         }));
 
         // Call parent callback
         if (onLeave) onLeave();
 
-        alert(t('leftActivity', 'Je hebt je afgemeld voor de activiteit'));
+        showAlertMessage(t('leftActivity', 'Je hebt je afgemeld voor de activiteit'));
       } else {
         const error = await response.json();
-        alert(error.error || t('leaveFailed', 'Kon niet afmelden voor activiteit'));
+        showAlertMessage(error.error || t('leaveFailed', 'Kon niet afmelden voor activiteit'));
       }
     } catch (error) {
       console.error('Error leaving activity:', error);
-      alert(t('leaveError', 'Er ging iets mis bij het afmelden'));
+      showAlertMessage(t('leaveError', 'Er ging iets mis bij het afmelden'));
     }
   };
 
@@ -156,9 +165,9 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
     return null;
   }
 
-  // Check user status
-  const isParticipant = activity.participants?.some(p => p.user?._id === user?._id || p.user === user?._id);
-  const isOrganizer = activity.organizer?._id === user?._id || activity.organizer === user?._id;
+  // Check user status using standardized utility functions
+  const isParticipant = isActivityParticipant(activity, user);
+  const isOrganizer = isActivityOrganizer(activity, user);
   const isFull = (activity.participants?.filter(p => p.status === 'confirmed')?.length || 0) >= activity.maxParticipants;
   const confirmedParticipants = activity.participants?.filter(p => p.status === 'confirmed') || [];
 
@@ -422,7 +431,7 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
               className="chat-button primary-button"
               onClick={() => {
                 // TODO: Open activity chat
-                alert(t('chatComingSoon', 'Chat functie komt binnenkort'));
+                showAlertMessage(t('chatComingSoon', 'Chat functie komt binnenkort'));
               }}
             >
               <span className="button-icon">💬</span>
@@ -434,6 +443,28 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
             {t('close', 'Sluiten')}
           </button>
         </div>
+
+        {/* Alert Dialog */}
+        <Alert
+          isOpen={showAlert}
+          onClose={() => setShowAlert(false)}
+          message={alertMessage}
+          type="info"
+        />
+
+        {/* Confirm Dialog */}
+        <ConfirmDialog
+          isOpen={showConfirmDialog}
+          onClose={() => setShowConfirmDialog(false)}
+          onConfirm={() => {
+            confirmAction && confirmAction();
+            setShowConfirmDialog(false);
+          }}
+          title={t('confirm', 'Bevestigen')}
+          message={confirmMessage}
+          confirmText={t('confirm', 'Bevestigen')}
+          cancelText={t('cancel', 'Annuleren')}
+        />
       </div>
     </div>
   );

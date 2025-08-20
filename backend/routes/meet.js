@@ -5,58 +5,10 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const UserConnection = require('../models/UserConnection');
 const mongoose = require('mongoose');
+const { auth, optionalAuth } = require('../middleware/auth');
 
-// Middleware to check authentication
-const authenticateUser = async (req, res, next) => {
-  try {
-    const userId = req.headers['x-user-id'] || req.headers['user-id'];
-    console.log('Meet auth headers:', req.headers);
-    console.log('Meet auth userId:', userId);
-    
-    if (!userId) {
-      console.log('No user ID provided, continuing without authentication for demo');
-      req.user = { 
-        _id: 'demo-user', 
-        username: 'Demo User',
-        isVerified: true 
-      };
-      return next();
-    }
-    
-    let user;
-    try {
-      user = await User.findById(userId);
-    } catch (findError) {
-      console.log('User lookup failed:', findError.message);
-    }
-    
-    if (!user) {
-      console.log('User not found, creating demo user for:', userId);
-      // For demo purposes, create a mock user object
-      req.user = { 
-        _id: userId, 
-        username: 'Demo User',
-        isVerified: true 
-      };
-    } else {
-      req.user = user;
-    }
-    
-    next();
-  } catch (error) {
-    console.error('Authentication error:', error);
-    // For demo, continue with mock user instead of failing
-    req.user = { 
-      _id: 'demo-user', 
-      username: 'Demo User',
-      isVerified: true 
-    };
-    next();
-  }
-};
-
-// Apply authentication to all routes
-router.use(authenticateUser);
+// Apply authentication to all routes - using standardized auth middleware
+router.use(auth);
 
 // ============ USER DISCOVERY ============
 

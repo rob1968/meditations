@@ -19,7 +19,7 @@ const ChatWindow = ({ conversation, currentUser, onBack }) => {
 
   // Get other user for direct conversations
   const otherUser = conversation.type === 'direct' 
-    ? conversation.participants.find(p => p._id !== currentUser._id)
+    ? conversation.participants.find(p => p._id !== (currentUser?.id || currentUser?._id))
     : null;
 
   const conversationTitle = conversation.type === 'direct' 
@@ -27,7 +27,7 @@ const ChatWindow = ({ conversation, currentUser, onBack }) => {
     : conversation.name;
 
   useEffect(() => {
-    if (!conversation?._id || !currentUser?._id) {
+    if (!conversation?._id || (!currentUser?.id && !currentUser?._id)) {
       console.warn('Missing conversation or user data, skipping chat initialization');
       return;
     }
@@ -62,13 +62,13 @@ const ChatWindow = ({ conversation, currentUser, onBack }) => {
 
     try {
       setIsLoading(true);
-      console.log('🔍 Fetching messages for conversation:', conversation._id, 'user:', currentUser._id);
+      console.log('🔍 Fetching messages for conversation:', conversation._id, 'user:', currentUser.id || currentUser._id);
       
       const response = await fetch(
         `${API_BASE_URL}/meet/conversations/${conversation._id}/messages?page=${page}&limit=50`,
         {
           headers: {
-            'x-user-id': currentUser._id || currentUser.id || ''
+            'x-user-id': currentUser.id || currentUser._id || ''
           }
         }
       );
@@ -96,7 +96,7 @@ const ChatWindow = ({ conversation, currentUser, onBack }) => {
             },
             {
               _id: 'mock2', 
-              sender: { _id: currentUser._id, username: currentUser.username },
+              sender: { _id: currentUser.id || currentUser._id, username: currentUser.username },
               content: { text: 'Hallo! Dit ziet er geweldig uit!' },
               createdAt: new Date(Date.now() - 500000).toISOString()
             },
@@ -379,7 +379,7 @@ const ChatWindow = ({ conversation, currentUser, onBack }) => {
               // Safety checks for message and user data
               if (!message || !currentUser) return null;
               
-              const isOwnMessage = message.sender?._id === currentUser._id;
+              const isOwnMessage = message.sender?._id === (currentUser.id || currentUser._id);
               const showAvatar = !isOwnMessage && (
                 index === 0 || 
                 dateMessages[index - 1]?.sender?._id !== message.sender?._id

@@ -104,7 +104,7 @@ export const loadMainTab = () => loadState(KEYS.MAIN_TAB, 'journal');
 
 // Meet hub tab persistence  
 export const saveMeetTab = (tab) => saveState(KEYS.MEET_TAB, tab);
-export const loadMeetTab = () => loadState(KEYS.MEET_TAB, 'discover');
+export const loadMeetTab = () => loadState(KEYS.MEET_TAB, 'home');
 
 // Journal tab persistence
 export const saveJournalTab = (tab) => saveState(KEYS.JOURNAL_TAB, tab);

@@ -283,7 +283,7 @@ class AICoachService {
       
       // Save the analysis
       const aiCoach = new AICoach({
-        userId,
+        user: userId,
         sessionId: `journal_analysis_${journalEntry._id}_${Date.now()}`,
         sessionType: 'journal_analysis',
         // Store analysis in messages instead of separate fields
@@ -716,7 +716,7 @@ class AICoachService {
       // Save the coaching session
       const sessionId = `chat_${userId}_${Date.now()}`;
       const aiCoach = new AICoach({
-        userId,
+        user: userId,
         sessionId,
         sessionType: 'chat',
         messages: [

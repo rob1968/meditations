@@ -1,0 +1,99 @@
+/* CSS Custom Properties & Variables */
+/* Core Design System for Meditation App */
+
+:root {
+  /* Color Palette */
+  --color-night-darkest: #0f1419;
+  --color-night-dark: #1a2332;
+  --color-night-medium: #2d3561;
+  --color-night-light: #4a5c8a;
+  
+  /* Glass Morphism Effects */
+  --glass-light: rgba(255,255,255,0.1);
+  --glass-medium: rgba(255,255,255,0.2);
+  --glass-dark: rgba(0,0,0,0.8);
+  
+  /* Text Colors - Enhanced for Visibility */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255,255,255,0.9);
+  --text-tertiary: rgba(255,255,255,0.75);
+  --text-quaternary: rgba(255,255,255,0.6);
+  
+  /* Gradients */
+  --gradient-background: linear-gradient(135deg, #0f1419 0%, #1a2332 30%, #2d3561 60%, #4a5c8a 100%);
+  --gradient-card-1: linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #48dbfb 100%);
+  --gradient-card-2: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+  --gradient-card-3: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-card-4: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  
+  /* Typography */
+  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Mood Colors & Effects */
+  --mood-happy: linear-gradient(135deg, #FFD700, #FFA500, #FF8C00);
+  --mood-sad: linear-gradient(135deg, #4682B4, #5F9EA0, #708090);
+  --mood-calm: linear-gradient(135deg, #98FB98, #90EE90, #87CEEB);
+  --mood-angry: linear-gradient(135deg, #FF4500, #FF6347, #DC143C);
+  --mood-stressed: linear-gradient(135deg, #9370DB, #8A2BE2, #6A5ACD);
+  --mood-neutral: linear-gradient(135deg, #F5F5F5, #E8E8E8, #D3D3D3);
+  --mood-excited: linear-gradient(135deg, #FF1493, #FF69B4, #FFB6C1);
+  --mood-tired: linear-gradient(135deg, #696969, #778899, #A9A9A9);
+  
+  /* Mood Shadow Effects */
+  --mood-happy-shadow: 0 8px 32px rgba(255,215,0,0.3);
+  --mood-sad-shadow: 0 8px 32px rgba(70,130,180,0.3);
+  --mood-calm-shadow: 0 8px 32px rgba(152,251,152,0.3);
+  --mood-angry-shadow: 0 8px 32px rgba(255,69,0,0.3);
+  --mood-stressed-shadow: 0 8px 32px rgba(147,112,219,0.3);
+  --mood-neutral-shadow: 0 8px 32px rgba(211,211,211,0.3);
+  --mood-excited-shadow: 0 8px 32px rgba(255,20,147,0.3);
+  --mood-tired-shadow: 0 8px 32px rgba(105,105,105,0.3);
+  
+  /* Spacing Scale */
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 20px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  --space-4xl: 48px;
+  --space-5xl: 64px;
+  
+  /* Typography Scale */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 32px;
+  --text-4xl: 48px;
+  
+  /* Border Radius Scale */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  
+  /* Shadow Scale */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.15);
+  --shadow-lg: 0 8px 16px rgba(0,0,0,0.2);
+  --shadow-xl: 0 12px 24px rgba(0,0,0,0.25);
+  --shadow-glass: 0 8px 32px rgba(0,0,0,0.1);
+  
+  /* Animation Durations */
+  --duration-fast: 0.15s;
+  --duration-normal: 0.3s;
+  --duration-slow: 0.5s;
+  --easing-smooth: cubic-bezier(0.4,0,0.2,1);
+  
+  /* Breakpoints (for reference - use in media queries) */
+  --breakpoint-sm: 414px;   /* Mobile - iPhone 12 Pro Max width */
+  --breakpoint-md: 768px;   /* Tablet */
+  --breakpoint-lg: 1024px;  /* Desktop */
+  --breakpoint-xl: 1200px;  /* Large Desktop */
+}

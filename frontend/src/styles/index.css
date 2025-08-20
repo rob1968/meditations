@@ -1,0 +1,32 @@
+/* Master CSS Import File */
+/* Meditation App - Mobile-First Modular CSS Architecture */
+
+/* Core System Files - Mobile First */
+@import './variables.css';
+@import './reset.css';
+@import './mobile.css';
+
+/* Component Modules */
+@import './navigation.css';
+@import './buttons.css';
+@import './modals.css';
+@import './activity-cards.css';
+@import './meet-hub.css';
+@import './journal.css';
+@import './auth.css';
+@import './community.css';
+
+/* Additional Component Files (keep existing for now) */
+@import './Alert.css';
+@import './ConfirmDialog.css';
+@import './CityAutocomplete.css';
+@import './CityPickerModal.css';
+@import './LocationPickerModal.css';
+@import './wizard.css';
+
+/* Temporary: Import remaining globals.css content until fully migrated */
+/* This will be removed once all CSS is properly modularized */
+@import './globals.css';
+
+/* Text Override - Must be last to override all dark text */
+@import './text-override.css';

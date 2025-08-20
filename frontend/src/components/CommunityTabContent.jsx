@@ -4,7 +4,7 @@ import axios from 'axios';
 import { getFullUrl, API_ENDPOINTS } from '../config/api';
 
 const CommunityTabContent = ({ user }) => {
-  console.log('🎵🖼️ CommunityTabContent v4.1.0: Complete component with IMAGES and AUDIO PLAYER! Cache refresh forced 🎵🖼️', new Date().toISOString());
+  console.log('🎵🖼️ CommunityTabContent v4.1.1: Audio playback control - one audio at a time! Cache refresh forced 🎵🖼️', new Date().toISOString());
   
   const { t } = useTranslation();
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -12,6 +12,7 @@ const CommunityTabContent = ({ user }) => {
   const [communityMeditations, setCommunityMeditations] = useState([]);
   const [likedMeditations, setLikedMeditations] = useState(new Set());
   const [loading, setLoading] = useState(true);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState(null); // Track currently playing audio
   
   // Handle window resize for mobile responsiveness
   useEffect(() => {
@@ -106,26 +107,41 @@ const CommunityTabContent = ({ user }) => {
     }
   };
 
-  // Handle play tracking
-  const handlePlayMeditation = async (meditationId) => {
-    if (!user) return;
-    
-    try {
-      const endpoint = API_ENDPOINTS.COMMUNITY_PLAY(meditationId);
-      
-      await axios.post(getFullUrl(endpoint), { 
-        userId: user.id 
-      }, { withCredentials: true });
-      
-      // Update play count locally
-      setCommunityMeditations(prev => prev.map(med => 
-        med._id === meditationId 
-          ? { ...med, playCount: (med.playCount || 0) + 1 }
-          : med
-      ));
-    } catch (error) {
-      console.error('Error tracking play:', error);
+  // Handle audio play - stop other audios and track play count
+  const handleAudioPlay = async (meditationId, audioElement) => {
+    // Stop all other audio elements
+    if (currentlyPlaying && currentlyPlaying !== audioElement) {
+      currentlyPlaying.pause();
+      currentlyPlaying.currentTime = 0;
     }
+    
+    // Set current playing audio
+    setCurrentlyPlaying(audioElement);
+    
+    // Track play count if user is logged in
+    if (user) {
+      try {
+        const endpoint = API_ENDPOINTS.COMMUNITY_PLAY(meditationId);
+        
+        await axios.post(getFullUrl(endpoint), { 
+          userId: user.id 
+        }, { withCredentials: true });
+        
+        // Update play count locally
+        setCommunityMeditations(prev => prev.map(med => 
+          med._id === meditationId 
+            ? { ...med, playCount: (med.playCount || 0) + 1 }
+            : med
+        ));
+      } catch (error) {
+        console.error('Error tracking play:', error);
+      }
+    }
+  };
+
+  // Handle audio pause/ended - clear currently playing
+  const handleAudioStop = () => {
+    setCurrentlyPlaying(null);
   };
 
   // Filter meditations
@@ -327,7 +343,9 @@ const CommunityTabContent = ({ user }) => {
                   <audio 
                     controls 
                     preload="none"
-                    onPlay={() => handlePlayMeditation(meditation._id)}
+                    onPlay={(e) => handleAudioPlay(meditation._id, e.target)}
+                    onPause={handleAudioStop}
+                    onEnded={handleAudioStop}
                     style={{
                       width: '100%',
                       height: isMobile ? '44px' : '48px',

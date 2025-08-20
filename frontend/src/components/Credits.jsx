@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
-import { getFullUrl, getAuthHeaders } from '../config/api';
+import { getFullUrl } from '../config/api';
+import { getAuthHeaders } from '../utils/userUtils';
 import PiPaymentNew from './PiPaymentNew';
 import Alert from './Alert';
 
@@ -79,7 +80,7 @@ const Credits = ({ user }) => {
     try {
       setIsLoading(true);
       const response = await axios.get(getFullUrl(`/api/users/${user.id}/credits`), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       setCredits(response.data);
     } catch (error) {

@@ -2,10 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import ActivityCard from './ActivityCard';
 import ActivityFilters from './ActivityFilters';
+import { getUserId, getAuthHeaders } from '../../utils/userUtils';
 
 const ActivityList = ({ user, categories, onSelectActivity }) => {
   const { t } = useTranslation();
   const [activities, setActivities] = useState([]);
+  
+  // Translate backend error messages to user-friendly localized messages
+  const translateJoinError = (errorMessage) => {
+    switch (errorMessage) {
+      case 'Age restrictions not met':
+        return t('joinErrorAgeRestrictions', 'Je voldoet niet aan de leeftijdsvereisten voor deze activiteit. Controleer je profiel instellingen.');
+      case 'Gender preferences not met':
+        return t('joinErrorGenderPreferences', 'Deze activiteit is alleen voor een specifiek geslacht.');
+      case 'Already participating':
+        return t('joinErrorAlreadyParticipating', 'Je neemt al deel aan deze activiteit.');
+      case 'Activity is full':
+        return t('joinErrorActivityFull', 'Deze activiteit is vol. Probeer je aan te melden voor de wachtlijst.');
+      case 'Activity has ended':
+        return t('joinErrorActivityEnded', 'Deze activiteit is al afgelopen.');
+      case 'Activity not found':
+        return t('joinErrorActivityNotFound', 'Activiteit niet gevonden.');
+      case 'Activity is not published':
+        return t('joinErrorActivityNotPublished', 'Deze activiteit is nog niet beschikbaar voor aanmeldingen.');
+      case 'Invitation required':
+        return t('joinErrorInvitationRequired', 'Je hebt een uitnodiging nodig voor deze activiteit.');
+      case 'Je hebt al een activiteit op deze dag':
+        return t('joinErrorSameDayActivity', 'Je hebt al een activiteit op deze dag.');
+      default:
+        return errorMessage || t('joinFailed', 'Kon niet aanmelden voor activiteit');
+    }
+  };
   const [filteredActivities, setFilteredActivities] = useState([]);
   const [recommendedActivities, setRecommendedActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,6 +47,7 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   useEffect(() => {
     // Always load regular activities for the "all" tab count
@@ -35,7 +63,8 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
     try {
       console.log('🔄 Loading real activities from API...');
       
-      if (!user?._id && !user?.id) {
+      const userId = getUserId(user);
+      if (!userId) {
         console.log('❌ No user ID available for API call');
         setActivities([]);
         setIsLoading(false);
@@ -44,7 +73,6 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
       
       // Build query parameters for filters
       const queryParams = new URLSearchParams({
-        status: 'approved', // Only show approved activities
         page: page.toString(),
         limit: '10'
       });
@@ -55,10 +83,7 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
       if (filters.language) queryParams.append('language', filters.language);
       
       const response = await fetch(`/api/activities?${queryParams.toString()}`, {
-        headers: {
-          'x-user-id': user._id || user.id,
-          'Content-Type': 'application/json'
-        }
+        headers: getAuthHeaders(user)
       });
       
       if (response.ok) {
@@ -94,7 +119,8 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
     try {
       console.log("🔄 Loading real activity recommendations...");
       
-      if (!user?._id && !user?.id) {
+      const userId = getUserId(user);
+      if (!userId) {
         console.log("❌ No user ID available for recommendations");
         setRecommendedActivities([]);
         setIsLoading(false);
@@ -103,10 +129,7 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
       
       // Load recommended activities from API based on user profile
       const response = await fetch("/api/activities/recommendations", {
-        headers: {
-          "x-user-id": user._id || user.id,
-          "Content-Type": "application/json"
-        }
+        headers: getAuthHeaders(user)
       });
       
       if (response.ok) {
@@ -115,12 +138,9 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
         setRecommendedActivities(data.activities || []);
       } else {
         console.error("❌ Failed to load recommendations:", response.status);
-        // Fallback: use approved activities as recommendations
-        const fallbackResponse = await fetch("/api/activities?status=approved&limit=5", {
-          headers: {
-            "x-user-id": user._id || user.id,
-            "Content-Type": "application/json"
-          }
+        // Fallback: use published/upcoming activities as recommendations
+        const fallbackResponse = await fetch("/api/activities?limit=5", {
+          headers: getAuthHeaders(user)
         });
         
         if (fallbackResponse.ok) {
@@ -144,14 +164,18 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
     setPage(1); // Reset to first page when filters change
   };
 
+  const showSuccessMessage = (message, icon = '✅') => {
+    setSuccessMessage({ message, icon });
+    setTimeout(() => {
+      setSuccessMessage(null);
+    }, 3000);
+  };
+
   const handleJoinActivity = async (activityId) => {
     try {
       const response = await fetch(`/api/activities/${activityId}/join`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user?._id || user?.id || ''
-        }
+        headers: getAuthHeaders(user)
       });
 
       if (response.ok) {
@@ -164,19 +188,97 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
             : activity
         ));
         
-        // Show success message
-        if (result.waitlist) {
-          alert(t('addedToWaitlist', 'Je staat op de wachtlijst voor deze activiteit'));
-        } else {
-          alert(t('joinedActivity', 'Je hebt je aangemeld voor deze activiteit!'));
+        // Haptic feedback simulation
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
         }
+        
+        // Don't show overlay message anymore - let ActivityCard handle it
+        // Success is handled by ActivityCard
       } else {
         const error = await response.json();
-        alert(error.error || t('joinFailed', 'Kon niet aanmelden voor activiteit'));
+        console.error('❌ Join failed:', error);
+        const userFriendlyMessage = translateJoinError(error.error);
+        throw new Error(userFriendlyMessage);
       }
     } catch (error) {
-      console.error('Error joining activity:', error);
-      alert(t('joinError', 'Er ging iets mis bij het aanmelden'));
+      console.error('💥 Error joining activity:', error);
+      if (error.message) {
+        throw error; // Re-throw with translated message
+      }
+      throw new Error(t('joinError', 'Er ging iets mis bij het aanmelden'));
+    }
+  };
+
+  const handleLeaveActivity = async (activityId) => {
+    try {
+      console.log('🚪 Attempting to leave activity:', activityId, 'User:', getUserId(user));
+      
+      const response = await fetch(`/api/activities/${activityId}/leave`, {
+        method: 'POST',
+        headers: getAuthHeaders(user)
+      });
+
+      console.log('📡 Leave response status:', response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Leave successful:', result);
+        
+        // Update local state to reflect left status
+        const currentUserId = getUserId(user);
+        setActivities(prev => prev.map(activity => 
+          activity._id === activityId 
+            ? { 
+                ...activity, 
+                participants: activity.participants.filter(p => 
+                  getUserId(p.user || p) !== currentUserId
+                )
+              }
+            : activity
+        ));
+        
+        setFilteredActivities(prev => prev.map(activity => 
+          activity._id === activityId 
+            ? { 
+                ...activity, 
+                participants: activity.participants.filter(p => 
+                  getUserId(p.user || p) !== currentUserId
+                )
+              }
+            : activity
+        ));
+        
+        // Also update recommended activities if they exist
+        setRecommendedActivities(prev => prev.map(activity => 
+          activity._id === activityId 
+            ? { 
+                ...activity, 
+                participants: activity.participants.filter(p => 
+                  getUserId(p.user || p) !== currentUserId
+                )
+              }
+            : activity
+        ));
+        
+        // Haptic feedback simulation
+        if (navigator.vibrate) {
+          navigator.vibrate([50, 50, 50]);
+        }
+        
+        // Don't show overlay message anymore - let ActivityCard handle it
+        // Success is handled by ActivityCard
+      } else {
+        const error = await response.json();
+        console.error('❌ Leave failed:', error);
+        throw new Error(error.error || t('leaveFailed', 'Kon niet afmelden voor activiteit'));
+      }
+    } catch (error) {
+      console.error('💥 Error leaving activity:', error);
+      if (error.message) {
+        throw error; // Re-throw with translated message
+      }
+      throw new Error(t('leaveError', 'Er ging iets mis bij het afmelden'));
     }
   };
 
@@ -237,7 +339,6 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
     return grouped;
   };
 
-  // Remove unused variable since we now use groupActivitiesByDate inline
 
   if (isLoading && page === 1) {
     return (
@@ -334,7 +435,9 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
                     activity={activity}
                     user={user}
                     onJoin={() => handleJoinActivity(activity._id)}
+                    onLeave={() => handleLeaveActivity(activity._id)}
                     onSelect={() => onSelectActivity(activity)}
+                    showDirectActions={true}
                   />
                 </div>
               ))}
@@ -351,7 +454,9 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
                         activity={activity}
                         user={user}
                         onJoin={() => handleJoinActivity(activity._id)}
+                        onLeave={() => handleLeaveActivity(activity._id)}
                         onSelect={() => onSelectActivity(activity)}
+                        showDirectActions={true}
                       />
                     ))}
                   </div>
@@ -375,6 +480,15 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
         <div className="loading-more">
           <div className="loading-spinner"></div>
           <p>{t('loadingMore', 'Meer activiteiten laden...')}</p>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="success-message-overlay">
+          <div className="success-message">
+            <span className="success-icon">{successMessage.icon}</span>
+            <span className="success-text">{successMessage.message}</span>
+          </div>
         </div>
       )}
     </div>

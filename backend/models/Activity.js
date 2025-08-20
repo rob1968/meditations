@@ -310,6 +310,16 @@ activitySchema.methods.join = async function(userId) {
 };
 
 activitySchema.methods.leave = async function(userId) {
+  // Check if user is on waitlist
+  const isOnWaitlist = this.waitlist.some(w => w.user.toString() === userId.toString());
+  
+  if (isOnWaitlist) {
+    // Remove from waitlist
+    this.waitlist = this.waitlist.filter(w => w.user.toString() !== userId.toString());
+    await this.save();
+    return { success: true, waitlist: true, message: 'Removed from waitlist' };
+  }
+  
   // Remove from participants
   this.participants = this.participants.filter(p => p.user.toString() !== userId.toString());
   

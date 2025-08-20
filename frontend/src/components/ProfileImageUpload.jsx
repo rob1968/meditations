@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getFullUrl, getAuthHeaders } from '../config/api';
+import { getFullUrl } from '../config/api';
+import { getMultipartAuthHeaders, getAuthHeaders } from '../utils/userUtils';
 import ConfirmDialog from './ConfirmDialog';
 
 const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
@@ -72,10 +73,11 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      const response = await fetch(getFullUrl('/api/profile/upload-image'), {
+      const response = await fetch(getFullUrl('/profile/api/profile/upload-image'), {
         method: 'POST',
         headers: {
-          'x-user-id': user.id
+          'x-user-id': user.id || user._id || ''
+          // DO NOT set Content-Type header - let browser set it with boundary
         },
         body: formData,
         signal: controller.signal
@@ -127,10 +129,10 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
           
-          const response = await fetch(getFullUrl('/api/profile/delete-image'), {
+          const response = await fetch(getFullUrl('/profile/api/profile/delete-image'), {
             method: 'DELETE',
             headers: {
-              'x-user-id': user.id
+              'x-user-id': user.id || user._id || ''
             },
             signal: controller.signal
           });
@@ -168,8 +170,8 @@ const ProfileImageUpload = ({ user, profileImage, onImageUpdate }) => {
         console.log('Using direct URL:', imageToUse);
         return imageToUse;
       }
-      // Otherwise build the full URL
-      const fullUrl = getFullUrl(imageToUse);
+      // Use profile server for static files through main domain
+      const fullUrl = getFullUrl(`/profile${imageToUse}`);
       console.log('Built profile image URL:', fullUrl, 'from:', imageToUse);
       return fullUrl;
     }

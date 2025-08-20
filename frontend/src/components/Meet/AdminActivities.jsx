@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getAuthHeaders } from '../../utils/userUtils';
 
 const AdminActivities = ({ user }) => {
   // Admin activities moderation panel
@@ -20,8 +21,8 @@ const AdminActivities = ({ user }) => {
     console.log('🔍 User check:', user?.username, user?.isVerified);
     console.log('🔍 User object:', user);
     
-    // Check if user is robbie or rob admin
-    const isAdmin = (user?.username === 'rob' || user?.username === 'robbie') && user?.isVerified;
+    // Check if user has admin role
+    const isAdmin = user?.role === 'admin' && user?.permissions?.canModerateActivities;
     
     if (isAdmin) {
       console.log('✅ User is admin, loading data...');
@@ -46,10 +47,7 @@ const AdminActivities = ({ user }) => {
       console.log('🔧 User ID:', user._id || user.id);
       
       const response = await fetch(`/api/activities/admin/pending?status=${currentTab}`, {
-        headers: {
-          'x-user-id': user._id || user.id,
-          'Content-Type': 'application/json'
-        }
+        headers: getAuthHeaders(user)
       });
 
       if (response.ok) {
@@ -73,10 +71,7 @@ const AdminActivities = ({ user }) => {
       console.log('🔧 User ID for stats:', user._id || user.id);
       
       const response = await fetch('/api/activities/admin/stats', {
-        headers: {
-          'x-user-id': user._id || user.id,
-          'Content-Type': 'application/json'
-        }
+        headers: getAuthHeaders(user)
       });
 
       if (response.ok) {
@@ -103,10 +98,7 @@ const AdminActivities = ({ user }) => {
       
       const response = await fetch(`/api/activities/admin/${selectedActivity._id}/approve`, {
         method: 'POST',
-        headers: {
-          'x-user-id': user._id || user.id,
-          'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(user),
         body: JSON.stringify({ adminNotes })
       });
 
@@ -148,10 +140,7 @@ const AdminActivities = ({ user }) => {
       
       const response = await fetch(`/api/activities/admin/${selectedActivity._id}/reject`, {
         method: 'POST',
-        headers: {
-          'x-user-id': user._id || user.id,
-          'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(user),
         body: JSON.stringify({ 
           rejectionReason: rejectionReason.trim(),
           adminNotes: adminNotes.trim() || undefined
@@ -213,24 +202,22 @@ const AdminActivities = ({ user }) => {
     }
   };
 
-  // Check if user is admin
-  if ((user?.username !== 'rob' && user?.username !== 'robbie') || !user?.isVerified) {
+  // Check if user has admin role and activity moderation permissions
+  const isAdmin = user?.role === 'admin' && user?.permissions?.canModerateActivities;
+  
+  if (!isAdmin) {
     return (
       <div className="admin-access-denied">
         <div className="access-denied-content">
           <span className="access-denied-icon">🔒</span>
           <h3>Geen toegang</h3>
-          <p>Admin toegang vereist</p>
+          <p>Admin toegang vereist voor activiteiten moderatie</p>
           <div style={{marginTop: '20px', padding: '10px', background: '#f0f0f0', borderRadius: '5px', fontSize: '12px'}}>
             <strong>🔧 Debug Info:</strong><br/>
             Username: {user?.username || 'none'}<br/>
-            Verified: {user?.isVerified ? 'yes' : 'no'}<br/>
+            Role: {user?.role || 'none'}<br/>
+            Can Moderate Activities: {user?.permissions?.canModerateActivities ? 'yes' : 'no'}<br/>
             User ID: {user?._id || user?.id || 'missing'}<br/>
-            <br/>
-            <strong>For testing, run in console:</strong><br/>
-            <code style={{background: 'white', padding: '2px'}}>
-              localStorage.setItem('user', '{"{"}"id":"68a02a3173a675b2d6693db1","_id":"68a02a3173a675b2d6693db1","username":"robbie","isVerified":true{"}"}'); location.reload();
-            </code>
           </div>
         </div>
       </div>

@@ -1,0 +1,1131 @@
+/* Smart Text Color Override - Context-Aware Text Colors */
+/* White text on dark backgrounds, black text on light backgrounds */
+
+/* CRITICAL: Journal Writing Areas - Must Override Everything */
+/* These selectors must come FIRST to ensure highest priority */
+.expanded-writing-textarea,
+.quick-write-textarea,
+.entry-textarea,
+.journal-textarea {
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: #000000 !important; /* Pure black text for maximum contrast */
+  border: 2px solid rgba(0, 0, 0, 0.3) !important;
+  -webkit-text-fill-color: #000000 !important; /* Force black in WebKit */
+  caret-color: #000000 !important; /* Black cursor */
+}
+
+.expanded-writing-textarea::placeholder,
+.quick-write-textarea::placeholder,
+.entry-textarea::placeholder,
+.journal-textarea::placeholder {
+  color: rgba(0, 0, 0, 0.6) !important; /* Dark placeholder */
+  -webkit-text-fill-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Focus states for writing areas */
+.expanded-writing-textarea:focus,
+.quick-write-textarea:focus,
+.entry-textarea:focus,
+.journal-textarea:focus {
+  background: rgba(255, 255, 255, 1.0) !important;
+  color: #000000 !important;
+  border-color: #2563eb !important;
+  outline: 2px solid #2563eb !important;
+  outline-offset: 2px !important;
+  -webkit-text-fill-color: #000000 !important;
+  caret-color: #000000 !important;
+}
+
+/* Default: White text for dark app background */
+* {
+  color: var(--text-primary) !important;
+}
+
+/* Generic Light Background Detection - Catch-all for white/light backgrounds */
+[style*="background: rgba(255, 255, 255"],
+[style*="background: rgb(255, 255, 255"],
+[style*="background: white"],
+[style*="background: #fff"],
+[style*="background: #ffffff"],
+[style*="background-color: rgba(255, 255, 255"],
+[style*="background-color: white"],
+[style*="background-color: #fff"],
+[style*="background-color: #ffffff"] {
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* Smart Text Colors for Light Backgrounds */
+/* White and light backgrounds need dark text for readability */
+
+/* Form inputs and textareas - typically have light backgrounds */
+input[type="text"],
+input[type="email"], 
+input[type="password"],
+input[type="search"],
+textarea,
+select {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #1a2332 !important; /* Dark text on light background */
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* Select dropdown options */
+select option {
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(26, 35, 50, 0.6) !important; /* Dark placeholder */
+}
+
+/* Other form content areas */
+.text-input,
+.content-input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important; /* Dark text for readability */
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Modal content areas with light backgrounds */
+.modal-body input,
+.modal-body textarea,
+.share-form input,
+.share-form textarea,
+.upload-input,
+.upload-textarea {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Auth form inputs - High specificity to override global rules */
+.auth-container .auth-form input,
+.auth-container .auth-form textarea,
+.auth-container .auth-form select,
+.auth-container .form-input,
+.auth-form .form-input,
+.auth-form select,
+input.form-input,
+select.form-input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  -webkit-text-fill-color: #1a2332 !important; /* Override WebKit auto-fill */
+}
+
+/* Auth form select options */
+.auth-container .auth-form select option,
+.auth-form select option,
+select.form-input option {
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* Auth form input placeholders */
+.auth-container .auth-form input::placeholder,
+.auth-container .auth-form textarea::placeholder,
+.auth-container .form-input::placeholder,
+.auth-form .form-input::placeholder,
+input.form-input::placeholder {
+  color: rgba(26, 35, 50, 0.6) !important;
+  -webkit-text-fill-color: rgba(26, 35, 50, 0.6) !important;
+}
+
+/* Auth form input focus states */
+.auth-container .auth-form input:focus,
+.auth-container .auth-form textarea:focus,
+.auth-container .auth-form select:focus,
+.auth-container .form-input:focus,
+.auth-form .form-input:focus,
+.auth-form select:focus,
+input.form-input:focus,
+select.form-input:focus {
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: #1a2332 !important;
+  border-color: var(--gradient-card-1) !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* Language Selector in Auth/Login Screen */
+.auth-container .language-selector,
+.language-selector {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.auth-container .language-button,
+.language-button {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.auth-container .language-button:hover,
+.language-button:hover {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.auth-container .language-options,
+.language-options {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.auth-container .language-option,
+.language-option {
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.auth-container .language-option:hover,
+.language-option:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.auth-container .language-option.selected,
+.language-option.selected {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.auth-container .language-label,
+.language-label {
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* Profile Language Selector (from globals.css pattern) */
+.profile-language-selector {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.profile-language-label {
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.profile-select-button {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.profile-select-button:hover {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.profile-select-options {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.profile-select-option {
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.profile-select-option:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.profile-select-option.selected {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* ALL CHOICE ELEMENTS - Comprehensive Coverage */
+
+/* Radio Buttons and Checkboxes */
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: var(--gradient-card-1) !important;
+}
+
+/* Radio button and checkbox labels */
+input[type="radio"] + label,
+input[type="checkbox"] + label,
+label[for*="radio"],
+label[for*="checkbox"],
+.radio-label,
+.checkbox-label,
+.choice-label {
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* Button Groups and Toggle Buttons */
+.btn-group button,
+.toggle-btn,
+.toggle-button,
+.choice-btn,
+.option-btn {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.btn-group button:hover,
+.toggle-btn:hover,
+.toggle-button:hover,
+.choice-btn:hover,
+.option-btn:hover {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.btn-group button.active,
+.toggle-btn.active,
+.toggle-button.active,
+.choice-btn.active,
+.option-btn.active {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* Dropdown menus and select lists */
+.dropdown-menu,
+.select-menu,
+.choice-menu {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.dropdown-item,
+.select-item,
+.choice-item {
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.dropdown-item:hover,
+.select-item:hover,
+.choice-item:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* Multi-select and tag inputs */
+.multi-select,
+.tag-input,
+.choice-tags {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+.multi-select .tag,
+.tag-input .tag,
+.choice-tag {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* Segmented controls */
+.segmented-control,
+.segment-group {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+.segment,
+.segment-option {
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.segment.active,
+.segment-option.active {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* Any element with role="option" or aria-selected */
+[role="option"],
+[aria-selected] {
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+[role="option"]:hover,
+[aria-selected="true"] {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* Card Components with Light Backgrounds */
+.card[style*="background: rgba(255, 255, 255"],
+.card[style*="background: white"],
+.stat-item,
+.mood-patterns,
+.insights-section,
+.simple-progress-dashboard,
+.insight-metrics,
+.insight-chart-container, 
+.insight-neutral,
+.insight-recommendation {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Modal and Dialog Content */
+.modal-content,
+.modal-body,
+.dialog-content,
+.upload-modal,
+.confirm-dialog {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+}
+
+/* Chat Interface Light Backgrounds */
+.enhanced-chat-header,
+.chat-message-bubble[style*="background: rgba(255"],
+.chat-input-area,
+.file-attachment-display {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Enhanced Chat Input - Meet Chat Box */
+.enhanced-chat-input,
+.input-container,
+.enhanced-message-input,
+.message-input-wrapper {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.enhanced-message-input {
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.enhanced-message-input::placeholder {
+  color: rgba(26, 35, 50, 0.6) !important;
+  -webkit-text-fill-color: rgba(26, 35, 50, 0.6) !important;
+}
+
+/* Chat input focus states */
+.enhanced-chat-input:focus,
+.enhanced-message-input:focus,
+.input-container:focus-within {
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: #1a2332 !important;
+  border-color: var(--gradient-card-1) !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+/* All Chat and Meet Related Inputs */
+.chat-input,
+.meet-input,
+.message-input,
+.comment-input,
+.reply-input,
+[class*="chat-input"],
+[class*="message-input"],
+[class*="meet-input"] {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.chat-input:focus,
+.meet-input:focus,
+.message-input:focus,
+.comment-input:focus,
+.reply-input:focus,
+[class*="chat-input"]:focus,
+[class*="message-input"]:focus,
+[class*="meet-input"]:focus {
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.chat-input::placeholder,
+.meet-input::placeholder,
+.message-input::placeholder,
+.comment-input::placeholder,
+.reply-input::placeholder,
+[class*="chat-input"]::placeholder,
+[class*="message-input"]::placeholder,
+[class*="meet-input"]::placeholder {
+  color: rgba(26, 35, 50, 0.6) !important;
+  -webkit-text-fill-color: rgba(26, 35, 50, 0.6) !important;
+}
+
+/* Input Components */
+.input[class*="Input_input"],
+.select[class*="Select_select"] {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Grammar checker and text preview areas */
+.text-preview,
+.text-preview-scrollable,
+.meditation-text-display,
+.preview-text {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  border-left: 3px solid var(--gradient-card-1) !important;
+}
+
+/* Calendar day content */
+.calendar-day-content,
+.calendar-entry-preview {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #1a2332 !important;
+}
+
+/* Dropdown options and select menus */
+option,
+.select-option,
+.dropdown-option {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+}
+
+/* Language selector options */
+.profile-select-options,
+.panel-language-dropdown {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.profile-select-option,
+.panel-language-option {
+  color: #1a2332 !important;
+}
+
+.profile-select-option:hover,
+.panel-language-option:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #1a2332 !important;
+}
+
+/* Content areas that typically have light backgrounds */
+.content-area,
+.text-content,
+.entry-content,
+.message-content,
+.description-content {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  padding: var(--space-md) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+/* Search inputs */
+.search-input,
+.search-bar input {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+.search-input::placeholder {
+  color: rgba(26, 35, 50, 0.6) !important;
+}
+
+/* Admin content areas */
+.admin-content textarea,
+.moderation-section textarea {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Auto-fill states */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #1a2332 !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.9) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Focus states for light backgrounds (excluding journal areas) */
+input:focus,
+textarea:not(.expanded-writing-textarea):not(.quick-write-textarea):not(.entry-textarea):not(.journal-textarea):focus {
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: #1a2332 !important;
+  outline: 2px solid var(--gradient-card-1) !important;
+  outline-offset: 2px !important;
+  border-color: var(--gradient-card-1) !important;
+}
+
+/* Voice recording states for journal areas */
+.expanded-writing-textarea.voice-active,
+.quick-write-textarea.voice-active {
+  background: rgba(255, 255, 255, 1.0) !important;
+  color: #000000 !important; /* Pure black text */
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3) !important;
+  -webkit-text-fill-color: #000000 !important;
+  caret-color: #000000 !important;
+}
+
+/* Processing states for journal areas */
+.expanded-writing-textarea.processing,
+.quick-write-textarea.processing {
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: #000000 !important; /* Pure black text */
+  opacity: 0.8;
+  -webkit-text-fill-color: #000000 !important;
+  caret-color: #000000 !important;
+}
+
+/* Specific form elements that need light backgrounds */
+.form-group input,
+.form-group textarea,
+.upload-form input,
+.upload-form textarea {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Code and pre-formatted text areas */
+code,
+pre,
+.code-block,
+.pre-formatted {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1a2332 !important;
+  padding: var(--space-sm) !important;
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Specific Element Overrides - Force White Text */
+h1, h2, h3, h4, h5, h6,
+p, span, div, label, 
+button, input, textarea, select,
+.text, .title, .subtitle, .description,
+.name, .label, .content, .message {
+  color: #ffffff !important;
+}
+
+/* Component-Specific Overrides */
+
+/* Activity Cards - Dark Theme Matching App Style */
+.activity-card {
+  background: linear-gradient(135deg, 
+    rgba(16, 24, 40, 0.9), 
+    rgba(31, 41, 55, 0.85)) !important;
+  backdrop-filter: blur(25px) !important;
+  border: 2px solid rgba(75, 85, 99, 0.6) !important;
+  box-shadow: 
+    0 12px 40px rgba(0,0,0,0.6),
+    0 4px 16px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+.activity-card:hover {
+  background: linear-gradient(135deg, 
+    rgba(16, 24, 40, 0.95), 
+    rgba(31, 41, 55, 0.9)) !important;
+  border-color: rgba(75, 85, 99, 0.8) !important;
+  box-shadow: 
+    0 16px 48px rgba(0,0,0,0.7),
+    0 6px 20px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.15) !important;
+}
+
+.activity-title {
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8) !important;
+  font-weight: 700 !important;
+  background: linear-gradient(135deg, 
+    rgba(55, 65, 81, 0.8), 
+    rgba(31, 41, 55, 0.6)) !important;
+  padding: 10px 14px !important;
+  border-radius: 10px !important;
+  margin-bottom: 10px !important;
+  border: 1px solid rgba(75, 85, 99, 0.4) !important;
+}
+
+.activity-description {
+  color: rgba(255, 255, 255, 0.95) !important;
+  background: linear-gradient(135deg, 
+    rgba(31, 41, 55, 0.7), 
+    rgba(17, 24, 39, 0.5)) !important;
+  padding: 14px !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(75, 85, 99, 0.3) !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7) !important;
+}
+
+.activity-details {
+  background: linear-gradient(135deg, 
+    rgba(31, 41, 55, 0.6), 
+    rgba(17, 24, 39, 0.4)) !important;
+  border: 1px solid rgba(75, 85, 99, 0.4) !important;
+  padding: 16px !important;
+  border-radius: 12px !important;
+}
+
+.activity-detail {
+  color: rgba(255, 255, 255, 0.95) !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6) !important;
+}
+
+.detail-text {
+  color: rgba(255, 255, 255, 0.95) !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6) !important;
+  font-weight: 500 !important;
+}
+
+.organizer-name,
+.organizer-label {
+  color: rgba(255, 255, 255, 0.95) !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6) !important;
+}
+
+.activity-organizer {
+  background: linear-gradient(135deg, 
+    rgba(55, 65, 81, 0.6), 
+    rgba(31, 41, 55, 0.4)) !important;
+  padding: 12px !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(75, 85, 99, 0.3) !important;
+}
+
+/* Activity Status Badges - Dark Theme */
+.activity-status-badge {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8) !important;
+  font-weight: 700 !important;
+  backdrop-filter: blur(20px) !important;
+  padding: 6px 12px !important;
+  border-radius: 14px !important;
+}
+
+.activity-status-badge.joined {
+  background: linear-gradient(135deg, 
+    rgba(37, 99, 235, 0.9), 
+    rgba(29, 78, 216, 0.8)) !important;
+  border: 1px solid rgba(59, 130, 246, 0.8) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important;
+}
+
+.activity-status-badge.organizer {
+  background: linear-gradient(135deg, 
+    rgba(21, 128, 61, 0.9), 
+    rgba(22, 101, 52, 0.8)) !important;
+  border: 1px solid rgba(34, 197, 94, 0.8) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.4) !important;
+}
+
+.activity-status-badge.full {
+  background: linear-gradient(135deg, 
+    rgba(220, 38, 38, 0.9), 
+    rgba(185, 28, 28, 0.8)) !important;
+  border: 1px solid rgba(239, 68, 68, 0.8) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4) !important;
+}
+
+/* Activity Category Badge - Dark Theme */
+.activity-category-badge {
+  background: linear-gradient(135deg, 
+    rgba(55, 65, 81, 0.9), 
+    rgba(31, 41, 55, 0.8)) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(75, 85, 99, 0.6) !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7) !important;
+  font-weight: 700 !important;
+  padding: 8px 12px !important;
+  border-radius: 12px !important;
+}
+
+.category-name {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7) !important;
+}
+
+/* Activity Tags - Dark Theme */
+.activity-tag {
+  color: rgba(255, 255, 255, 0.95) !important;
+  background: linear-gradient(135deg, 
+    rgba(55, 65, 81, 0.8), 
+    rgba(31, 41, 55, 0.6)) !important;
+  border: 1px solid rgba(75, 85, 99, 0.4) !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7) !important;
+  padding: 6px 10px !important;
+  border-radius: 10px !important;
+}
+
+/* Activity Buttons - Enhanced Dark Theme */
+.join-button,
+.primary-button {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4) !important;
+}
+
+.secondary-button,
+.view-button,
+.waitlist-button {
+  background: linear-gradient(135deg, 
+    rgba(55, 65, 81, 0.9), 
+    rgba(31, 41, 55, 0.8)) !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6) !important;
+  font-weight: 600 !important;
+  border: 1px solid rgba(75, 85, 99, 0.6) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+}
+
+.warning-button,
+.leave-button {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Activity Card Message - Dark Theme */
+.activity-card-message {
+  background: linear-gradient(135deg, 
+    rgba(31, 41, 55, 0.9), 
+    rgba(17, 24, 39, 0.8)) !important;
+  border: 1px solid rgba(75, 85, 99, 0.4) !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7) !important;
+  padding: 12px !important;
+  border-radius: 10px !important;
+}
+
+/* Activity Meta Information */
+.activity-name,
+.activity-meta,
+.participants-count,
+.meditation-type,
+.meditation-date,
+.meditation-duration,
+.meditation-language,
+.meditation-text {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4) !important;
+}
+
+/* Journal Components */
+.journal-title,
+.journal-subtitle,
+.entry-content,
+.entry-date,
+.mood-label,
+.calendar-day,
+.weekday-header {
+  color: #ffffff !important;
+}
+
+/* Community Components */
+.community-title,
+.community-subtitle,
+.preview-type,
+.preview-language,
+.preview-duration,
+.preview-text,
+.share-form label,
+.meditation-header h4,
+.meditation-description {
+  color: #ffffff !important;
+}
+
+/* Auth Components */
+.auth-title,
+.auth-subtitle,
+.form-label,
+.profile-name,
+.profile-email,
+.profile-status,
+.location-text,
+.language-button,
+.language-option {
+  color: #ffffff !important;
+}
+
+/* Modal Components */
+.modal-header h2,
+.modal-header h3,
+.confirm-message,
+.alert-message,
+.loading-text,
+.upload-error,
+.upload-error-display {
+  color: #ffffff !important;
+}
+
+/* Admin Components */
+.admin-header h2,
+.admin-header p,
+.access-denied h2,
+.access-denied p,
+.meditation-header h4,
+.modal-body h4,
+.modal-body .description,
+.detail-section h5 {
+  color: #ffffff !important;
+}
+
+/* Navigation Components */
+.page-title,
+.page-subtitle,
+.panel-username,
+.panel-member-since,
+.panel-language-title,
+.panel-menu-label,
+.panel-language-option {
+  color: #ffffff !important;
+}
+
+/* Button Text Override */
+button,
+.btn,
+.button,
+.clickable,
+[role="button"] {
+  color: #ffffff !important;
+}
+
+/* Form Elements Override */
+input,
+textarea,
+select {
+  color: #ffffff !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Link Override */
+a {
+  color: #ffffff !important;
+}
+
+/* Card Text Override */
+.card,
+.card-header,
+.card-body,
+.card-footer,
+.card-title,
+.card-text,
+.card-subtitle {
+  color: #ffffff !important;
+}
+
+/* List Items */
+li,
+ul,
+ol {
+  color: #ffffff !important;
+}
+
+/* Table Elements */
+table,
+th,
+td,
+.table-header,
+.table-cell {
+  color: #ffffff !important;
+}
+
+/* Status and Badge Text */
+.badge,
+.status,
+.chip,
+.tag {
+  color: #ffffff !important;
+}
+
+/* Error and Warning Text - Keep some color for context but ensure visibility */
+.error-message,
+.warning-message,
+.success-message,
+.info-message {
+  color: #ffffff !important;
+}
+
+/* Form Validation Messages */
+.form-error,
+.validation-error,
+.field-error {
+  color: #fca5a5 !important; /* Light red for errors */
+}
+
+.form-success,
+.validation-success {
+  color: #86efac !important; /* Light green for success */
+}
+
+/* Specific Problem Areas - Force Override */
+
+/* Profile sections that might have dark text */
+.profile-container,
+.profile-container *,
+.profile-header,
+.profile-header *,
+.profile-stats,
+.profile-stats * {
+  color: #ffffff !important;
+}
+
+/* Admin dashboard text */
+.admin-dashboard,
+.admin-dashboard *,
+.admin-content,
+.admin-content * {
+  color: #ffffff !important;
+}
+
+/* Community hub text */
+.community-hub,
+.community-hub *,
+.meditation-preview,
+.meditation-preview * {
+  color: #ffffff !important;
+}
+
+/* Journal calendar text */
+.journal-calendar-modern,
+.journal-calendar-modern *,
+.calendar-header,
+.calendar-header * {
+  color: #ffffff !important;
+}
+
+/* Upload modal text */
+.upload-modal,
+.upload-modal *,
+.upload-section,
+.upload-section * {
+  color: #ffffff !important;
+}
+
+/* Statistics and metrics */
+.stat-card,
+.stat-card *,
+.stat-info,
+.stat-info *,
+.credit-stat,
+.credit-stat * {
+  color: #ffffff !important;
+}
+
+/* Fix specific black text issues found */
+.print-styles * {
+  color: #000 !important; /* Only for print styles */
+}
+
+@media print {
+  * {
+    color: #000 !important;
+  }
+}
+
+@media screen {
+  .high-contrast * {
+    color: #ffffff !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+  }
+}
+
+/* Special Cases - Preserve functional colors but ensure visibility */
+.like-button.liked {
+  color: #fca5a5 !important; /* Light red for liked items */
+}
+
+.play-count,
+.like-count {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Language selector text */
+.profile-select-option,
+.profile-select-option * {
+  color: #ffffff !important;
+}
+
+/* Meditation type descriptions */
+.meditation-type-description,
+.background-description {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Tab text */
+.admin-tab,
+.community-tab,
+.meet-tab {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.admin-tab.active,
+.community-tab.active,
+.meet-tab.active {
+  color: #ffffff !important;
+}
+
+/* Ensure input text is always visible */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+textarea {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Autocomplete text */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--glass-medium) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Dropdown options */
+option {
+  background: var(--glass-dark) !important;
+  color: #ffffff !important;
+}

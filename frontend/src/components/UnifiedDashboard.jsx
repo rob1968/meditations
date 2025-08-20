@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import { getFullUrl, getAssetUrl, API_ENDPOINTS, getAuthHeaders } from '../config/api';
+import { getFullUrl, getAssetUrl, API_ENDPOINTS } from '../config/api';
+import { getAuthHeaders } from '../utils/userUtils';
 import { loadDashboardTab, saveDashboardTab } from '../utils/statePersistence';
 import PageHeader from './PageHeader';
 import Alert from './Alert';
@@ -158,7 +159,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     try {
       const url = getFullUrl(`/api/meditation/custom-backgrounds`);
       const response = await axios.get(url, {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       setSavedCustomBackgrounds(response.data.backgrounds || []);
     } catch (error) {
@@ -221,7 +222,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
   const loadMyMeditations = async () => {
     try {
       const response = await axios.get(getFullUrl(API_ENDPOINTS.USER_MEDITATIONS(user.id)), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       console.log('My meditations response:', response.data);
       setMyMeditations(response.data.meditations || []);
@@ -303,7 +304,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       const response = await axios.post(getFullUrl(`/api/community/meditations/${meditationId}/play`), {
         userId: user?.id
       }, {
-        headers: getAuthHeaders(user?.id)
+        headers: getAuthHeaders(user)
       });
       
       // Only update if play was actually counted (backend returns success)
@@ -338,7 +339,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       const response = await axios.post(getFullUrl(`/api/community/meditations/${meditationId}/like`), {
         userId: user.id
       }, {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
 
       // Update local state
@@ -412,7 +413,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
     try {
       await axios.delete(getFullUrl(API_ENDPOINTS.DELETE_IMAGE(meditationId)), {
         params: { userId: user.id },
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       await loadMyMeditations();
       setShowImageOptions(null);
@@ -664,7 +665,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
           sharedMeditationId: response.data.meditation._id,
           isShared: true
         }, {
-          headers: getAuthHeaders(user.id)
+          headers: getAuthHeaders(user)
         });
         
         // Refresh meditations and credits
@@ -694,7 +695,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
             isShared: false,
             sharedMeditationId: null
           }, {
-            headers: getAuthHeaders(user.id)
+            headers: getAuthHeaders(user)
           });
           await loadMyMeditations();
           showAlert(t('meditationUnshared', 'Meditation unshared successfully!'), 'success');
@@ -714,7 +715,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
       async () => {
         try {
           await axios.delete(getFullUrl(`/api/user-meditations/${user.id}/${meditationId}`), {
-            headers: getAuthHeaders(user.id)
+            headers: getAuthHeaders(user)
           });
           await loadMyMeditations();
           showAlert(t('meditationDeleted', 'Meditation deleted successfully!'), 'success');
@@ -827,7 +828,7 @@ const UnifiedDashboard = ({ user, userCredits, onCreditsUpdate, onProfileClick, 
         type,
         language: currentLanguage
       }, {
-        headers: getAuthHeaders(user?.id)
+        headers: getAuthHeaders(user)
       });
       
       return response.data.text;

@@ -24,7 +24,7 @@ const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxCl
   }, [activeTab]);
 
   useEffect(() => {
-    if (user && user.username === 'rob') {
+    if (user && user.role === 'admin') {
       fetchMeditations();
     }
   }, [user]);
@@ -45,7 +45,10 @@ const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxCl
       setIsLoading(true);
       console.log('Fetching admin meditations for user:', user.id);
       const response = await axios.get(getFullUrl('/api/community/admin/meditations'), {
-        params: { adminUserId: user.id }
+        params: { adminUserId: user.id },
+        headers: {
+          'x-user-id': user.id
+        }
       });
       
       console.log('Admin response:', response.data);
@@ -69,6 +72,11 @@ const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxCl
         {
           adminUserId: user.id,
           moderationNotes: moderationNote
+        },
+        {
+          headers: {
+            'x-user-id': user.id
+          }
         }
       );
 
@@ -98,6 +106,11 @@ const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxCl
         {
           adminUserId: user.id,
           moderationNotes: moderationNote
+        },
+        {
+          headers: {
+            'x-user-id': user.id
+          }
         }
       );
 
@@ -138,12 +151,22 @@ const AdminDashboard = ({ user, onLogout, onProfileClick, unreadCount, onInboxCl
     morning: t('morningMeditation', 'Morning')
   };
 
-  if (!user || user.username !== 'rob') {
+  // Check if user has admin role and meditation moderation permissions
+  const canAccessAdmin = user?.role === 'admin' && user?.permissions?.canModerateMeditations;
+  
+  if (!canAccessAdmin) {
     return (
       <div className="admin-dashboard">
         <div className="access-denied">
           <h2>🚫 {t('accessDenied', 'Access Denied')}</h2>
           <p>{t('noPermissionMessage', 'You don\'t have permission to access this page.')}</p>
+          <div style={{marginTop: '20px', padding: '10px', background: '#f0f0f0', borderRadius: '5px', fontSize: '12px'}}>
+            <strong>🔧 Debug Info:</strong><br/>
+            Username: {user?.username || 'none'}<br/>
+            Role: {user?.role || 'none'}<br/>
+            Can Moderate Meditations: {user?.permissions?.canModerateMeditations ? 'yes' : 'no'}<br/>
+            User ID: {user?._id || user?.id || 'missing'}<br/>
+          </div>
         </div>
       </div>
     );

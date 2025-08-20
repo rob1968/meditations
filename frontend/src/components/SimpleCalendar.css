@@ -131,6 +131,23 @@
   font-weight: 600;
 }
 
+/* Future Date - Disabled */
+.simple-day-future {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  cursor: not-allowed !important;
+  opacity: 0.4 !important;
+}
+
+.simple-day-future:hover {
+  background: rgba(255, 255, 255, 0.02) !important;
+  transform: none !important;
+}
+
+.simple-day-future .simple-day-number {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
 /* Day Number */
 .simple-day-number {
   color: rgba(255, 255, 255, 0.9);

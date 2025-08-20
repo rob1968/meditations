@@ -6,6 +6,7 @@ const fs = require('fs').promises;
 const SharedMeditation = require('../models/SharedMeditation');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const { auth } = require('../middleware/auth');
 
 // Multilingual notification texts
 const getNotificationTexts = (language, type, meditationType) => {
@@ -144,6 +145,27 @@ const getNotificationTexts = (language, type, meditationType) => {
   
   const languageTexts = texts[language] || texts.en;
   return languageTexts[type] || languageTexts.approved;
+};
+
+// Admin middleware - check if user has admin role and meditation moderation permissions
+const adminAuth = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Check if user has admin role and meditation moderation permissions
+    if (req.user.role !== 'admin' || !req.user.permissions?.canModerateMeditations) {
+      console.log(`Access denied for user ${req.user.username}: role=${req.user.role}, canModerateMeditations=${req.user.permissions?.canModerateMeditations}`);
+      return res.status(403).json({ error: 'Admin access required - need meditation moderation permissions' });
+    }
+    
+    console.log(`Admin access granted for user ${req.user.username} with role ${req.user.role}`);
+    next();
+  } catch (error) {
+    console.error('Admin authentication error:', error);
+    res.status(500).json({ error: 'Admin authentication failed' });
+  }
 };
 
 // Configure multer for file uploads
@@ -670,15 +692,8 @@ router.get('/stats', async (req, res) => {
 
 // Admin Routes
 // Get all meditations for moderation (admin only)
-router.get('/admin/meditations', async (req, res) => {
+router.get('/admin/meditations', auth, adminAuth, async (req, res) => {
   try {
-    const { adminUserId } = req.query;
-    
-    // Check if user is admin (rob)
-    const adminUser = await User.findById(adminUserId);
-    if (!adminUser || adminUser.username !== 'rob') {
-      return res.status(403).json({ success: false, error: 'Unauthorized' });
-    }
 
     const meditations = await SharedMeditation.find({})
       .sort({ createdAt: -1 })
@@ -705,15 +720,9 @@ router.get('/admin/meditations', async (req, res) => {
 });
 
 // Approve meditation (admin only)
-router.patch('/admin/meditation/:id/approve', async (req, res) => {
+router.patch('/admin/meditation/:id/approve', auth, adminAuth, async (req, res) => {
   try {
-    const { adminUserId, moderationNotes } = req.body;
-    
-    // Check if user is admin (rob)
-    const adminUser = await User.findById(adminUserId);
-    if (!adminUser || adminUser.username !== 'rob') {
-      return res.status(403).json({ success: false, error: 'Unauthorized' });
-    }
+    const { moderationNotes } = req.body;
 
     const meditation = await SharedMeditation.findById(req.params.id);
     if (!meditation) {
@@ -731,7 +740,7 @@ router.patch('/admin/meditation/:id/approve', async (req, res) => {
     
     // Create notification for the user
     const notification = new Notification({
-      userId: meditation.author.userId,
+      user: meditation.author.userId,
       meditationId: meditation._id,
       type: 'approved',
       title: notificationTexts.title,
@@ -752,15 +761,9 @@ router.patch('/admin/meditation/:id/approve', async (req, res) => {
 });
 
 // Reject meditation (admin only)
-router.patch('/admin/meditation/:id/reject', async (req, res) => {
+router.patch('/admin/meditation/:id/reject', auth, adminAuth, async (req, res) => {
   try {
-    const { adminUserId, moderationNotes } = req.body;
-    
-    // Check if user is admin (rob)
-    const adminUser = await User.findById(adminUserId);
-    if (!adminUser || adminUser.username !== 'rob') {
-      return res.status(403).json({ success: false, error: 'Unauthorized' });
-    }
+    const { moderationNotes } = req.body;
 
     const meditation = await SharedMeditation.findById(req.params.id);
     if (!meditation) {
@@ -778,7 +781,7 @@ router.patch('/admin/meditation/:id/reject', async (req, res) => {
     
     // Create notification for the user
     const notification = new Notification({
-      userId: meditation.author.userId,
+      user: meditation.author.userId,
       meditationId: meditation._id,
       type: 'rejected',
       title: notificationTexts.title,

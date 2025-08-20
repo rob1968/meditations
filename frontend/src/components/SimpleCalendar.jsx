@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import './SimpleCalendar.css';
 
 const SimpleCalendar = ({ 
@@ -10,6 +11,8 @@ const SimpleCalendar = ({
   onNextMonth,
   t 
 }) => {
+  const { i18n } = useTranslation();
+  
   // Get days in month
   const getDaysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate();
@@ -43,7 +46,8 @@ const SimpleCalendar = ({
         day: day,
         date: dateStr,
         hasEntry: hasEntry,
-        isToday: isToday(day)
+        isToday: isToday(day),
+        isFuture: isFutureDate(day)
       });
     }
     
@@ -63,11 +67,50 @@ const SimpleCalendar = ({
            currentYear === today.getFullYear();
   };
 
+  // Check if a day is in the future
+  const isFutureDate = (day) => {
+    const today = new Date();
+    const dayDate = new Date(currentYear, currentMonth, day);
+    
+    // Debug logging
+    console.log('isFutureDate check:', {
+      day,
+      currentYear,
+      currentMonth,
+      dayDate: dayDate.toDateString(),
+      today: today.toDateString(),
+      isFuture: dayDate > today
+    });
+    
+    return dayDate > today;
+  };
+
   // Format month and year using proper internationalization
   const formatMonthYear = () => {
     const date = new Date(currentYear, currentMonth);
-    // Use browser's built-in localization for month names
-    const formatter = new Intl.DateTimeFormat(navigator.language || 'en', { 
+    
+    // Map i18n language codes to proper locales for date formatting
+    const languageToLocale = {
+      'en': 'en-US',
+      'nl': 'nl-NL', 
+      'de': 'de-DE',
+      'fr': 'fr-FR',
+      'es': 'es-ES',
+      'it': 'it-IT',
+      'ja': 'ja-JP',
+      'ko': 'ko-KR',
+      'pt': 'pt-BR',
+      'ru': 'ru-RU',
+      'zh': 'zh-CN',
+      'ar': 'ar-SA',
+      'hi': 'hi-IN'
+    };
+    
+    const currentLanguage = i18n.language || 'en';
+    const locale = languageToLocale[currentLanguage] || 'en-US';
+    
+    // Use the selected UI language for month names
+    const formatter = new Intl.DateTimeFormat(locale, { 
       month: 'long',
       year: 'numeric' 
     });
@@ -128,11 +171,27 @@ const SimpleCalendar = ({
               dayObj.isToday ? 'simple-day-today' : ''
             } ${
               dayObj.hasEntry ? 'simple-day-has-entry' : ''
+            } ${
+              dayObj.isFuture ? 'simple-day-future' : ''
             }`}
             onClick={() => {
-              if (dayObj.type === 'day' && onDateClick) {
+              console.log('Calendar day clicked:', {
+                day: dayObj.day,
+                date: dayObj.date,
+                isFuture: dayObj.isFuture,
+                type: dayObj.type,
+                willCall: dayObj.type === 'day' && !dayObj.isFuture
+              });
+              
+              if (dayObj.type === 'day' && !dayObj.isFuture && onDateClick) {
                 onDateClick(dayObj.date);
+              } else if (dayObj.isFuture) {
+                console.log('Blocked future date click');
               }
+            }}
+            style={{ 
+              cursor: dayObj.isFuture ? 'not-allowed' : 'pointer',
+              opacity: dayObj.isFuture ? 0.4 : 1
             }}
           >
             {dayObj.day && (

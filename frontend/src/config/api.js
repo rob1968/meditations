@@ -87,17 +87,15 @@ export const getAssetUrl = (assetPath) => {
   return `${API_BASE_URL}${assetPath}`;
 };
 
-// Helper function to get authenticated headers
-export const getAuthHeaders = (userId) => {
-  return {
-    'Content-Type': 'application/json',
-    'x-user-id': userId
-  };
-};
+// NOTE: getAuthHeaders moved to /src/utils/userUtils.js for consistent user ID handling
+// Use: import { getAuthHeaders } from '../utils/userUtils'; getAuthHeaders(user);
 
 // Helper function for authenticated requests
 export const apiRequest = async (url, options = {}, userId) => {
-  const defaultHeaders = userId ? getAuthHeaders(userId) : { 'Content-Type': 'application/json' };
+  const defaultHeaders = userId ? {
+    'Content-Type': 'application/json',
+    'x-user-id': userId
+  } : { 'Content-Type': 'application/json' };
   
   const config = {
     ...options,

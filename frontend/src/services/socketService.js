@@ -106,6 +106,10 @@ class SocketService {
       this.emit('new_message', data);
     });
 
+    this.socket.on('message_reaction', (data) => {
+      this.emit('message_reaction', data);
+    });
+
     this.socket.on('user_typing', (data) => {
       this.emit('user_typing', data);
     });
@@ -172,18 +176,57 @@ class SocketService {
     }
   }
 
-  sendMessage(conversationId, text, type = 'text', replyTo = null) {
+  sendMessage(conversationId, messageData) {
     if (!this.isConnected) return;
+    
+    // Handle both old and new format
+    if (typeof messageData === 'string') {
+      messageData = { text: messageData, type: 'text' };
+    }
     
     this.socket.emit('send_message', {
       conversationId,
-      text,
-      type,
-      replyTo
+      ...messageData
     });
     
     // Stop typing indicator
     this.stopTyping(conversationId);
+  }
+
+  // ============ MESSAGE REACTIONS ============
+
+  sendReaction(conversationId, messageId, emoji) {
+    if (!this.isConnected) return;
+    
+    this.socket.emit('message_reaction', {
+      conversationId,
+      messageId,
+      emoji
+    });
+  }
+
+  // ============ FILE ATTACHMENTS ============
+
+  sendFileMessage(conversationId, fileData, replyTo = null) {
+    if (!this.isConnected) return;
+    
+    this.socket.emit('send_message', {
+      conversationId,
+      type: 'file',
+      content: fileData,
+      replyTo
+    });
+  }
+
+  sendImageMessage(conversationId, imageData, replyTo = null) {
+    if (!this.isConnected) return;
+    
+    this.socket.emit('send_message', {
+      conversationId,
+      type: 'image',
+      content: imageData,
+      replyTo
+    });
   }
 
   // ============ TYPING INDICATORS ============

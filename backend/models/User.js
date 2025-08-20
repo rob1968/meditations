@@ -362,6 +362,35 @@ const UserSchema = new mongoose.Schema({
     }
   }],
   
+  // User role and permissions for admin functionality
+  role: {
+    type: String,
+    enum: ['user', 'moderator', 'admin'],
+    default: 'user'
+  },
+  permissions: {
+    canModerateActivities: {
+      type: Boolean,
+      default: false
+    },
+    canModerateMeditations: {
+      type: Boolean,
+      default: false
+    },
+    canModerateUsers: {
+      type: Boolean,
+      default: false
+    },
+    canViewAnalytics: {
+      type: Boolean,
+      default: false
+    },
+    canManageSystem: {
+      type: Boolean,
+      default: false
+    }
+  },
+  
   // Metadata
   createdAt: {
     type: Date,

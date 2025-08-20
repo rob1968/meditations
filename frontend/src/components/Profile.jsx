@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
-import { getFullUrl, API_ENDPOINTS, getAuthHeaders } from '../config/api';
+import { getFullUrl, API_ENDPOINTS } from '../config/api';
+import { getAuthHeaders } from '../utils/userUtils';
 import { getSortedCountries } from '../data/countries';
 import { getLocalizedLanguages, getLanguageDisplayName } from '../data/languages';
 import PiPaymentNew from './PiPaymentNew';
@@ -96,7 +97,7 @@ const Profile = ({ user, onLogout, onBackToCreate }) => {
   const fetchUserCredits = async () => {
     try {
       const response = await axios.get(getFullUrl(`/api/users/${user.id}/credits`), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       setCredits(response.data);
     } catch (error) {

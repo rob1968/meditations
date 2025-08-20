@@ -4,6 +4,7 @@ import ActivityCard from './ActivityCard';
 import ConfirmDialog from '../ConfirmDialog';
 import Alert from '../Alert';
 import CreateActivity from './CreateActivity';
+import { getAuthHeaders } from '../../utils/userUtils';
 
 const MyActivities = ({ user, onSelectActivity }) => {
   const { t } = useTranslation();
@@ -12,7 +13,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
     participating: [],
     past: []
   });
-  const [activeTab, setActiveTab] = useState('participating');
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'organizing', 'participating', 'past'
   const [isLoading, setIsLoading] = useState(true);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -46,9 +47,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/activities/user/my-activities', {
-        headers: {
-          'x-user-id': user?._id || user?.id || ''
-        }
+        headers: getAuthHeaders(user)
       });
 
       if (response.ok) {
@@ -67,6 +66,30 @@ const MyActivities = ({ user, onSelectActivity }) => {
     setShowAlert(true);
   };
 
+  const handleJoinActivity = async (activityId) => {
+    try {
+      const response = await fetch(`/api/activities/${activityId}/join`, {
+        method: 'POST',
+        headers: getAuthHeaders(user)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Reload activities to reflect changes
+        await loadMyActivities();
+        
+        showAlertMessage(t('joinedActivity', 'Je hebt je aangemeld voor de activiteit'));
+      } else {
+        const error = await response.json();
+        showAlertMessage(error.error || t('joinFailed', 'Kon niet aanmelden voor activiteit'));
+      }
+    } catch (error) {
+      console.error('Error joining activity:', error);
+      showAlertMessage(t('joinError', 'Er ging iets mis bij het aanmelden'));
+    }
+  };
+
   const handleLeaveActivity = (activityId) => {
     setConfirmMessage(t('confirmLeaveActivity', 'Weet je zeker dat je je wilt afmelden voor deze activiteit?'));
     setConfirmAction(() => () => performLeaveActivity(activityId));
@@ -77,10 +100,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
     try {
       const response = await fetch(`/api/activities/${activityId}/leave`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user?._id || user?.id || ''
-        }
+        headers: getAuthHeaders(user)
       });
 
       if (response.ok) {
@@ -111,10 +131,7 @@ const MyActivities = ({ user, onSelectActivity }) => {
     try {
       const response = await fetch(`/api/activities/${activityId}/cancel`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user?._id || user?.id || ''
-        },
+        headers: getAuthHeaders(user),
         body: JSON.stringify({ reason: cancelReason })
       });
 
@@ -161,27 +178,6 @@ const MyActivities = ({ user, onSelectActivity }) => {
     // Refresh the list to make sure we have the latest data
     loadMyActivities();
   };
-
-  const tabs = [
-    { 
-      id: 'participating', 
-      label: t('participating', 'Deelnemend'), 
-      count: activities.participating?.length || 0,
-      icon: '🤝'
-    },
-    { 
-      id: 'organizing', 
-      label: t('organizing', 'Organiserend'), 
-      count: activities.organizing?.length || 0,
-      icon: '👑'
-    },
-    { 
-      id: 'past', 
-      label: t('pastActivities', 'Vorige'), 
-      count: activities.past?.length || 0,
-      icon: '📜'
-    }
-  ];
 
   const canLeaveActivity = (activity) => {
     const now = new Date();
@@ -266,6 +262,91 @@ const MyActivities = ({ user, onSelectActivity }) => {
     }
   };
 
+  // Get filtered activities
+  const getFilteredActivities = () => {
+    const allUpcoming = [
+      ...activities.organizing.map(a => ({ ...a, role: 'organizer' })),
+      ...activities.participating.map(a => ({ ...a, role: 'participant' }))
+    ].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    switch (activeFilter) {
+      case 'organizing':
+        return activities.organizing.map(a => ({ ...a, role: 'organizer' }));
+      case 'participating':
+        return activities.participating.map(a => ({ ...a, role: 'participant' }));
+      case 'past':
+        return activities.past.map(a => ({ ...a, role: 'past' }));
+      case 'all':
+      default:
+        return allUpcoming;
+    }
+  };
+
+  // Group activities by date
+  const groupActivitiesByDate = (activities) => {
+    const grouped = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const thisWeek = new Date(today);
+    thisWeek.setDate(thisWeek.getDate() + 7);
+
+    activities.forEach(activity => {
+      const activityDate = new Date(activity.date);
+      activityDate.setHours(0, 0, 0, 0);
+      
+      let groupKey;
+      if (activityDate.getTime() === today.getTime()) {
+        groupKey = t('today', 'Vandaag');
+      } else if (activityDate.getTime() === tomorrow.getTime()) {
+        groupKey = t('tomorrow', 'Morgen');
+      } else if (activityDate < thisWeek) {
+        groupKey = t('thisWeek', 'Deze Week');
+      } else {
+        groupKey = activityDate.toLocaleDateString('nl-NL', { 
+          weekday: 'long', 
+          day: 'numeric', 
+          month: 'long' 
+        });
+      }
+      
+      if (!grouped[groupKey]) {
+        grouped[groupKey] = [];
+      }
+      grouped[groupKey].push(activity);
+    });
+    
+    return grouped;
+  };
+
+  const filterButtons = [
+    { 
+      id: 'all', 
+      label: t('all', 'Alle'),
+      count: activities.organizing.length + activities.participating.length,
+      icon: '📅'
+    },
+    { 
+      id: 'organizing', 
+      label: t('organizing', 'Organiserend'),
+      count: activities.organizing.length,
+      icon: '👑'
+    },
+    { 
+      id: 'participating', 
+      label: t('participating', 'Deelnemend'),
+      count: activities.participating.length,
+      icon: '🤝'
+    },
+    { 
+      id: 'past', 
+      label: t('past', 'Vorige'),
+      count: activities.past.length,
+      icon: '📜'
+    }
+  ];
+
   if (isLoading) {
     return (
       <div className="my-activities-loading">
@@ -275,89 +356,124 @@ const MyActivities = ({ user, onSelectActivity }) => {
     );
   }
 
-  const currentActivities = activities[activeTab] || [];
+  const filteredActivities = getFilteredActivities();
 
   return (
-    <div className="my-activities">
+    <div className="my-activities-redesigned">
       <div className="my-activities-header">
         <h2 className="my-activities-title">{t('myActivities', 'Mijn Activiteiten')}</h2>
+        <p className="my-activities-subtitle">
+          {t('myActivitiesSubtitle', 'Bekijk al je activiteiten op één plek')}
+        </p>
       </div>
 
-      <div className="my-activities-tabs">
-        {tabs.map(tab => (
+      <div className="filter-pills">
+        {filterButtons.map(filter => (
           <button
-            key={tab.id}
-            className={`my-activity-tab mobile-touch-target ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
+            key={filter.id}
+            className={`filter-pill mobile-touch-target ${activeFilter === filter.id ? 'active' : ''}`}
+            onClick={() => setActiveFilter(filter.id)}
           >
-            <span className="tab-icon">{tab.icon}</span>
-            <span className="tab-label">{tab.label}</span>
-            <span className="tab-count">({tab.count})</span>
+            <span className="pill-icon">{filter.icon}</span>
+            <span className="pill-label">{filter.label}</span>
+            {filter.count > 0 && (
+              <span className="pill-count">{filter.count}</span>
+            )}
           </button>
         ))}
       </div>
 
       <div className="my-activities-content">
-        {currentActivities.length === 0 ? (
+        {filteredActivities.length === 0 ? (
           <div className="no-activities">
             <div className="no-activities-icon">
-              {activeTab === 'organizing' && '👑'}
-              {activeTab === 'participating' && '🤝'}
-              {activeTab === 'past' && '📜'}
+              {activeFilter === 'organizing' && '👑'}
+              {activeFilter === 'participating' && '🤝'}
+              {activeFilter === 'past' && '📜'}
+              {activeFilter === 'all' && '📅'}
             </div>
             <h3 className="no-activities-title">
-              {activeTab === 'organizing' && t('noOrganizing', 'Geen activiteiten georganiseerd')}
-              {activeTab === 'participating' && t('noParticipating', 'Geen activiteiten waaraan je deelneemt')}
-              {activeTab === 'past' && t('noPastActivities', 'Geen vorige activiteiten')}
+              {activeFilter === 'organizing' && t('noOrganizing', 'Geen activiteiten georganiseerd')}
+              {activeFilter === 'participating' && t('noParticipating', 'Geen activiteiten waaraan je deelneemt')}
+              {activeFilter === 'past' && t('noPastActivities', 'Geen vorige activiteiten')}
+              {activeFilter === 'all' && t('noActivities', 'Geen activiteiten gepland')}
             </h3>
             <p className="no-activities-description">
-              {activeTab === 'organizing' && t('noOrganizingDesc', 'Maak je eerste activiteit aan!')}
-              {activeTab === 'participating' && t('noParticipatingDesc', 'Zoek naar interessante activiteiten om aan deel te nemen')}
-              {activeTab === 'past' && t('noPastActivitiesDesc', 'Je activiteitengeschiedenis verschijnt hier')}
+              {activeFilter === 'organizing' && t('noOrganizingDesc', 'Maak je eerste activiteit aan!')}
+              {activeFilter === 'participating' && t('noParticipatingDesc', 'Zoek naar interessante activiteiten om aan deel te nemen')}
+              {activeFilter === 'past' && t('noPastActivitiesDesc', 'Je activiteitengeschiedenis verschijnt hier')}
+              {activeFilter === 'all' && t('noActivitiesDesc', 'Begin met het ontdekken van nieuwe activiteiten!')}
             </p>
           </div>
         ) : (
-          <div className="activities-grid">
-            {currentActivities.map(activity => (
-              <div key={activity._id} className="my-activity-wrapper">
-                <ActivityCard
-                  activity={activity}
-                  user={user}
-                  onSelect={() => onSelectActivity(activity)}
-                  onJoin={() => {}} // No join action for my activities
-                />
-                
-                {activeTab !== 'past' && (
-                  <div className="my-activity-actions">
-                    {renderActivityActions(activity, activeTab === 'organizing')}
-                  </div>
-                )}
-                
-                {activeTab === 'organizing' && (
-                  <div className="organizer-stats">
-                    <div className="stat">
-                      <span className="stat-icon">👥</span>
-                      <span className="stat-value">
-                        {activity.participants?.filter(p => p.status === 'confirmed').length || 0}
-                      </span>
-                      <span className="stat-label">{t('participants', 'deelnemers')}</span>
-                    </div>
-                    
-                    {activity.waitlist?.length > 0 && (
-                      <div className="stat">
-                        <span className="stat-icon">⏳</span>
-                        <span className="stat-value">{activity.waitlist.length}</span>
-                        <span className="stat-label">{t('waitlist', 'wachtlijst')}</span>
+          <div className="activities-grouped">
+            {Object.entries(groupActivitiesByDate(filteredActivities)).map(([dateGroup, activitiesInGroup]) => (
+              <div key={dateGroup} className="activity-date-group">
+                <h3 className="date-group-title">{dateGroup}</h3>
+                <div className="activities-list">
+                  {activitiesInGroup.map(activity => (
+                    <div key={activity._id} className="activity-item">
+                      <ActivityCard
+                        activity={activity}
+                        user={user}
+                        onSelect={() => onSelectActivity(activity)}
+                        onJoin={() => handleJoinActivity(activity._id)}
+                        onLeave={() => handleLeaveActivity(activity._id)}
+                        showDirectActions={true}
+                      />
+                      
+                      {/* Role Badge */}
+                      <div className={`role-badge ${activity.role}`}>
+                        {activity.role === 'organizer' && (
+                          <>
+                            <span className="role-icon">👑</span>
+                            <span className="role-text">{t('organizer', 'Organisator')}</span>
+                          </>
+                        )}
+                        {activity.role === 'participant' && (
+                          <>
+                            <span className="role-icon">🤝</span>
+                            <span className="role-text">{t('participant', 'Deelnemer')}</span>
+                          </>
+                        )}
                       </div>
-                    )}
-                    
-                    <div className="stat">
-                      <span className="stat-icon">👁️</span>
-                      <span className="stat-value">{activity.viewCount || 0}</span>
-                      <span className="stat-label">{t('views', 'weergaven')}</span>
+                      
+                      {/* Actions */}
+                      {activeFilter !== 'past' && activity.role !== 'past' && (
+                        <div className="activity-actions">
+                          {renderActivityActions(activity, activity.role === 'organizer')}
+                        </div>
+                      )}
+                      
+                      {/* Stats for organizer */}
+                      {activity.role === 'organizer' && (
+                        <div className="organizer-stats">
+                          <div className="stat">
+                            <span className="stat-icon">👥</span>
+                            <span className="stat-value">
+                              {activity.participants?.filter(p => p.status === 'confirmed').length || 0}
+                            </span>
+                            <span className="stat-label">{t('participants', 'deelnemers')}</span>
+                          </div>
+                          
+                          {activity.waitlist?.length > 0 && (
+                            <div className="stat">
+                              <span className="stat-icon">⏳</span>
+                              <span className="stat-value">{activity.waitlist.length}</span>
+                              <span className="stat-label">{t('waitlist', 'wachtlijst')}</span>
+                            </div>
+                          )}
+                          
+                          <div className="stat">
+                            <span className="stat-icon">👁️</span>
+                            <span className="stat-value">{activity.viewCount || 0}</span>
+                            <span className="stat-label">{t('views', 'weergaven')}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             ))}
           </div>

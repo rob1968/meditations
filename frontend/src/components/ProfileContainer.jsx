@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import { getFullUrl, getAuthHeaders } from '../config/api';
+import { getFullUrl } from '../config/api';
+import { getAuthHeaders } from '../utils/userUtils';
 import ProfileInfo from './ProfileInfo';
 import Credits from './Credits';
 import Statistics from './Statistics';
@@ -40,7 +41,7 @@ const ProfileContainer = ({ user, onLogout, onBackToCreate, selectedSection = 'p
         gender: updatedUser.gender || '',
         bio: updatedUser.bio || ''
       }, {
-        headers: getAuthHeaders(updatedUser.id)
+        headers: getAuthHeaders(updatedUser)
       });
       
       if (response.data.success) {

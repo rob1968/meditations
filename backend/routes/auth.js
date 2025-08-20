@@ -196,8 +196,8 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username must be at least 3 characters long' });
     }
     
-    // Find user
-    const user = await User.findOne({ username: username.trim() });
+    // Find user with role and permissions
+    const user = await User.findOne({ username: username.trim() }).select('+role +permissions');
     if (!user) {
       return res.status(404).json({ error: 'Username not found' });
     }
@@ -223,7 +223,9 @@ router.post('/login', async (req, res) => {
         isVerified: user.isVerified,
         verificationMethod: user.verificationMethod,
         verifiedAt: user.verifiedAt,
-        trustScore: user.trustScore
+        trustScore: user.trustScore,
+        role: user.role,
+        permissions: user.permissions
       }
     });
   } catch (error) {
@@ -1444,12 +1446,12 @@ async function deleteAllUserData(userId, username) {
     console.log(`✅ Deleted ${results.deletedMeditations} meditations`);
     
     // 2. Delete all journal entries
-    const deletedJournalEntries = await JournalEntry.deleteMany({ userId });
+    const deletedJournalEntries = await JournalEntry.deleteMany({ user: userId });
     results.deletedJournalEntries = deletedJournalEntries.deletedCount;
     console.log(`✅ Deleted ${results.deletedJournalEntries} journal entries`);
     
     // 3. Delete all AI Coach sessions
-    const deletedAICoachSessions = await AICoach.deleteMany({ userId });
+    const deletedAICoachSessions = await AICoach.deleteMany({ user: userId });
     results.deletedAICoachSessions = deletedAICoachSessions.deletedCount;
     console.log(`✅ Deleted ${results.deletedAICoachSessions} AI Coach sessions`);
     
@@ -1473,12 +1475,12 @@ async function deleteAllUserData(userId, username) {
     console.log(`✅ Removed user likes from ${results.removedLikes} posts`);
     
     // 7. Delete all addictions
-    const deletedAddictions = await Addiction.deleteMany({ userId });
+    const deletedAddictions = await Addiction.deleteMany({ user: userId });
     results.deletedAddictions = deletedAddictions.deletedCount;
     console.log(`✅ Deleted ${results.deletedAddictions} addiction records`);
     
     // 8. Delete all notifications
-    const deletedNotifications = await Notification.deleteMany({ userId });
+    const deletedNotifications = await Notification.deleteMany({ user: userId });
     results.deletedNotifications = deletedNotifications.deletedCount;
     console.log(`✅ Deleted ${results.deletedNotifications} notifications`);
     

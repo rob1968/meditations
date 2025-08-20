@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import socketService from '../../services/socketService';
-import ChatWindow from './ChatWindow';
+import EnhancedChatWindow from './EnhancedChatWindow';
 
 const ChatList = ({ user, activityId, onUnreadCountChange }) => {
   const { t } = useTranslation();
@@ -10,6 +10,9 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
 
+  console.log('🚀 ChatList component rendered with user:', user?.id || user?._id);
+  console.log('🚀 ChatList user object:', user);
+
   useEffect(() => {
     fetchConversations();
     setupSocketListeners();
@@ -17,7 +20,7 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
     return () => {
       cleanupSocketListeners();
     };
-  }, [user._id]);
+  }, [user?.id || user?._id]);
 
   // Auto-select activity conversation if activityId is provided
   useEffect(() => {
@@ -35,10 +38,16 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
   const fetchConversations = async () => {
     try {
       setIsLoading(true);
-      console.log('🔄 Loading real conversations for user:', user._id);
+      console.log('🔄 ChatList fetchConversations started');
+      console.log('🔄 Loading real conversations for user:', user?.id || user?._id);
+      console.log('👤 Full user object:', user);
+      console.log('🔍 User keys:', user ? Object.keys(user) : 'user is null/undefined');
+      console.log('🔍 User._id:', user?._id);
+      console.log('🔍 User.id:', user?.id);
 
-      if (!user?._id && !user?.id) {
+      if (!user?.id && !user?._id) {
         console.log('❌ No user ID available for conversations');
+        console.log('❌ User is:', user);
         setConversations([]);
         setIsLoading(false);
         return;
@@ -47,7 +56,7 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
       // Load real conversations from API
       const response = await fetch('/api/meet/conversations', {
         headers: {
-          'x-user-id': user._id || user.id,
+          'x-user-id': user.id || user._id,
           'Content-Type': 'application/json'
         }
       });
@@ -128,12 +137,12 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
 
   const getConversationTitle = (conversation) => {
     if (conversation.type === 'activity') {
-      return conversation.metadata?.name || 'Activiteit Chat';
+      return conversation.metadata?.name || t('activityChat', 'Activiteit Chat');
     } else if (conversation.type === 'direct') {
       const otherParticipant = conversation.participants.find(p => p._id !== user._id);
-      return otherParticipant?.username || 'Direct Chat';
+      return otherParticipant?.username || t('directChat', 'Direct Chat');
     }
-    return 'Chat';
+    return t('chat', 'Chat');
   };
 
   const getConversationSubtitle = (conversation) => {
@@ -145,13 +154,13 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
       const diffDays = Math.floor(diffHours / 24);
 
       if (diffDays > 0) {
-        return `${diffDays} ${diffDays === 1 ? 'dag' : 'dagen'}`;
+        return t('daysUntil', '{{count}} dagen', { count: diffDays });
       } else if (diffHours > 0) {
-        return `${diffHours} ${diffHours === 1 ? 'uur' : 'uur'}`;
+        return t('hoursUntil', '{{count}} uur', { count: diffHours });
       } else if (diffMs > 0) {
-        return 'Binnenkort';
+        return t('soon', 'Binnenkort');
       } else {
-        return 'Bezig';
+        return t('ongoing', 'Bezig');
       }
     }
     return `${conversation.participants?.length || 0} ${t('participants', 'deelnemers')}`;
@@ -167,14 +176,14 @@ const ChatList = ({ user, activityId, onUnreadCountChange }) => {
     if (days > 0) return `${days}d`;
     if (hours > 0) return `${hours}u`;
     if (minutes > 0) return `${minutes}m`;
-    return 'nu';
+    return t('now', 'nu');
   };
 
   if (selectedConversation) {
     return (
-      <ChatWindow
+      <EnhancedChatWindow
         conversation={selectedConversation}
-        user={user}
+        currentUser={user}
         onBack={() => setSelectedConversation(null)}
         onMessageSent={handleNewMessage}
       />

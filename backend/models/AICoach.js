@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const AICoachSchema = new mongoose.Schema({
-  userId: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -236,8 +236,8 @@ AICoachSchema.methods.getInsights = function(days = 7) {
 };
 
 // Indexes for better performance
-AICoachSchema.index({ userId: 1, createdAt: -1 });
-AICoachSchema.index({ userId: 1, sessionType: 1 });
+AICoachSchema.index({ user: 1, createdAt: -1 });
+AICoachSchema.index({ user: 1, sessionType: 1 });
 AICoachSchema.index({ sessionId: 1 }, { unique: true });
 AICoachSchema.index({ 'messages.timestamp': -1 });
 

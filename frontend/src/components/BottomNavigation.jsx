@@ -11,8 +11,8 @@ const BottomNavigation = ({ activeTab, onTabChange, user, onLogout }) => {
     { id: 'dashboard', icon: '🧘', label: t('meditations', 'Meditations') }
   ];
 
-  // Add admin tab for user 'rob'
-  if (user && user.username === 'rob') {
+  // Add admin tab for users with admin role
+  if (user && user.role === 'admin') {
     tabs.push({ id: 'admin', icon: '⚙️', label: t('admin', 'Admin') });
   }
 

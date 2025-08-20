@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const JournalEntrySchema = new mongoose.Schema({
-  userId: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -135,7 +135,7 @@ const JournalEntrySchema = new mongoose.Schema({
   },
   
   likes: [{
-    userId: {
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true
@@ -173,9 +173,9 @@ JournalEntrySchema.methods.updateLikeCount = function() {
 
 // Method to add a like
 JournalEntrySchema.methods.addLike = function(userId) {
-  const existingLike = this.likes.find(like => like.userId.toString() === userId.toString());
+  const existingLike = this.likes.find(like => like.user.toString() === userId.toString());
   if (!existingLike) {
-    this.likes.push({ userId });
+    this.likes.push({ user: userId });
     return this.updateLikeCount();
   }
   return Promise.resolve(this);
@@ -183,13 +183,13 @@ JournalEntrySchema.methods.addLike = function(userId) {
 
 // Method to remove a like
 JournalEntrySchema.methods.removeLike = function(userId) {
-  this.likes = this.likes.filter(like => like.userId.toString() !== userId.toString());
+  this.likes = this.likes.filter(like => like.user.toString() !== userId.toString());
   return this.updateLikeCount();
 };
 
 // Method to toggle like
 JournalEntrySchema.methods.toggleLike = function(userId) {
-  const existingLike = this.likes.find(like => like.userId.toString() === userId.toString());
+  const existingLike = this.likes.find(like => like.user.toString() === userId.toString());
   if (existingLike) {
     return this.removeLike(userId).then(() => ({ isLiked: false, likeCount: this.likeCount }));
   } else {
@@ -198,7 +198,7 @@ JournalEntrySchema.methods.toggleLike = function(userId) {
 };
 
 // Indexes for better performance
-JournalEntrySchema.index({ userId: 1, createdAt: -1 });
+JournalEntrySchema.index({ user: 1, createdAt: -1 });
 JournalEntrySchema.index({ isShared: 1, sharedAt: -1 });
 JournalEntrySchema.index({ mood: 1 });
 JournalEntrySchema.index({ tags: 1 });
@@ -208,7 +208,7 @@ JournalEntrySchema.index({ title: 'text', content: 'text' });
 
 // Compound index to ensure one entry per day per user
 JournalEntrySchema.index({ 
-  userId: 1, 
+  user: 1, 
   date: 1 
 }, { 
   unique: true,

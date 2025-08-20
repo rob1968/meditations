@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import './i18n';
-import './styles/globals.css';
+import './styles/index.css';
 import './styles/wizard.css';
 import Auth from './components/Auth';
 import BottomNavigation from './components/BottomNavigation';
@@ -25,7 +25,8 @@ import ReviewStep from './components/ReviewStep';
 import Alert from './components/Alert';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
-import { getFullUrl, getAssetUrl, API_ENDPOINTS, getAuthHeaders } from './config/api';
+import { getFullUrl, getAssetUrl, API_ENDPOINTS } from './config/api';
+import { getAuthHeaders } from './utils/userUtils';
 import { isPiBrowser } from './utils/piDetection';
 import piAuthService from './services/piAuth';
 import { loadMainTab, saveMainTab } from './utils/statePersistence';
@@ -217,7 +218,7 @@ const App = () => {
         type,
         language: currentLanguage
       }, {
-        headers: getAuthHeaders(user?.id)
+        headers: getAuthHeaders(user)
       });
       
       return response.data.text;
@@ -273,7 +274,7 @@ const App = () => {
         meditationType: meditationType,
         isModified: isTextModified // Send whether this is user-modified text
       }, {
-        headers: getAuthHeaders(user?.id)
+        headers: getAuthHeaders(user)
       });
       
       if (response.data.success) {
@@ -578,7 +579,7 @@ const App = () => {
         userId: user.id,
         isModified: true
       }, {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       
       setDraftSaveMessage(t('draftSaved', 'Draft saved'));
@@ -841,7 +842,7 @@ const App = () => {
         getFullUrl(`/api/notifications/user`),
         { 
           params: { unreadOnly: true },
-          headers: getAuthHeaders(user.id)
+          headers: getAuthHeaders(user)
         }
       );
       setUnreadCount(response.data.unreadCount);
@@ -927,7 +928,7 @@ const App = () => {
     
     try {
       const response = await axios.get(getFullUrl(`/api/users/${user.id}/credits`), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       setUserCredits(response.data);
     } catch (error) {
@@ -940,7 +941,7 @@ const App = () => {
     
     try {
       const response = await axios.get(getFullUrl(`/api/auth/user/${user.id}/elevenlabs-stats`), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       setElevenlabsCredits(response.data);
     } catch (error) {
@@ -1349,7 +1350,7 @@ const App = () => {
       console.log('fetchSavedCustomBackgrounds: URL:', url);
       
       const response = await axios.get(url, {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       console.log('fetchSavedCustomBackgrounds: Response:', response.data);
       
@@ -1385,7 +1386,7 @@ const App = () => {
     
     try {
       await axios.delete(getFullUrl(`/api/meditation/custom-background/${user.id}/${backgroundId}`), {
-        headers: getAuthHeaders(user.id)
+        headers: getAuthHeaders(user)
       });
       fetchSavedCustomBackgrounds(); // Refresh the list
     } catch (error) {
@@ -1526,7 +1527,18 @@ const App = () => {
       case 'journal':
         return <Journal user={user} userCredits={userCredits} onCreditsUpdate={fetchUserCredits} onProfileClick={(section = 'profile') => { setActiveTab('profile'); setProfileSection(section); }} unreadCount={unreadCount} onInboxClick={() => handleTabChange('inbox')} onCreateClick={() => handleTabChange('dashboard')} />;
       case 'meet':
-        return <MeetHub user={user} />;
+        return <MeetHub 
+          user={user} 
+          onNavigate={(section) => {
+            console.log('MeetHub navigation to:', section);
+            if (section === 'profile' || section === 'settings' || section === 'credits' || section === 'language') {
+              setActiveTab('profile');
+              setProfileSection(section);
+            } else {
+              setActiveTab(section);
+            }
+          }}
+        />;
       case 'journalHub':
         return <JournalHub user={user} />;
       case 'admin':

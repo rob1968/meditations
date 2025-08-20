@@ -1,0 +1,342 @@
+/* Mobile-First Responsive Design System */
+/* Base styles are mobile-first, then enhanced for larger screens */
+
+/* === MOBILE-FIRST BASE STYLES === */
+
+/* Container Sizes - Mobile First */
+.container,
+.create-content,
+.auth-container,
+.journal-container,
+.community-hub {
+  max-width: 100%;
+  padding: var(--space-md);
+  margin: 0 auto;
+}
+
+/* Typography - Mobile First */
+.main-title {
+  font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.section-title,
+.auth-title,
+.journal-title,
+.community-title {
+  font-size: 20px;
+  margin-bottom: var(--space-md);
+}
+
+/* Touch Targets - Mobile First (minimum 44px) */
+button,
+.clickable,
+[role="button"],
+.interactive {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Form Elements - Mobile Optimized */
+input,
+textarea,
+select {
+  min-height: 44px;
+  font-size: 16px; /* Prevents zoom on iOS */
+  border-radius: var(--radius-lg);
+  padding: var(--space-sm) var(--space-md);
+}
+
+/* Cards and Components - Mobile First */
+.meditation-card,
+.journal-entry,
+.activity-card {
+  margin-bottom: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+}
+
+/* Navigation - Mobile First */
+.community-tabs,
+.meditation-types {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.community-tabs::-webkit-scrollbar,
+.meditation-types::-webkit-scrollbar {
+  display: none;
+}
+
+/* Grid Systems - Mobile First */
+.activities-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+}
+
+.mood-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+}
+
+/* Modals - Mobile First */
+.modal-overlay {
+  padding: var(--space-sm);
+}
+
+.modal-content {
+  margin: var(--space-sm);
+  max-height: calc(100vh - 32px);
+  border-radius: var(--radius-xl);
+}
+
+/* Images and Media - Mobile Responsive */
+.meditation-thumbnail,
+.activity-card-image {
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius-md);
+}
+
+/* === PROGRESSIVE ENHANCEMENT FOR LARGER SCREENS === */
+
+/* Small Tablets (414px+) */
+@media (min-width: 414px) {
+  .container,
+  .create-content,
+  .auth-container,
+  .journal-container,
+  .community-hub {
+    max-width: 414px;
+    padding: var(--space-lg);
+  }
+  
+  .mood-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .meditation-card {
+    display: flex;
+    gap: var(--space-lg);
+  }
+  
+  .meditation-thumbnail {
+    width: 140px;
+    flex-shrink: 0;
+  }
+}
+
+/* Tablets (768px+) */
+@media (min-width: 768px) {
+  .main-title {
+    font-size: 48px;
+    letter-spacing: -1px;
+  }
+  
+  .section-title,
+  .auth-title,
+  .journal-title,
+  .community-title {
+    font-size: 28px;
+    margin-bottom: var(--space-xl);
+  }
+  
+  .activities-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-lg);
+  }
+  
+  .mood-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .modal-overlay {
+    padding: var(--space-lg);
+  }
+  
+  .modal-content {
+    margin: 0;
+    max-height: 90vh;
+  }
+  
+  /* Enhanced hover states for non-touch devices */
+  .meditation-card:hover {
+    transform: translateY(-4px);
+  }
+  
+  .button:hover,
+  .clickable:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* Desktop (1024px+) */
+@media (min-width: 1024px) {
+  .container,
+  .create-content {
+    max-width: 800px;
+  }
+  
+  .activities-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .community-hub {
+    max-width: 800px;
+  }
+}
+
+/* Large Desktop (1200px+) */
+@media (min-width: 1200px) {
+  .activities-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* === MOBILE-SPECIFIC OPTIMIZATIONS === */
+
+/* iOS Safe Area Support */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .main-content {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+  
+  .modal-content {
+    max-height: calc(100vh - env(safe-area-inset-bottom) - 32px);
+  }
+}
+
+/* Touch Interaction Improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  *:hover {
+    transform: none !important;
+  }
+  
+  /* Enhanced touch targets */
+  .filter-pill,
+  .community-tab,
+  .mood-option {
+    min-height: 48px;
+    padding: var(--space-sm) var(--space-md);
+  }
+  
+  /* Better spacing for touch */
+  .social-action {
+    min-height: 44px;
+    min-width: 44px;
+    padding: var(--space-sm);
+  }
+}
+
+/* High DPI Display Optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Sharper borders and shadows on retina displays */
+  .meditation-card,
+  .modal-content,
+  .auth-form {
+    border-width: 0.5px;
+  }
+}
+
+/* Reduce Motion for Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .meditation-card:hover,
+  .button:hover {
+    transform: none;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .modal-content,
+  .meditation-card,
+  .auth-form {
+    border-width: 2px;
+    border-color: currentColor;
+  }
+  
+  .glass-light,
+  .glass-medium {
+    background: rgba(255, 255, 255, 0.9);
+    color: #000;
+  }
+}
+
+/* Dark Mode Support (if system preference) */
+@media (prefers-color-scheme: light) {
+  /* Force dark theme - override light mode */
+  :root {
+    --text-primary: #ffffff !important;
+    --text-secondary: rgba(255, 255, 255, 0.9) !important;
+    --text-tertiary: rgba(255, 255, 255, 0.75) !important;
+    --glass-light: rgba(255, 255, 255, 0.1) !important;
+    --glass-medium: rgba(255, 255, 255, 0.2) !important;
+  }
+}
+
+/* Focus Management for Keyboard Navigation */
+@media (hover: hover) and (pointer: fine) {
+  /* Desktop keyboard navigation */
+  button:focus-visible,
+  .clickable:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .modal-overlay,
+  .bottom-navigation,
+  .page-header,
+  button,
+  .interactive {
+    display: none !important;
+  }
+  
+  .meditation-card,
+  .journal-entry {
+    break-inside: avoid;
+    border: 1px solid #000;
+    margin-bottom: 1rem;
+  }
+  
+  * {
+    background: transparent !important;
+    color: #000000 !important; /* Black for printing */
+    box-shadow: none !important;
+  }
+}

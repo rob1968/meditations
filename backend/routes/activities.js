@@ -4,6 +4,7 @@ const Activity = require('../models/Activity');
 const ActivityCategory = require('../models/ActivityCategory');
 const User = require('../models/User');
 const Conversation = require('../models/Conversation');
+const { auth } = require('../middleware/auth');
 
 // Auto-status checker function
 const updateActivityStatuses = async () => {
@@ -28,26 +29,6 @@ setInterval(updateActivityStatuses, 30 * 60 * 1000);
 // Run once on startup
 setTimeout(updateActivityStatuses, 5000);
 
-// Middleware to check authentication
-const auth = async (req, res, next) => {
-  try {
-    const userId = req.headers['x-user-id'] || req.headers['user-id'];
-    if (!userId) {
-      return res.status(401).json({ error: 'User ID required' });
-    }
-    
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error('Authentication error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
-  }
-};
 
 // Seed categories on first run
 router.post('/categories/seed', async (req, res) => {
@@ -161,7 +142,35 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Get single activity (MUST come after specific routes like /recommendations)
+// Get activities user is participating in
+router.get('/user/participating', auth, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Activities I'm participating in (not organizing)
+    const activities = await Activity.find({
+      'participants.user': userId,
+      organizer: { $ne: userId },
+      status: { $ne: 'cancelled' },
+      date: { $gte: new Date() }
+    })
+    .populate('organizer', 'username profileImage isVerified')
+    .populate('category')
+    .sort({ date: 1 });
+    
+    console.log(`📋 Found ${activities.length} participating activities for user ${userId}`);
+    
+    res.json({
+      activities,
+      count: activities.length
+    });
+  } catch (error) {
+    console.error('Error fetching participating activities:', error);
+    res.status(500).json({ error: 'Failed to fetch participating activities' });
+  }
+});
+
+// Get single activity (MUST come after specific routes like /recommendations and /user/*)
 router.get('/:id', auth, async (req, res) => {
   try {
     // Validate that id is a valid MongoDB ObjectId
@@ -625,18 +634,20 @@ router.post('/:id/invite', auth, async (req, res) => {
   }
 });
 
-// Admin middleware - check if user is admin (username: 'rob')
+// Admin middleware - check if user has admin role and activity moderation permissions
 const adminAuth = async (req, res, next) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    // Check if user is admin (username 'rob' or 'robbie' and verified)
-    if ((req.user.username !== 'rob' && req.user.username !== 'robbie') || !req.user.isVerified) {
-      return res.status(403).json({ error: 'Admin access required' });
+    // Check if user has admin role and activity moderation permissions
+    if (req.user.role !== 'admin' || !req.user.permissions?.canModerateActivities) {
+      console.log(`Access denied for user ${req.user.username}: role=${req.user.role}, canModerateActivities=${req.user.permissions?.canModerateActivities}`);
+      return res.status(403).json({ error: 'Admin access required - need activity moderation permissions' });
     }
     
+    console.log(`Admin access granted for user ${req.user.username} with role ${req.user.role}`);
     next();
   } catch (error) {
     console.error('Admin authentication error:', error);

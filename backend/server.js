@@ -22,7 +22,7 @@ const addictionsRoute = require('./routes/addictions');
 const piPaymentsRoute = require('./routes/piPayments');
 const aiCoachRoute = require('./routes/aiCoach');
 const emergencyContactsRoute = require('./routes/emergencyContacts');
-const profileRoute = require('./routes/profile');
+// // const profileRoute = require('./routes/profile'); // Profile functionality moved to separate server
 const musicRoute = require('./routes/music');
 const meetRoute = require('./routes/meet');
 const app = express();
@@ -44,7 +44,10 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
+
+// Standard body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Log all requests for debugging Pi Browser issues
 app.use((req, res, next) => {
@@ -78,7 +81,7 @@ app.use('/api/addictions', addictionsRoute);
 app.use('/api/pi-payments', piPaymentsRoute);
 app.use('/api/ai-coach', aiCoachRoute);
 app.use('/api/emergency-contacts', emergencyContactsRoute);
-app.use('/api/profile', profileRoute);
+// // app.use('/api/profile', profileRoute); // Profile functionality moved to separate server
 app.use('/api/music', musicRoute);
 app.use('/api/meet', meetRoute);
 app.use('/api/activities', require('./routes/activities')); // Meet5-style activities

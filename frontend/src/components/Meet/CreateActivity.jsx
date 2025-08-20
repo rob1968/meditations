@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import LocationAutocomplete from './LocationAutocomplete';
+import { getAuthHeaders } from '../../utils/userUtils';
 
 const CreateActivity = ({ user, categories, onActivityCreated, editingActivity, onCancel }) => {
   console.log('🏗️ CreateActivity component loaded');
@@ -39,7 +40,7 @@ const CreateActivity = ({ user, categories, onActivityCreated, editingActivity, 
     tags: [],
     cost: {
       amount: 0,
-      description: 'Ieder betaalt zelf',
+      description: t('everyonePaysOwn', 'Ieder betaalt zelf'),
       splitMethod: 'pay_own'
     }
   });
@@ -79,7 +80,7 @@ const CreateActivity = ({ user, categories, onActivityCreated, editingActivity, 
         tags: activity.tags || [],
         cost: activity.cost || {
           amount: 0,
-          description: 'Ieder betaalt zelf',
+          description: t('everyonePaysOwn', 'Ieder betaalt zelf'),
           splitMethod: 'pay_own'
         }
       });
@@ -135,10 +136,7 @@ const CreateActivity = ({ user, categories, onActivityCreated, editingActivity, 
     try {
       const response = await fetch(url, {
         method: method,
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user?._id || user?.id || ''
-        },
+        headers: getAuthHeaders(user),
         body: JSON.stringify(formData)
       });
 

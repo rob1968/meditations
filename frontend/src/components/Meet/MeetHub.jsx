@@ -4,7 +4,7 @@ import socketService from '../../services/socketService';
 import { loadMeetTab, saveMeetTab } from '../../utils/statePersistence';
 import ActivityList from './ActivityList';
 import MyActivities from './MyActivities';
-import CreateActivity from './CreateActivity';
+import CreateActivityWizard from './CreateActivityWizard';
 import ChatList from './ChatList';
 import SafetyModal from './SafetyModal';
 import UserVerification from './UserVerification';
@@ -21,6 +21,7 @@ const MeetHub = ({ user, onNavigate }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showSafetyModal, setShowSafetyModal] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showCreateActivity, setShowCreateActivity] = useState(false);
 
   useEffect(() => {
     // Initialize socket connection when MeetHub loads
@@ -108,28 +109,21 @@ const MeetHub = ({ user, onNavigate }) => {
 
   const allTabs = [
     { 
-      id: 'discover', 
-      icon: '🔍', 
-      label: t('discoverActivities', 'Ontdekken'),
+      id: 'home', 
+      icon: '🏠', 
+      label: t('home', 'Home'),
       badge: null
     },
     { 
-      id: 'my-activities', 
-      icon: '👤', 
-      label: t('myActivities', 'Mijn'),
+      id: 'mijn', 
+      icon: '📅', 
+      label: t('mijn', 'Mijn'),
       badge: null
     },
     { 
-      id: 'create', 
-      icon: '➕', 
-      label: t('createActivity', 'Nieuw'),
-      badge: null,
-      requiresVerification: true
-    },
-    { 
-      id: 'chats', 
+      id: 'chat', 
       icon: '💬', 
-      label: t('activityChats', 'Chats'),
+      label: t('chat', 'Chat'),
       badge: unreadMessages > 0 ? unreadMessages : null
     },
     { 
@@ -150,8 +144,8 @@ const MeetHub = ({ user, onNavigate }) => {
       return canShow;
     }
     if (tab.adminOnly) {
-      const canShow = (user?.username === 'rob' || user?.username === 'robbie') && user?.isVerified === true;
-      console.log(`🔍 Tab "${tab.id}" is admin only - User: ${user?.username}, Verified: ${user?.isVerified}, Show tab: ${canShow}`);
+      const canShow = user?.role === 'admin' && user?.permissions?.canModerateActivities;
+      console.log(`🔍 Tab "${tab.id}" is admin only - User: ${user?.username}, Role: ${user?.role}, Can Moderate: ${user?.permissions?.canModerateActivities}, Show tab: ${canShow}`);
       return canShow;
     }
     return true;
@@ -172,47 +166,31 @@ const MeetHub = ({ user, onNavigate }) => {
     }
 
     switch (activeTab) {
-      case 'discover':
+      case 'home':
         return (
           <ActivityList 
             user={user} 
             categories={categories}
             onSelectActivity={(activity) => {
               setSelectedActivity(activity);
-              setActiveTab('chats');
+              setActiveTab('chat');
             }}
           />
         );
-      case 'my-activities':
+      case 'mijn':
         return (
           <MyActivities 
             user={user}
             onSelectActivity={(activity) => {
               setSelectedActivity(activity);
-              setActiveTab('chats');
+              setActiveTab('chat');
             }}
           />
         );
-      case 'create':
-        console.log('🔨 Rendering CreateActivity component');
-        console.log('📦 Categories available:', categories?.length || 0);
-        console.log('👤 User for CreateActivity:', user?.username);
-        return (
-          <CreateActivity 
-            user={user} 
-            categories={categories}
-            onActivityCreated={(newActivity) => {
-              console.log('🎉 Activity created:', newActivity);
-              setSelectedActivity(newActivity);
-              setActiveTab('my-activities');
-            }}
-          />
-        );
-      case 'chats':
+      case 'chat':
         return (
           <ChatList 
             user={user} 
-            activityId={selectedActivity?._id}
             onUnreadCountChange={setUnreadMessages}
           />
         );
@@ -229,7 +207,7 @@ const MeetHub = ({ user, onNavigate }) => {
             categories={categories}
             onSelectActivity={(activity) => {
               setSelectedActivity(activity);
-              setActiveTab('chats');
+              setActiveTab('chat');
             }}
           />
         );
@@ -254,17 +232,30 @@ const MeetHub = ({ user, onNavigate }) => {
       />
       <div className="meet-header">        
         <div className="meet-header-actions">
-          {true && (
+          {/* Primary Action Button - Only show on Home tab */}
+          {activeTab === 'home' && (
             <button 
-              className="create-activity-button primary-button"
+              className="primary-action-button"
               onClick={() => {
-                console.log('🔄 Create button clicked, switching to create tab');
+                console.log('🔄 Create button clicked, opening CreateActivity modal');
                 console.log('User verified status:', user?.isVerified);
-                setActiveTab('create');
+                setShowCreateActivity(true);
               }}
               title={t('createActivity', 'Nieuwe activiteit aanmaken')}
             >
-              ➕ {t('createActivity', 'Activiteit aanmaken')}
+              <span className="action-icon">➕</span>
+              <span className="action-text">{t('newActivity', 'Nieuwe Activiteit')}</span>
+            </button>
+          )}
+          
+          {/* Secondary Action Button for other tabs */}
+          {activeTab !== 'home' && (
+            <button 
+              className="secondary-action-button"
+              onClick={() => setShowCreateActivity(true)}
+              title={t('createActivity', 'Nieuwe activiteit aanmaken')}
+            >
+              ➕
             </button>
           )}
           
@@ -361,6 +352,36 @@ const MeetHub = ({ user, onNavigate }) => {
                 setShowVerificationModal(false);
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Create Activity Modal */}
+      {showCreateActivity && (
+        <div className="create-activity-modal-overlay" onClick={() => setShowCreateActivity(false)}>
+          <div className="create-activity-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="create-activity-modal-header">
+              <h2>{t('createActivity', 'Activiteit Aanmaken')}</h2>
+              <button 
+                className="close-modal-button"
+                onClick={() => setShowCreateActivity(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="create-activity-modal-body">
+              <CreateActivityWizard
+                user={user}
+                categories={categories}
+                onActivityCreated={(newActivity) => {
+                  console.log('🎉 Activity created:', newActivity);
+                  setSelectedActivity(newActivity);
+                  setShowCreateActivity(false);
+                  setActiveTab('mijn');
+                }}
+                onCancel={() => setShowCreateActivity(false)}
+              />
+            </div>
           </div>
         </div>
       )}
