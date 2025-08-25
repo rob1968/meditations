@@ -22,7 +22,7 @@ const addictionsRoute = require('./routes/addictions');
 const piPaymentsRoute = require('./routes/piPayments');
 const aiCoachRoute = require('./routes/aiCoach');
 const emergencyContactsRoute = require('./routes/emergencyContacts');
-// // const profileRoute = require('./routes/profile'); // Profile functionality moved to separate server
+// Profile functionality moved to separate server (port 5005)
 const musicRoute = require('./routes/music');
 const meetRoute = require('./routes/meet');
 const app = express();

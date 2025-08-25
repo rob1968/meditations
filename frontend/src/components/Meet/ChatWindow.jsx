@@ -27,8 +27,8 @@ const ChatWindow = ({ conversation, currentUser, onBack }) => {
     : conversation.name;
 
   useEffect(() => {
-    if (!conversation?._id || (!currentUser?.id && !currentUser?._id)) {
-      console.warn('Missing conversation or user data, skipping chat initialization');
+    if (!conversation?._id || !currentUser?._id) {
+      // Skip initialization during loading - this is normal
       return;
     }
 
@@ -49,12 +49,8 @@ const ChatWindow = ({ conversation, currentUser, onBack }) => {
   const fetchMessages = async () => {
     // Safety check: ensure we have all required data
     if (!conversation?._id || !currentUser?._id) {
-      console.warn('Cannot fetch messages: missing conversation or user data', {
-        conversationId: conversation?._id,
-        userId: currentUser?._id,
-        conversation,
-        currentUser
-      });
+      // Silently return during initial loading - no error logging needed
+      // This is normal behavior when components mount before data is available
       setMessages([]);
       setIsLoading(false);
       return;

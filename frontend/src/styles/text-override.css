@@ -629,6 +629,83 @@ pre,
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
 }
 
+/* CREATE ACTIVITY WIZARD - Override White Backgrounds with Darker Gray-Blue */
+/* High specificity to override all white background rules above */
+
+.create-activity-wizard .form-input,
+.create-activity-wizard .form-textarea,
+.create-activity-wizard .form-select,
+.create-activity-wizard input[type="text"],
+.create-activity-wizard input[type="email"],
+.create-activity-wizard input[type="password"],
+.create-activity-wizard input[type="search"],
+.create-activity-wizard textarea,
+.create-activity-wizard select {
+  background: rgba(220, 225, 235, 0.95) !important;
+  color: #1a2332 !important;
+  border: 2px solid rgba(75, 85, 99, 0.4) !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.create-activity-wizard .form-input:focus,
+.create-activity-wizard .form-textarea:focus,
+.create-activity-wizard .form-select:focus,
+.create-activity-wizard input[type="text"]:focus,
+.create-activity-wizard input[type="email"]:focus,
+.create-activity-wizard input[type="password"]:focus,
+.create-activity-wizard input[type="search"]:focus,
+.create-activity-wizard textarea:focus,
+.create-activity-wizard select:focus {
+  background: rgba(220, 225, 235, 0.98) !important;
+  color: #1a2332 !important;
+  border-color: rgba(16, 185, 129, 0.6) !important;
+  -webkit-text-fill-color: #1a2332 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}
+
+.create-activity-wizard .form-input.error,
+.create-activity-wizard .form-textarea.error,
+.create-activity-wizard .form-select.error,
+.create-activity-wizard input.error,
+.create-activity-wizard textarea.error,
+.create-activity-wizard select.error {
+  background: rgba(220, 225, 235, 0.95) !important;
+  color: #1a2332 !important;
+  border-color: rgba(239, 68, 68, 0.6) !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
+.create-activity-wizard .form-input::placeholder,
+.create-activity-wizard .form-textarea::placeholder,
+.create-activity-wizard input::placeholder,
+.create-activity-wizard textarea::placeholder {
+  color: rgba(26, 35, 50, 0.6) !important;
+  -webkit-text-fill-color: rgba(26, 35, 50, 0.6) !important;
+}
+
+.create-activity-wizard .form-input:focus::placeholder,
+.create-activity-wizard .form-textarea:focus::placeholder,
+.create-activity-wizard input:focus::placeholder,
+.create-activity-wizard textarea:focus::placeholder {
+  color: rgba(26, 35, 50, 0.4) !important;
+  -webkit-text-fill-color: rgba(26, 35, 50, 0.4) !important;
+}
+
+/* WebKit autofill overrides for create activity wizard */
+.create-activity-wizard input:-webkit-autofill,
+.create-activity-wizard input:-webkit-autofill:hover,
+.create-activity-wizard input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #1a2332 !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(220, 225, 235, 0.95) inset !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+}
+
+.create-activity-wizard select option {
+  background: rgba(220, 225, 235, 0.98) !important;
+  color: #1a2332 !important;
+  -webkit-text-fill-color: #1a2332 !important;
+}
+
 /* Specific Element Overrides - Force White Text */
 h1, h2, h3, h4, h5, h6,
 p, span, div, label, 

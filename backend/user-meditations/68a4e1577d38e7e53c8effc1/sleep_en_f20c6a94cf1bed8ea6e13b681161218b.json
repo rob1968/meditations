@@ -1,0 +1,23 @@
+{
+  "id": "f20c6a94cf1bed8ea6e13b681161218b",
+  "userId": "68a4e1577d38e7e53c8effc1",
+  "meditationType": "sleep",
+  "language": "en",
+  "text": "Test meditation text",
+  "audioFiles": [
+    {
+      "filename": "meditation_en_1755716867575_27d15990.mp3",
+      "voiceId": "21m00Tcm4TlvDq8ikWAM",
+      "background": "ocean",
+      "duration": 2.115875,
+      "language": "en"
+    }
+  ],
+  "createdAt": "2025-08-20T19:07:47.686Z",
+  "updatedAt": "2025-08-24T18:28:39.062Z",
+  "customImage": {
+    "filename": "meditation-1756060119059-95e0c115191d.jpg",
+    "originalName": "Peaceful Moon.jpg",
+    "uploadedAt": "2025-08-24T18:28:39.062Z"
+  }
+}

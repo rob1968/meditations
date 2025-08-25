@@ -27,7 +27,14 @@ export const isActivityOrganizer = (activity, user) => {
   if (!activity?.organizer || !user) return false;
   
   const userId = getUserId(user);
-  const organizerId = getUserId(activity.organizer);
+  
+  // Handle both object format {_id: '...', id: '...'} and string format
+  let organizerId;
+  if (typeof activity.organizer === 'string') {
+    organizerId = activity.organizer;
+  } else {
+    organizerId = getUserId(activity.organizer);
+  }
   
   return userId && organizerId && userId === organizerId;
 };
@@ -45,7 +52,14 @@ export const isActivityParticipant = (activity, user) => {
   if (!userId) return false;
   
   return activity.participants.some(participant => {
-    const participantUserId = getUserId(participant.user || participant);
+    // Handle both object format {_id: '...', id: '...'} and string format
+    let participantUserId;
+    const userRef = participant.user || participant;
+    if (typeof userRef === 'string') {
+      participantUserId = userRef;
+    } else {
+      participantUserId = getUserId(userRef);
+    }
     return participantUserId === userId;
   });
 };

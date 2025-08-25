@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import googlePlacesService from '../services/googlePlacesService';
 import { useTranslation } from 'react-i18next';
-import '../styles/CityAutocomplete.css';
+// CSS styles are now in the global app.css
 
 const CityAutocomplete = ({ 
   countryCode, 

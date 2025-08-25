@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './Select.module.css';
+// CSS styles are now in the global app.css
 
 const Select = ({ 
   value,
@@ -11,12 +11,12 @@ const Select = ({
   ...props 
 }) => {
   return (
-    <div className={styles.selectWrapper}>
+    <div className="select-wrapper">
       <select
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={`${styles.select} ${className}`}
+        className={`select ${className}`}
         {...props}
       >
         {placeholder && (

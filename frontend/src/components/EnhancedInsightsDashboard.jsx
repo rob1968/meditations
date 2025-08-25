@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { getFullUrl } from '../config/api';
-import './EnhancedInsightsDashboard.css';
+// CSS styles are now in the global app.css
 
 const EnhancedInsightsDashboard = ({ user }) => {
   const { t } = useTranslation();

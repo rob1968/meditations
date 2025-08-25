@@ -1,12 +1,15 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import '../styles/ConfirmDialog.css';
+// CSS styles are now in the global app.css
 
 const ConfirmDialog = ({ 
-  message, 
+  message,
+  title, 
   visible, 
+  isOpen,
   onConfirm, 
   onCancel,
+  onClose,
   confirmText,
   cancelText
 }) => {
@@ -16,12 +19,18 @@ const ConfirmDialog = ({
     window.__CONFIRM_DIALOG_LOADED__ = true;
   }
   
-  if (!visible) return null;
+  // Support both visible and isOpen props for compatibility
+  const isVisible = visible || isOpen;
+  if (!isVisible) return null;
+
+  // Handle both onCancel and onClose for compatibility
+  const handleClose = onCancel || onClose;
 
   return (
     <div className="confirm-dialog-overlay">
       <div className="confirm-dialog">
-        <p className="confirm-message">{message}</p>
+        {title && <h3 className="confirm-title">{title}</h3>}
+        <div className="confirm-message">{message}</div>
         <div className="confirm-buttons">
           <button 
             className="confirm-btn confirm-yes" 
@@ -31,7 +40,7 @@ const ConfirmDialog = ({
           </button>
           <button 
             className="confirm-btn confirm-no" 
-            onClick={onCancel}
+            onClick={handleClose}
           >
             ❌ {cancelText || t('cancel', 'Cancel')}
           </button>

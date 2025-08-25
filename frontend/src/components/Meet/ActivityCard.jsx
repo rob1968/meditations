@@ -27,8 +27,23 @@ const ActivityCard = ({ activity, user, onJoin, onLeave, onSelect, showDirectAct
     participantCount: activity.participants?.length || 0,
     waitlistCount: activity.waitlist?.length || 0,
     userId: user?.id,
+    organizerId: activity.organizer?.id || activity.organizer?._id,
+    activityOrganizer: activity.organizer,
     userObject: user,
-    shouldShowJoinButton: !isParticipant && !isFull && !isOnWaitlist
+    shouldShowJoinButton: !isParticipant && !isFull && !isOnWaitlist && !isOrganizer,
+    joinButtonConditions: {
+      notParticipant: !isParticipant,
+      notOnWaitlist: !isOnWaitlist,
+      notFull: !isFull,
+      notOrganizer: !isOrganizer
+    },
+    // PARTICIPANT DEBUG INFO
+    participants: activity.participants,
+    participantUserIds: activity.participants?.map(p => ({
+      participantUser: p.user,
+      participantUserId: p.user?._id || p.user?.id || p.user,
+      matchesCurrentUser: (p.user?._id || p.user?.id || p.user) === user?.id
+    }))
   });
   
   // Format date and time
@@ -249,8 +264,8 @@ const ActivityCard = ({ activity, user, onJoin, onLeave, onSelect, showDirectAct
       
       {/* Smart Action Buttons Row - Mobile First */}
       <div className="card-actions-row">
-        {/* Primary Join Button - Only show if can join directly */}
-        {!isParticipant && !isOnWaitlist && !isFull && (
+        {/* Primary Join Button - Only show if can join directly and not organizer */}
+        {!isParticipant && !isOnWaitlist && !isFull && !isOrganizer && (
           <button 
             className="action-btn primary-action"
             disabled={isJoining || isLeaving || actionProgress}
@@ -306,8 +321,8 @@ const ActivityCard = ({ activity, user, onJoin, onLeave, onSelect, showDirectAct
           </button>
         )}
         
-        {/* Waitlist Button - Only show if activity is full and not on waitlist */}
-        {!isParticipant && !isOnWaitlist && isFull && (
+        {/* Waitlist Button - Only show if activity is full and not on waitlist and not organizer */}
+        {!isParticipant && !isOnWaitlist && isFull && !isOrganizer && (
           <button 
             className="action-btn waitlist-action"
             disabled={isJoining || isLeaving || actionProgress}

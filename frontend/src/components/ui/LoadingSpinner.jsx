@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import styles from './LoadingSpinner.module.css';
+// CSS styles are now in the global app.css
 
 const LoadingSpinner = ({ 
   size = 'medium', 
@@ -11,9 +11,9 @@ const LoadingSpinner = ({
   const displayText = text || t('loading', 'Loading...');
   
   return (
-    <div className={`${styles.container} ${className}`}>
-      <div className={`${styles.spinner} ${styles[size]}`}></div>
-      {displayText && <p className={styles.text}>{displayText}</p>}
+    <div className={`loading-spinner-container ${className}`}>
+      <div className={`loading-spinner loading-spinner-${size}`}></div>
+      {displayText && <p className="loading-spinner-text">{displayText}</p>}
     </div>
   );
 };

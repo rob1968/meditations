@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import styles from './Background.module.css';
+// CSS styles are now in the global app.css
 
 const Background = ({ children }) => {
   const particlesRef = useRef(null);
@@ -15,7 +15,7 @@ const Background = ({ children }) => {
       // Create particles
       for (let i = 0; i < 50; i++) {
         const particle = document.createElement('div');
-        particle.className = styles.particle;
+        particle.className = 'particle';
         
         // Random size and position
         const size = Math.random() * 4 + 2;
@@ -33,9 +33,9 @@ const Background = ({ children }) => {
   }, []);
 
   return (
-    <div className={styles.background}>
-      <div className={styles.particles} ref={particlesRef}></div>
-      <div className={styles.content}>
+    <div className="background">
+      <div className="particles" ref={particlesRef}></div>
+      <div className="content">
         {children}
       </div>
     </div>

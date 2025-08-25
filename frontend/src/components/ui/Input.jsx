@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './Input.module.css';
+// CSS styles are now in the global app.css
 
 const Input = ({ 
   type = 'text',
@@ -23,7 +23,7 @@ const Input = ({
       placeholder={placeholder}
       disabled={disabled}
       rows={rows}
-      className={`${styles.input} ${className}`}
+      className={`input ${className}`}
       {...props}
     />
   );

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { getFullUrl, API_ENDPOINTS } from '../config/api';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
-import './GrammarChecker.css';
+// CSS styles are now in the global app.css
 
 const SpellingChecker = forwardRef(({ 
   text, 

@@ -68,20 +68,25 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
       if (response.ok) {
         const result = await response.json();
         
-        // Update local activity state
-        setActivity(prev => ({
-          ...prev,
-          participants: [...prev.participants, { user: user, status: 'confirmed' }]
-        }));
+        // Update local activity state properly
+        if (result.waitlist) {
+          // User was added to waitlist
+          setActivity(prev => ({
+            ...prev,
+            waitlist: [...(prev.waitlist || []), { user: user, joinedAt: new Date() }]
+          }));
+          showAlertMessage(t('addedToWaitlist', 'Je staat op de wachtlijst voor deze activiteit'));
+        } else {
+          // User successfully joined as participant
+          setActivity(prev => ({
+            ...prev,
+            participants: [...(prev.participants || []), { user: user, status: 'confirmed', joinedAt: new Date() }]
+          }));
+          showAlertMessage(t('joinedActivity', 'Je hebt je aangemeld voor deze activiteit!'));
+        }
 
         // Call parent callback
         if (onJoin) onJoin(result);
-
-        if (result.waitlist) {
-          showAlertMessage(t('addedToWaitlist', 'Je staat op de wachtlijst voor deze activiteit'));
-        } else {
-          showAlertMessage(t('joinedActivity', 'Je hebt je aangemeld voor deze activiteit!'));
-        }
       } else {
         const error = await response.json();
         showAlertMessage(error.error || t('joinFailed', 'Kon niet aanmelden voor activiteit'));
@@ -110,17 +115,41 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
       });
 
       if (response.ok) {
-        // Update local activity state using consistent user ID handling
+        const result = await response.json();
         const currentUserId = getUserId(user);
-        setActivity(prev => ({
-          ...prev,
-          participants: prev.participants.filter(p => getUserId(p.user) !== currentUserId)
-        }));
+        
+        // Update local activity state properly
+        if (result.waitlist) {
+          // User was removed from waitlist
+          setActivity(prev => ({
+            ...prev,
+            waitlist: prev.waitlist?.filter(w => getUserId(w.user) !== currentUserId) || []
+          }));
+          showAlertMessage(t('leftWaitlist', 'Je staat niet meer op de wachtlijst'));
+        } else {
+          // User left as participant, potentially move someone from waitlist
+          setActivity(prev => {
+            const updatedParticipants = prev.participants.filter(p => getUserId(p.user) !== currentUserId);
+            let updatedWaitlist = prev.waitlist || [];
+            
+            // If there was a waitlist and space opened up, move first person
+            if (updatedWaitlist.length > 0 && updatedParticipants.length < prev.maxParticipants) {
+              const nextUser = updatedWaitlist[0];
+              updatedParticipants.push({ user: nextUser.user, status: 'confirmed', joinedAt: new Date() });
+              updatedWaitlist = updatedWaitlist.slice(1);
+            }
+            
+            return {
+              ...prev,
+              participants: updatedParticipants,
+              waitlist: updatedWaitlist
+            };
+          });
+          showAlertMessage(t('leftActivity', 'Je hebt je afgemeld voor de activiteit'));
+        }
 
         // Call parent callback
-        if (onLeave) onLeave();
-
-        showAlertMessage(t('leftActivity', 'Je hebt je afgemeld voor de activiteit'));
+        if (onLeave) onLeave(result);
       } else {
         const error = await response.json();
         showAlertMessage(error.error || t('leaveFailed', 'Kon niet afmelden voor activiteit'));
@@ -169,7 +198,26 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
   const isParticipant = isActivityParticipant(activity, user);
   const isOrganizer = isActivityOrganizer(activity, user);
   const isFull = (activity.participants?.filter(p => p.status === 'confirmed')?.length || 0) >= activity.maxParticipants;
+  const isOnWaitlist = activity.waitlist?.some(w => getUserId(w.user) === getUserId(user));
   const confirmedParticipants = activity.participants?.filter(p => p.status === 'confirmed') || [];
+  
+  // Check if user can leave activity (2-hour deadline)
+  const canLeaveActivity = () => {
+    if (isOrganizer) return false; // Organizers cannot leave
+    
+    const now = new Date();
+    const activityDateTime = new Date(activity.date);
+    
+    if (activity.startTime) {
+      const [hours, minutes] = activity.startTime.split(':');
+      activityDateTime.setHours(parseInt(hours), parseInt(minutes));
+    }
+    
+    const hoursUntilActivity = (activityDateTime - now) / (1000 * 60 * 60);
+    
+    // Can leave if more than 2 hours before start
+    return hoursUntilActivity > 2;
+  };
 
   // Format date and time
   const activityDate = new Date(activity.date);
@@ -376,7 +424,8 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
 
         <div className="activity-details-footer">
           <div className="action-buttons">
-            {!isParticipant && !isFull && (
+            {/* Join button - show only if not participant and not on waitlist and not organizer */}
+            {!isParticipant && !isOnWaitlist && !isFull && !isOrganizer && (
               <button 
                 className="join-button primary-button"
                 onClick={handleJoinActivity}
@@ -396,25 +445,71 @@ const ActivityDetails = ({ activityId, user, onClose, onJoin, onLeave, onEdit })
               </button>
             )}
 
-            {!isParticipant && isFull && (
+            {/* Waitlist button - show only if not participant, not on waitlist, activity is full, and not organizer */}
+            {!isParticipant && !isOnWaitlist && isFull && !isOrganizer && (
               <button 
                 className="waitlist-button secondary-button"
                 onClick={handleJoinActivity}
                 disabled={isJoining}
               >
-                <span className="button-icon">⏳</span>
-                <span className="button-text">{t('joinWaitlist', 'Wachtlijst')}</span>
+                {isJoining ? (
+                  <>
+                    <span className="button-icon">⏳</span>
+                    <span className="button-text">{t('joiningWaitlist', 'Toevoegen...')}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="button-icon">⏳</span>
+                    <span className="button-text">{t('joinWaitlist', 'Wachtlijst')}</span>
+                  </>
+                )}
               </button>
             )}
 
-            {isParticipant && !isOrganizer && (
+            {/* Leave button - show for participants and waitlist users who can still leave */}
+            {(isParticipant || isOnWaitlist) && !isOrganizer && canLeaveActivity() && (
               <button 
                 className="leave-button secondary-button"
                 onClick={handleLeaveActivity}
               >
                 <span className="button-icon">👋</span>
-                <span className="button-text">{t('leaveActivity', 'Afmelden')}</span>
+                <span className="button-text">
+                  {isOnWaitlist ? t('leaveWaitlist', 'Verlaat wachtlijst') : t('leaveActivity', 'Afmelden')}
+                </span>
               </button>
+            )}
+
+            {/* Status display for participants */}
+            {isParticipant && (
+              <div className="participation-status">
+                <span className="status-icon">✅</span>
+                <span className="status-text">{t('participantStatus', 'Je neemt deel aan deze activiteit')}</span>
+              </div>
+            )}
+
+            {/* Status display for waitlist */}
+            {isOnWaitlist && (
+              <div className="waitlist-status">
+                <span className="status-icon">⏳</span>
+                <span className="status-text">
+                  {t('waitlistStatus', 'Je staat op de wachtlijst')}
+                  {activity.waitlist && (
+                    <span className="position-info">
+                      {' - '}#{activity.waitlist.findIndex(w => getUserId(w.user) === getUserId(user)) + 1}
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
+
+            {/* Deadline warning */}
+            {(isParticipant || isOnWaitlist) && !canLeaveActivity() && !isOrganizer && (
+              <div className="deadline-warning">
+                <span className="warning-icon">⏰</span>
+                <span className="warning-text">
+                  {t('leaveDeadlinePassed', 'Afmelden niet meer mogelijk (binnen 2 uur)')}
+                </span>
+              </div>
             )}
 
             {isOrganizer && onEdit && (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import googlePlacesService from '../services/googlePlacesService';
 import { useTranslation } from 'react-i18next';
-import '../styles/LocationPickerModal.css';
+// CSS styles are now in the global app.css
 
 const LocationPickerModal = ({ 
   value, // Expected format: { city: "Amsterdam", country: "Netherlands", countryCode: "NL" }
@@ -22,7 +22,7 @@ const LocationPickerModal = ({
   const { t } = useTranslation();
 
 
-  // Search for locations with debounce
+  // Search for locations with debounce and Chrome compatibility
   const searchLocations = async (query) => {
     if (!query || query.length < 2) {
       setSuggestions([]);
@@ -33,12 +33,34 @@ const LocationPickerModal = ({
     setError('');
 
     try {
+      // Chrome-specific: Add retry mechanism for failed requests
+      const isChrome = /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent);
+      
       const options = {
         types: ['(cities)'], // Focus on cities and administrative areas
         // No country restriction - allow global search
       };
 
-      const predictions = await googlePlacesService.getPlacePredictions(query, options);
+      let predictions;
+      let retryCount = 0;
+      const maxRetries = isChrome ? 2 : 1;
+
+      while (retryCount <= maxRetries) {
+        try {
+          predictions = await googlePlacesService.getPlacePredictions(query, options);
+          break; // Success, exit retry loop
+        } catch (retryError) {
+          retryCount++;
+          console.warn(`[LocationPickerModal] Retry ${retryCount}/${maxRetries} for query "${query}":`, retryError);
+          
+          if (retryCount <= maxRetries) {
+            // Wait before retry (Chrome-specific delay)
+            await new Promise(resolve => setTimeout(resolve, isChrome ? 1000 : 500));
+          } else {
+            throw retryError; // Final attempt failed
+          }
+        }
+      }
       
       // Process predictions to extract location data
       const processedSuggestions = predictions.map(prediction => {
@@ -140,14 +162,31 @@ const LocationPickerModal = ({
       setSuggestions(processedSuggestions);
     } catch (error) {
       console.error('[LocationPickerModal] Search error:', error);
-      setError(t('searchError', 'Error searching for locations'));
+      
+      // Chrome-specific: Provide more helpful error messages
+      const isChrome = /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent);
+      let errorMessage = t('searchError', 'Error searching for locations');
+      
+      if (isChrome) {
+        if (error.message?.includes('ZERO_RESULTS')) {
+          errorMessage = t('noResultsChrome', 'No locations found. Try a different search term.');
+        } else if (error.message?.includes('OVER_QUERY_LIMIT') || error.message?.includes('REQUEST_DENIED')) {
+          errorMessage = t('rateLimitChrome', 'Search temporarily unavailable. Please try again in a moment.');
+        } else if (error.message?.includes('INVALID_REQUEST')) {
+          errorMessage = t('invalidSearchChrome', 'Please enter a valid location name.');
+        } else {
+          errorMessage = t('chromeSearchError', 'Location search failed. Please try typing more of the location name.');
+        }
+      }
+      
+      setError(errorMessage);
       setSuggestions([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle search input change
+  // Handle search input change with Chrome compatibility
   const handleSearchChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -157,10 +196,14 @@ const LocationPickerModal = ({
       clearTimeout(searchTimeoutRef.current);
     }
 
+    // Chrome-specific: Use longer debounce for Chrome to prevent rate limiting
+    const isChrome = /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent);
+    const debounceTime = isChrome ? 500 : 300;
+
     // Set new timeout for search
     searchTimeoutRef.current = setTimeout(() => {
       searchLocations(query);
-    }, 300);
+    }, debounceTime);
   };
 
   // Handle location selection
@@ -177,19 +220,32 @@ const LocationPickerModal = ({
     closeModal(); // Use closeModal instead of direct setIsOpen to restore scroll
   };
 
-  // Open modal and focus search
+  // Open modal and focus search with Chrome compatibility
   const openModal = () => {
     if (disabled) return;
     setIsOpen(true);
     setSearchQuery('');
     setSuggestions([]);
+    setError('');
     document.body.style.overflow = 'hidden';
+    
+    // Chrome-specific: Use longer timeout for focus and add fallback
+    const isChrome = /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent);
+    const focusDelay = isChrome ? 200 : 100;
     
     setTimeout(() => {
       if (searchInputRef.current) {
-        searchInputRef.current.focus();
+        try {
+          searchInputRef.current.focus();
+          // Chrome-specific: Ensure input is ready for typing
+          if (isChrome) {
+            searchInputRef.current.click();
+          }
+        } catch (focusError) {
+          console.warn('[LocationPickerModal] Focus error:', focusError);
+        }
       }
-    }, 100);
+    }, focusDelay);
   };
 
   // Close modal

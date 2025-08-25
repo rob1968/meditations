@@ -86,6 +86,11 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   // Tab navigation state
   const [activeTab, setActiveTab] = useState(() => loadJournalTab()); // 'write', 'calendar', 'archive', 'addictions', 'coach'
   
+  // Archive tab swipe functionality
+  const [archiveCurrentIndex, setArchiveCurrentIndex] = useState(0);
+  const [archiveTouchStart, setArchiveTouchStart] = useState(null);
+  const [archiveTouchEnd, setArchiveTouchEnd] = useState(null);
+  
   // Ref to track if calendar has been initialized to prevent re-loading today's entry
   const calendarInitialized = useRef(false);
   
@@ -97,7 +102,7 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
     
     return parts.map((part, index) => 
       part.toLowerCase() === searchTerm.toLowerCase() ? 
-        <span key={index} style={{ backgroundColor: '#ffeb3b', color: '#000', fontWeight: 'bold' }}>{part}</span> : 
+        <span key={index} style={{ backgroundColor: '#ffeb3b', color: '#1a2332', fontWeight: 'bold' }}>{part}</span> : 
         part
     );
   };
@@ -209,6 +214,42 @@ const Journal = ({ user, userCredits, onCreditsUpdate, onProfileClick, unreadCou
   const handleTriggerDismiss = () => {
     console.log('Trigger alert dismissed');
     handleTriggerAlertClose();
+  };
+
+  // Archive tab swipe handlers
+  const minSwipeDistance = 50;
+
+  const onArchiveTouchStart = (e) => {
+    setArchiveTouchEnd(null);
+    setArchiveTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onArchiveTouchMove = (e) => {
+    setArchiveTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onArchiveTouchEnd = (filteredEntries) => {
+    if (!archiveTouchStart || !archiveTouchEnd) return;
+    
+    const distance = archiveTouchStart - archiveTouchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      // Swipe left - next card
+      setArchiveCurrentIndex((prev) => {
+        const next = prev + 1;
+        return next >= filteredEntries.length ? 0 : next;
+      });
+    }
+    
+    if (isRightSwipe) {
+      // Swipe right - previous card
+      setArchiveCurrentIndex((prev) => {
+        const next = prev - 1;
+        return next < 0 ? filteredEntries.length - 1 : next;
+      });
+    }
   };
 
   // Filter entries based on selected month and mood
@@ -3451,7 +3492,7 @@ const handleSaveEntry = async () => {
                     boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
                   }}>
                     <div className="spinner"></div>
-                    <span style={{ color: '#1f2937', fontSize: '14px', fontWeight: '700', textShadow: 'none' }}>{t('transcribing', 'Transcriberen...')}</span>
+                    <span style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '700', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>{t('transcribing', 'Transcriberen...')}</span>
                   </div>
                 )}
 

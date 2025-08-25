@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import LocationAutocomplete from './LocationAutocomplete';
+import LocationPickerModal from '../LocationPickerModal';
 import ImageUpload from './ImageUpload';
 import { getAuthHeaders } from '../../utils/userUtils';
-import '../../styles/create-activity-wizard.css';
+import SpellingChecker from '../GrammarChecker';
+// CSS styles are now in the global app.css
 
 const CreateActivityWizard = ({ user, categories, onActivityCreated, editingActivity, onCancel }) => {
   const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -19,17 +21,13 @@ const CreateActivityWizard = ({ user, categories, onActivityCreated, editingActi
     duration: 120,
     minParticipants: 3,
     maxParticipants: 8,
-    location: {
-      name: '',
-      address: '',
-      city: user?.location?.city || '',
-      coordinates: {
-        type: 'Point',
-        coordinates: [
-          user?.location?.coordinates?.longitude || 4.9041,
-          user?.location?.coordinates?.latitude || 52.3676
-        ]
-      }
+    location: null, // Will store LocationPickerModal format: { city, country, countryCode, fullName }
+    coordinates: {
+      type: 'Point',
+      coordinates: [
+        user?.location?.coordinates?.longitude || 4.9041,
+        user?.location?.coordinates?.latitude || 52.3676
+      ]
     },
     privacy: 'public',
     ageRange: {
@@ -179,6 +177,14 @@ const CreateActivityWizard = ({ user, categories, onActivityCreated, editingActi
     }
   }, [editingActivity, user]);
 
+  // Simple validation error clearing
+  useEffect(() => {
+    // Clear validation errors when form data changes
+    if (Object.keys(validationErrors).length > 0) {
+      setValidationErrors({});
+    }
+  }, [formData]);
+
   // Smart defaults based on category selection
   useEffect(() => {
     if (formData.category && !selectedTemplate) {
@@ -297,11 +303,11 @@ const CreateActivityWizard = ({ user, categories, onActivityCreated, editingActi
         break;
 
       case 2:
-        // Location validation
-        if (!formData.location.name || !formData.location.name.trim()) {
+        // Location validation - using LocationPickerModal format
+        if (!formData.location || !formData.location.city || !formData.location.country) {
           errors.location = t('locationRequired', 'Locatie is verplicht');
-        } else if (formData.location.name.trim().length < 3) {
-          errors.location = t('locationTooShort', 'Locatie naam moet minimaal 3 karakters zijn');
+        } else if (formData.location.city.trim().length < 2) {
+          errors.location = t('locationTooShort', 'Stad naam moet minimaal 2 karakters zijn');
         }
 
         // Participants validation
@@ -357,7 +363,8 @@ const CreateActivityWizard = ({ user, categories, onActivityCreated, editingActi
       case 4:
         // Final validations - check all critical fields again
         if (!formData.title.trim() || !formData.description.trim() || !formData.category || 
-            !formData.date || !formData.startTime || !formData.location.name) {
+            !formData.date || !formData.startTime || !formData.location || 
+            (!formData.location.city && !formData.location.fullName)) {
           errors.finalCheck = t('missingRequiredFields', 'Controleer alle verplichte velden');
         }
         break;
@@ -393,8 +400,17 @@ const CreateActivityWizard = ({ user, categories, onActivityCreated, editingActi
     handleInputChange('tags', formData.tags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleLocationSelect = (location) => {
-    handleInputChange('location', location);
+  const handleLocationSelect = (locationData) => {
+    // Handle LocationPickerModal data format: { city, country, countryCode, fullName }
+    if (locationData) {
+      handleInputChange('location', locationData);
+      // Also update coordinates if needed - for now just use default Netherlands center
+      // In future, could make Google Places call to get exact coordinates
+      handleInputChange('coordinates', {
+        type: 'Point',
+        coordinates: [4.9041, 52.3676] // Default Netherlands coordinates
+      });
+    }
   };
 
   const handleSubmit = async () => {
@@ -404,6 +420,21 @@ const CreateActivityWizard = ({ user, categories, onActivityCreated, editingActi
     
     try {
       const submitData = { ...formData };
+      
+      // Fix location data mapping: LocationPickerModal format -> Backend format
+      if (submitData.location) {
+        const locationData = submitData.location;
+        submitData.location = {
+          name: locationData.city || locationData.fullName || 'Unknown Location',
+          address: locationData.fullName || `${locationData.city}, ${locationData.country}`,
+          city: locationData.city,
+          country: locationData.country,
+          coordinates: submitData.coordinates || {
+            type: 'Point',
+            coordinates: [4.9041, 52.3676] // Default Netherlands coordinates
+          }
+        };
+      }
       
       const response = await fetch('/api/activities', {
         method: editingActivity ? 'PUT' : 'POST',
@@ -508,13 +539,15 @@ const CreateActivityWizard = ({ user, categories, onActivityCreated, editingActi
           <span className="label-icon">📄</span>
           {t('description', 'Beschrijving')} *
         </label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => handleInputChange('description', e.target.value)}
+        <SpellingChecker
+          text={formData.description}
+          onTextChange={(newText) => handleInputChange('description', newText)}
           placeholder={t('descriptionPlaceholder', 'Beschrijf wat je gaat doen, wat deelnemers kunnen verwachten...')}
           className={`form-textarea ${validationErrors.description ? 'error' : ''}`}
           maxLength={1000}
           rows={4}
+          enabled={true}
+          autoApplyCorrections={false}
         />
         {validationErrors.description && <div className="error-message">{validationErrors.description}</div>}
         <div className="char-count">{formData.description.length}/1000</div>
@@ -589,11 +622,11 @@ const CreateActivityWizard = ({ user, categories, onActivityCreated, editingActi
           <span className="label-icon">📍</span>
           {t('location', 'Locatie')} *
         </label>
-        <LocationAutocomplete
+        <LocationPickerModal
           value={formData.location}
           onChange={handleLocationSelect}
           placeholder={t('locationPlaceholder', 'Zoek naar een locatie...')}
-          className={validationErrors.location ? 'error' : ''}
+          required={true}
         />
         {validationErrors.location && <div className="error-message">{validationErrors.location}</div>}
       </div>
@@ -839,7 +872,7 @@ const CreateActivityWizard = ({ user, categories, onActivityCreated, editingActi
           </div>
           <div className="preview-detail">
             <span className="detail-icon">📍</span>
-            <span className="detail-text">{formData.location.name}</span>
+            <span className="detail-text">{formData.location?.fullName || `${formData.location?.city || ''}, ${formData.location?.country || ''}`}</span>
           </div>
           <div className="preview-detail">
             <span className="detail-icon">👥</span>

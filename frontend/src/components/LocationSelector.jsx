@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import googlePlacesService from '../services/googlePlacesService';
-import './LocationSelector.css';
+// CSS styles are now in the global app.css
 
 const LocationSelector = ({ 
   value, 

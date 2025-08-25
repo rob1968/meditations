@@ -776,6 +776,8 @@ const upload = multer({
     // Accept audio files supported by Google Speech-to-Text
     const allowedMimes = [
       'audio/webm',
+      'audio/webm;codecs=opus',
+      'audio/webm;codecs=vp8',
       'audio/mp4',
       'audio/mpeg',
       'audio/wav',
@@ -785,7 +787,32 @@ const upload = multer({
       'audio/flac'
     ];
     
-    if (allowedMimes.includes(file.mimetype)) {
+    // Also check if the mimetype starts with audio/ and contains webm, mp4, etc.
+    const isAudioFile = file.mimetype.startsWith('audio/') && (
+      file.mimetype.includes('webm') ||
+      file.mimetype.includes('mp4') ||
+      file.mimetype.includes('mpeg') ||
+      file.mimetype.includes('wav') ||
+      file.mimetype.includes('ogg') ||
+      file.mimetype.includes('mp3') ||
+      file.mimetype.includes('flac') ||
+      file.mimetype.includes('m4a')
+    );
+    
+    // Allow common browser-generated MIME types for audio files
+    const isBrowserAudioFile = (
+      file.mimetype === 'application/octet-stream' && 
+      file.originalname && 
+      (file.originalname.endsWith('.wav') || 
+       file.originalname.endsWith('.mp3') || 
+       file.originalname.endsWith('.ogg') || 
+       file.originalname.endsWith('.webm') || 
+       file.originalname.endsWith('.mp4') || 
+       file.originalname.endsWith('.m4a') || 
+       file.originalname.endsWith('.flac'))
+    );
+    
+    if (allowedMimes.includes(file.mimetype) || isAudioFile || isBrowserAudioFile) {
       cb(null, true);
     } else {
       console.log('Rejected file type:', file.mimetype);
@@ -1610,15 +1637,22 @@ router.post('/transcribe', auth, upload.single('audio'), async (req, res) => {
 
     // Handle different audio formats
     if (req.file.mimetype) {
-      if (req.file.mimetype.includes('wav')) {
+      if (req.file.mimetype.includes('wav') || req.file.originalname?.endsWith('.wav')) {
         request.config.encoding = 'LINEAR16';
-        request.config.sampleRateHertz = 44100;
+        // For WAV files, let Google auto-detect the sample rate by omitting it
+        delete request.config.sampleRateHertz;
       } else if (req.file.mimetype.includes('mp3') || req.file.mimetype.includes('mpeg')) {
         request.config.encoding = 'MP3';
+        delete request.config.sampleRateHertz;
       } else if (req.file.mimetype.includes('mp4')) {
         request.config.encoding = 'MP3';
-      } else if (req.file.mimetype.includes('ogg')) {
+        delete request.config.sampleRateHertz;
+      } else if (req.file.mimetype.includes('ogg') || req.file.originalname?.endsWith('.ogg')) {
         request.config.encoding = 'OGG_OPUS';
+        delete request.config.sampleRateHertz;
+      } else if (req.file.mimetype.includes('webm') || req.file.originalname?.endsWith('.webm')) {
+        request.config.encoding = 'WEBM_OPUS';
+        // Keep default 48000 for WebM as it's the standard browser recording rate
       }
     }
 
@@ -1672,6 +1706,12 @@ router.post('/transcribe', auth, upload.single('audio'), async (req, res) => {
 
   } catch (error) {
     console.error('Error transcribing audio with Google Speech-to-Text:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     
     // Clean up temporary file if it exists
     if (req.file && fs.existsSync(req.file.path)) {

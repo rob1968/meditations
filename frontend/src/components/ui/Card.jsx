@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './Card.module.css';
+// CSS styles are now in the global app.css
 
 const Card = ({ 
   children, 
@@ -9,7 +9,7 @@ const Card = ({
 }) => {
   return (
     <div
-      className={`${styles.card} ${styles[variant]} ${className}`}
+      className={`card card-${variant} ${className}`}
       {...props}
     >
       {children}

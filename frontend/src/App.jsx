@@ -15,6 +15,7 @@ import Inbox from './components/Inbox';
 import Journal from './components/Journal';
 import JournalHub from './components/JournalHub';
 import MeetHub from './components/Meet/MeetHub';
+import ChatTest from './components/ChatTest';
 import PageHeader from './components/PageHeader';
 import VoiceSlider from './components/VoiceSlider';
 import GDPRConsent from './components/GDPRConsent';
@@ -1539,6 +1540,8 @@ const App = () => {
             }
           }}
         />;
+      case 'chattest':
+        return <ChatTest />;
       case 'journalHub':
         return <JournalHub user={user} />;
       case 'admin':

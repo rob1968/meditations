@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import './SimpleCalendar.css';
+// CSS styles are now in the global app.css
 
 const SimpleCalendar = ({ 
   currentMonth, 

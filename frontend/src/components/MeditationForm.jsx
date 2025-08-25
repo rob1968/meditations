@@ -4,34 +4,34 @@ import { Button, Input, Select, Card, FormField, LoadingSpinner } from './ui';
 import MeditationTypeSlider from './MeditationTypeSlider';
 import BackgroundSlider from './BackgroundSlider';
 import VoiceSlider from './VoiceSlider';
-import styles from './MeditationForm.module.css';
+// CSS styles are now in the global app.css
 
 const MeditationForm = ({ text, setText, background, setBackground, voiceId, setVoiceId, voices, generate, isLoading, meditationType, selectMeditationType, duration, handleDurationChange, onGenerateTextPreview, isGeneratingText, showTextPreview, userCredits }) => {
   const { t } = useTranslation();
   
   return (
-    <Card className={styles.formCard}>
-      <div className={styles.header}>
-        <span className={styles.icon}>🧘‍♀️</span>
-        <h1 className={styles.title}>{t('title')}</h1>
-        <p className={styles.subtitle}>{t('subtitle')}</p>
+    <Card className="form-card">
+      <div className="header">
+        <span className="icon">🧘‍♀️</span>
+        <h1 className="title">{t('title')}</h1>
+        <p className="subtitle">{t('subtitle')}</p>
       </div>
       
-      <form className={styles.form} onSubmit={(e) => { e.preventDefault(); generate(); }}>
+      <form className="form" onSubmit={(e) => { e.preventDefault(); generate(); }}>
         <MeditationTypeSlider 
           selectedType={meditationType}
           onTypeSelect={selectMeditationType}
         />
         
         {!showTextPreview && (
-          <div className={styles.previewContainer}>
+          <div className="preview-container">
             <Button
               type="button"
               onClick={onGenerateTextPreview}
               disabled={isGeneratingText || isLoading || (userCredits && userCredits.credits < 1)}
               variant="outline"
               size="medium"
-              className={styles.previewButton}
+              className="preview-button"
             >
               {isGeneratingText ? (
                 <>
@@ -48,18 +48,18 @@ const MeditationForm = ({ text, setText, background, setBackground, voiceId, set
         )}
         
         <FormField label={`${t('duration')}: ${duration} ${t('minutes')}`}>
-          <div className={styles.durationContainer}>
+          <div className="duration-container">
             <input
               type="range"
               min="1"
               max="20"
               value={duration}
               onChange={(e) => handleDurationChange(parseInt(e.target.value))}
-              className={styles.durationSlider}
+              className="duration-slider"
             />
-            <div className={styles.durationLabels}>
-              <span className={styles.durationLabel}>1{t('min')}</span>
-              <span className={styles.durationLabel}>20{t('min')}</span>
+            <div className="duration-labels">
+              <span className="duration-label">1{t('min')}</span>
+              <span className="duration-label">20{t('min')}</span>
             </div>
           </div>
         </FormField>
@@ -90,7 +90,7 @@ const MeditationForm = ({ text, setText, background, setBackground, voiceId, set
           type="submit"
           disabled={isLoading}
           size="large"
-          className={styles.generateButton}
+          className="generate-button"
         >
           {isLoading ? t('generating') : t('generateButton')}
         </Button>
@@ -98,7 +98,7 @@ const MeditationForm = ({ text, setText, background, setBackground, voiceId, set
         {isLoading && (
           <LoadingSpinner 
             text={t('generatingText')}
-            className={styles.loading}
+            className="loading"
           />
         )}
       </form>

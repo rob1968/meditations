@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, Button } from './ui';
-import styles from './AudioPlayer.module.css';
+// CSS styles are now in the global app.css
 
 const AudioPlayer = ({ audioUrl }) => {
   const { t } = useTranslation();
@@ -59,29 +59,29 @@ const AudioPlayer = ({ audioUrl }) => {
   if (!audioUrl) return null;
 
   return (
-    <Card variant="secondary" className={styles.audioPlayer}>
-      <div className={styles.controls}>
+    <Card variant="secondary" className="audio-player">
+      <div className="controls">
         <Button
           variant="secondary"
           size="large"
           onClick={togglePlay}
-          className={styles.playButton}
+          className="play-button"
         >
           {isPlaying ? '⏸️' : '▶️'}
         </Button>
         
-        <div className={styles.info}>
-          <div className={styles.title}>{t('audioTitle')}</div>
-          <div className={styles.time}>
+        <div className="info">
+          <div className="title">{t('audioTitle')}</div>
+          <div className="time">
             {formatTime(currentTime)} / {formatTime(duration)}
           </div>
         </div>
       </div>
       
-      <div className={styles.progressContainer} onClick={handleSeek}>
-        <div className={styles.progressBar}>
+      <div className="progress-container" onClick={handleSeek}>
+        <div className="progress-bar">
           <div 
-            className={styles.progress} 
+            className="progress" 
             style={{ width: `${(currentTime / duration) * 100}%` }}
           />
         </div>
@@ -91,7 +91,7 @@ const AudioPlayer = ({ audioUrl }) => {
         ref={audioRef}
         src={audioUrl}
         preload="metadata"
-        className={styles.hiddenAudio}
+        className="hidden-audio"
       />
     </Card>
   );

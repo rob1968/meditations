@@ -347,6 +347,11 @@ router.post('/:id/join', auth, async (req, res) => {
       return res.status(404).json({ error: 'Activity not found' });
     }
     
+    // Don't allow organizer to join (they're automatically participant)
+    if (activity.organizer.toString() === req.user._id.toString()) {
+      return res.status(400).json({ error: 'Je bent al organisator en automatisch deelnemer van deze activiteit' });
+    }
+    
     // Check if user can join
     const canJoinResult = await req.user.canJoinActivity(activity);
     if (!canJoinResult.canJoin) {

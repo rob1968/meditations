@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import '../styles/Alert.css';
+// CSS styles are now in the global app.css
 
 const Alert = ({ 
   message, 

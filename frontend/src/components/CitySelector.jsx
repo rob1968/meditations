@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import useCities from '../hooks/useCities';
-import './CitySelector.css';
+// CSS styles are now in the global app.css
 
 const CitySelector = ({ 
   countryName, 

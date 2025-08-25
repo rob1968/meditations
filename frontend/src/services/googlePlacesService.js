@@ -89,24 +89,26 @@ class GooglePlacesService {
       throw new Error('Google Maps API not loaded');
     }
 
-    // Initialize services - use new API if available, fallback to old
+    // Always try to use new API first
     if (window.google.maps.places.AutocompleteSuggestion) {
       console.log('[GooglePlaces] Using new AutocompleteSuggestion API');
       this.useNewAPI = true;
     } else {
-      console.log('[GooglePlaces] Using legacy AutocompleteService API');
+      console.log('[GooglePlaces] New API not available, will use legacy API as fallback');
       this.useNewAPI = false;
-      this.initializeLegacyServices();
+      // Don't initialize legacy services until actually needed
     }
     
     this.geocoder = new window.google.maps.Geocoder();
     
-    // Generate new session token
-    this.generateNewSessionToken();
+    // Generate new session token if available
+    if (window.google.maps.places.AutocompleteSessionToken) {
+      this.generateNewSessionToken();
+    }
   }
 
   /**
-   * Initialize legacy Google Places services
+   * Initialize legacy Google Places services (only when needed)
    */
   initializeLegacyServices() {
     if (!window.google || !window.google.maps || !window.google.maps.places) {
@@ -114,11 +116,26 @@ class GooglePlacesService {
       return;
     }
     
-    console.log('[GooglePlaces] Initializing legacy services...');
-    this.autocompleteService = new window.google.maps.places.AutocompleteService();
-    this.placesService = new window.google.maps.places.PlacesService(
-      document.createElement('div')
-    );
+    // Only initialize if not already done and if legacy API is available
+    if (!this.autocompleteService && window.google.maps.places.AutocompleteService) {
+      console.log('[GooglePlaces] Initializing legacy AutocompleteService...');
+      try {
+        this.autocompleteService = new window.google.maps.places.AutocompleteService();
+      } catch (error) {
+        console.warn('[GooglePlaces] Could not initialize AutocompleteService:', error);
+      }
+    }
+    
+    if (!this.placesService && window.google.maps.places.PlacesService) {
+      console.log('[GooglePlaces] Initializing legacy PlacesService...');
+      try {
+        this.placesService = new window.google.maps.places.PlacesService(
+          document.createElement('div')
+        );
+      } catch (error) {
+        console.warn('[GooglePlaces] Could not initialize PlacesService:', error);
+      }
+    }
   }
 
   /**
@@ -126,7 +143,15 @@ class GooglePlacesService {
    */
   generateNewSessionToken() {
     if (window.google && window.google.maps && window.google.maps.places) {
-      this.sessionToken = new window.google.maps.places.AutocompleteSessionToken();
+      try {
+        // Only create session token if the API supports it
+        if (window.google.maps.places.AutocompleteSessionToken) {
+          this.sessionToken = new window.google.maps.places.AutocompleteSessionToken();
+        }
+      } catch (error) {
+        console.warn('[GooglePlaces] Could not create session token:', error);
+        this.sessionToken = null;
+      }
     }
   }
 
@@ -157,7 +182,7 @@ class GooglePlacesService {
   }
 
   /**
-   * Get place predictions with autocomplete
+   * Get place predictions with autocomplete and Chrome compatibility
    * @param {string} input - Search input
    * @param {object} options - Autocomplete options
    * @returns {Promise<Array>} Array of place predictions
@@ -172,6 +197,17 @@ class GooglePlacesService {
 
     if (!input || input.trim().length < 2) {
       return [];
+    }
+
+    // Chrome-specific: Detect browser and adjust behavior
+    const isChrome = /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent);
+    
+    if (isChrome) {
+      console.log('[GooglePlaces] Chrome detected, using legacy API for better compatibility');
+      // Force legacy API for Chrome compatibility
+      this.useNewAPI = false;
+      this.initializeLegacyServices();
+      return this.getPlacePredictionsLegacy(input, options);
     }
 
     // Try new API first if available, fallback to legacy on error
@@ -195,36 +231,51 @@ class GooglePlacesService {
    */
   async getPlacePredictionsNew(input, options = {}) {
     try {
+      // Map legacy types to new includedPrimaryTypes
+      let includedTypes = [];
+      if (options.types) {
+        if (options.types.includes('(cities)')) {
+          includedTypes = ['locality', 'administrative_area_level_3'];
+        } else if (options.types.includes('country')) {
+          includedTypes = ['country'];
+        } else if (options.types.includes('establishment')) {
+          includedTypes = ['establishment'];
+        } else if (options.types.includes('point_of_interest')) {
+          includedTypes = ['point_of_interest'];
+        } else if (options.types.includes('locality')) {
+          includedTypes = ['locality'];
+        } else {
+          // Default to locality for general searches
+          includedTypes = ['locality'];
+        }
+      } else {
+        includedTypes = ['locality'];
+      }
+
       const request = {
         input: input.trim(),
-        includedPrimaryTypes: options.types || ['locality'],
-        sessionToken: this.sessionToken
+        includedPrimaryTypes: includedTypes
       };
 
-      // Add location restriction if country is specified
+      // Add region codes if country is specified
       if (options.componentRestrictions && options.componentRestrictions.country) {
-        request.locationRestriction = {
-          rectangle: {
-            // Use country bounds - for NL as example, but we'll make it more generic
-            low: { lat: 50.0, lng: 3.0 },
-            high: { lat: 54.0, lng: 8.0 }
-          }
-        };
-        
-        // Better approach: use includedRegionCodes instead
-        request.includedRegionCodes = [options.componentRestrictions.country];
-        delete request.locationRestriction;
+        request.includedRegionCodes = [options.componentRestrictions.country.toUpperCase()];
+      }
+
+      // Add language code if available
+      if (options.language) {
+        request.languageCode = options.language;
       }
 
       const { suggestions } = await window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
       
       // Convert new format to legacy format for compatibility
-      return suggestions.map(suggestion => ({
+      return (suggestions || []).map(suggestion => ({
         place_id: suggestion.placePrediction.placeId,
         description: suggestion.placePrediction.text.text,
         structured_formatting: {
-          main_text: suggestion.placePrediction.structuredFormat.mainText?.text || '',
-          secondary_text: suggestion.placePrediction.structuredFormat.secondaryText?.text || ''
+          main_text: suggestion.placePrediction.structuredFormat?.mainText?.text || suggestion.placePrediction.text.text.split(',')[0],
+          secondary_text: suggestion.placePrediction.structuredFormat?.secondaryText?.text || ''
         },
         types: suggestion.placePrediction.types || []
       }));
@@ -235,7 +286,7 @@ class GooglePlacesService {
   }
 
   /**
-   * Get place predictions using legacy AutocompleteService API
+   * Get place predictions using legacy AutocompleteService API with Chrome compatibility
    */
   async getPlacePredictionsLegacy(input, options = {}) {
     // Ensure legacy services are initialized
@@ -248,6 +299,9 @@ class GooglePlacesService {
       throw new Error('AutocompleteService could not be initialized');
     }
 
+    // Chrome-specific: Add more conservative request options
+    const isChrome = /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent);
+    
     const defaultOptions = {
       input: input.trim(),
       sessionToken: this.sessionToken,
@@ -255,17 +309,58 @@ class GooglePlacesService {
       fields: ['place_id', 'name', 'formatted_address', 'types', 'address_components']
     };
 
+    // Chrome-specific adjustments
+    if (isChrome) {
+      // Remove session token for Chrome to avoid potential issues
+      delete defaultOptions.sessionToken;
+      // Limit fields to essential ones only
+      defaultOptions.fields = ['place_id', 'formatted_address'];
+    }
+
     const requestOptions = { ...defaultOptions, ...options };
 
     return new Promise((resolve, reject) => {
+      // Chrome-specific: Add timeout for the request
+      let timeoutId;
+      if (isChrome) {
+        timeoutId = setTimeout(() => {
+          reject(new Error('TIMEOUT: Request took too long'));
+        }, 10000); // 10 second timeout for Chrome
+      }
+
       this.autocompleteService.getPlacePredictions(requestOptions, (predictions, status) => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+
         if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+          console.log(`[GooglePlaces] Legacy API success: ${(predictions || []).length} results`);
           resolve(predictions || []);
         } else if (status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+          console.log('[GooglePlaces] Legacy API: No results found');
           resolve([]);
         } else {
-          console.error('Places Autocomplete error:', status);
-          reject(new Error(`Places API error: ${status}`));
+          console.error('[GooglePlaces] Legacy API error:', status);
+          
+          // Chrome-specific: More detailed error messages
+          let errorMessage = `Places API error: ${status}`;
+          if (isChrome) {
+            switch (status) {
+              case 'OVER_QUERY_LIMIT':
+                errorMessage = 'OVER_QUERY_LIMIT: Too many requests. Please wait a moment.';
+                break;
+              case 'REQUEST_DENIED':
+                errorMessage = 'REQUEST_DENIED: API access denied. Check API key permissions.';
+                break;
+              case 'INVALID_REQUEST':
+                errorMessage = 'INVALID_REQUEST: Invalid search parameters.';
+                break;
+              default:
+                errorMessage = `Chrome API error: ${status}`;
+            }
+          }
+          
+          reject(new Error(errorMessage));
         }
       });
     });
@@ -305,17 +400,45 @@ class GooglePlacesService {
    */
   async getPlaceDetailsNew(placeId, fields) {
     try {
-      const request = {
-        id: placeId,
-        fields: fields,
-        sessionToken: this.sessionToken
+      // Create a Place instance with the place ID
+      const place = new window.google.maps.places.Place({
+        id: placeId
+      });
+
+      // Map legacy field names to new API field names
+      const fieldMapping = {
+        'name': 'displayName',
+        'formatted_address': 'formattedAddress',
+        'address_components': 'addressComponents',
+        'geometry': 'location',
+        'types': 'types'
       };
 
-      const place = await window.google.maps.places.Place.fetchFields(request);
+      const mappedFields = fields.map(field => fieldMapping[field] || field);
+      
+      // Fetch the requested fields
+      await place.fetchFields({
+        fields: mappedFields
+      });
+      
+      // Convert new format to legacy format for compatibility
+      const placeData = {
+        place_id: placeId,
+        name: place.displayName || '',
+        formatted_address: place.formattedAddress || '',
+        address_components: place.addressComponents || [],
+        geometry: place.location ? {
+          location: {
+            lat: () => place.location.lat,
+            lng: () => place.location.lng
+          }
+        } : null,
+        types: place.types || []
+      };
       
       // Generate new session token after successful request
       this.generateNewSessionToken();
-      return place;
+      return placeData;
     } catch (error) {
       console.error('New Place details error:', error);
       throw error;
@@ -326,6 +449,16 @@ class GooglePlacesService {
    * Get place details using legacy PlacesService API
    */
   async getPlaceDetailsLegacy(placeId, fields) {
+    // Ensure legacy services are initialized
+    if (!this.placesService) {
+      console.log('[GooglePlaces] PlacesService not initialized, initializing now...');
+      this.initializeLegacyServices();
+    }
+
+    if (!this.placesService) {
+      throw new Error('PlacesService could not be initialized');
+    }
+
     const request = {
       placeId: placeId,
       fields: fields,

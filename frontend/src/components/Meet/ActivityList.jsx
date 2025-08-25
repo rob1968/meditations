@@ -29,6 +29,8 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
         return t('joinErrorInvitationRequired', 'Je hebt een uitnodiging nodig voor deze activiteit.');
       case 'Je hebt al een activiteit op deze dag':
         return t('joinErrorSameDayActivity', 'Je hebt al een activiteit op deze dag.');
+      case 'Je bent al organisator en automatisch deelnemer van deze activiteit':
+        return t('joinErrorAlreadyOrganizer', 'Je bent organisator van deze activiteit en neemt automatisch deel.');
       default:
         return errorMessage || t('joinFailed', 'Kon niet aanmelden voor activiteit');
     }
@@ -181,20 +183,34 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
       if (response.ok) {
         const result = await response.json();
         
-        // Update local state to reflect joined status
-        setActivities(prev => prev.map(activity => 
-          activity._id === activityId 
-            ? { ...activity, participants: [...activity.participants, { user: user }] }
-            : activity
-        ));
+        // Update local state to reflect joined status properly
+        const updateFunction = (activity) => {
+          if (activity._id !== activityId) return activity;
+          
+          if (result.waitlist) {
+            // User was added to waitlist
+            return {
+              ...activity,
+              waitlist: [...(activity.waitlist || []), { user: user, joinedAt: new Date() }]
+            };
+          } else {
+            // User successfully joined as participant
+            return {
+              ...activity,
+              participants: [...(activity.participants || []), { user: user, status: 'confirmed', joinedAt: new Date() }]
+            };
+          }
+        };
+        
+        setActivities(prev => prev.map(updateFunction));
+        setFilteredActivities(prev => prev.map(updateFunction));
         
         // Haptic feedback simulation
         if (navigator.vibrate) {
           navigator.vibrate(50);
         }
         
-        // Don't show overlay message anymore - let ActivityCard handle it
-        // Success is handled by ActivityCard
+        return result;
       } else {
         const error = await response.json();
         console.error('❌ Join failed:', error);
@@ -225,49 +241,50 @@ const ActivityList = ({ user, categories, onSelectActivity }) => {
         const result = await response.json();
         console.log('✅ Leave successful:', result);
         
-        // Update local state to reflect left status
+        // Update local state to reflect left status properly
         const currentUserId = getUserId(user);
-        setActivities(prev => prev.map(activity => 
-          activity._id === activityId 
-            ? { 
-                ...activity, 
-                participants: activity.participants.filter(p => 
-                  getUserId(p.user || p) !== currentUserId
-                )
-              }
-            : activity
-        ));
         
-        setFilteredActivities(prev => prev.map(activity => 
-          activity._id === activityId 
-            ? { 
-                ...activity, 
-                participants: activity.participants.filter(p => 
-                  getUserId(p.user || p) !== currentUserId
-                )
-              }
-            : activity
-        ));
+        const updateFunction = (activity) => {
+          if (activity._id !== activityId) return activity;
+          
+          if (result.waitlist) {
+            // User was removed from waitlist
+            return {
+              ...activity,
+              waitlist: (activity.waitlist || []).filter(w => getUserId(w.user) !== currentUserId)
+            };
+          } else {
+            // User left as participant, potentially move someone from waitlist
+            const updatedParticipants = activity.participants.filter(p => 
+              getUserId(p.user || p) !== currentUserId
+            );
+            let updatedWaitlist = activity.waitlist || [];
+            
+            // If there was a waitlist and space opened up, move first person
+            if (updatedWaitlist.length > 0 && updatedParticipants.length < activity.maxParticipants) {
+              const nextUser = updatedWaitlist[0];
+              updatedParticipants.push({ user: nextUser.user, status: 'confirmed', joinedAt: new Date() });
+              updatedWaitlist = updatedWaitlist.slice(1);
+            }
+            
+            return {
+              ...activity,
+              participants: updatedParticipants,
+              waitlist: updatedWaitlist
+            };
+          }
+        };
         
-        // Also update recommended activities if they exist
-        setRecommendedActivities(prev => prev.map(activity => 
-          activity._id === activityId 
-            ? { 
-                ...activity, 
-                participants: activity.participants.filter(p => 
-                  getUserId(p.user || p) !== currentUserId
-                )
-              }
-            : activity
-        ));
+        setActivities(prev => prev.map(updateFunction));
+        setFilteredActivities(prev => prev.map(updateFunction));
+        setRecommendedActivities(prev => prev.map(updateFunction));
         
         // Haptic feedback simulation
         if (navigator.vibrate) {
           navigator.vibrate([50, 50, 50]);
         }
         
-        // Don't show overlay message anymore - let ActivityCard handle it
-        // Success is handled by ActivityCard
+        return result;
       } else {
         const error = await response.json();
         console.error('❌ Leave failed:', error);

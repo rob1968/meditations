@@ -58,8 +58,8 @@ const EnhancedChatWindow = ({ conversation, currentUser, onBack }) => {
   };
 
   useEffect(() => {
-    if (!conversation?._id || (!currentUser?.id && !currentUser?._id)) {
-      console.warn('Missing conversation or user data, skipping chat initialization');
+    if (!conversation?._id || !currentUser?._id) {
+      // Skip initialization during loading - this is normal
       return;
     }
 
@@ -79,7 +79,7 @@ const EnhancedChatWindow = ({ conversation, currentUser, onBack }) => {
 
   const fetchMessages = async () => {
     if (!conversation?._id || !currentUser?._id) {
-      console.warn('Cannot fetch messages: missing conversation or user data');
+      // Silently return during initial loading - this is normal behavior
       setMessages([]);
       setIsLoading(false);
       return;

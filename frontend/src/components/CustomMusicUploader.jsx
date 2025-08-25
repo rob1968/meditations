@@ -4,7 +4,7 @@ import axios from 'axios';
 import { getFullUrl } from '../config/api';
 import ConfirmDialog from './ConfirmDialog';
 import Alert from './Alert';
-import './CustomMusicUploader.css';
+// CSS styles are now in the global app.css
 
 const CustomMusicUploader = ({ 
   selectedMusic, 

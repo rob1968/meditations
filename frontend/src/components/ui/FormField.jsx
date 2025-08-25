@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './FormField.module.css';
+// CSS styles are now in the global app.css
 
 const FormField = ({ 
   label, 
@@ -9,11 +9,11 @@ const FormField = ({
   ...props 
 }) => {
   return (
-    <div className={`${styles.field} ${className}`} {...props}>
+    <div className={`form-field ${className}`} {...props}>
       {label && (
-        <label className={styles.label}>
+        <label className="form-label">
           {label}
-          {required && <span className={styles.required}>*</span>}
+          {required && <span className="form-required">*</span>}
         </label>
       )}
       {children}

@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './Button.module.css';
+// CSS styles are now in the global app.css
 
 const Button = ({ 
   children, 
@@ -12,7 +12,7 @@ const Button = ({
 }) => {
   return (
     <button
-      className={`${styles.button} ${styles[variant]} ${styles[size]} ${className}`}
+      className={`button button-${variant} button-${size} ${className}`}
       onClick={onClick}
       disabled={disabled}
       {...props}

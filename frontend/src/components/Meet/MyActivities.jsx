@@ -8,6 +8,9 @@ import { getAuthHeaders } from '../../utils/userUtils';
 
 const MyActivities = ({ user, onSelectActivity }) => {
   const { t } = useTranslation();
+  
+  // Cache-bust version identifier: v2.1
+  console.log('🎯 [CACHE-BUST-v2.1] MyActivities component loaded at:', new Date().toISOString());
   const [activities, setActivities] = useState({
     organizing: [],
     participating: [],
@@ -44,15 +47,29 @@ const MyActivities = ({ user, onSelectActivity }) => {
   };
 
   const loadMyActivities = async () => {
+    console.log('🔄 [CACHE-BUST-v2.1] Loading my activities for user:', user?.id, user?.username);
+    console.log('🕐 [CACHE-BUST-v2.1] Timestamp:', new Date().toISOString());
     setIsLoading(true);
     try {
+      const headers = getAuthHeaders(user);
+      console.log('📡 Auth headers:', headers);
+      
       const response = await fetch('/api/activities/user/my-activities', {
-        headers: getAuthHeaders(user)
+        headers
       });
 
+      console.log('📊 My activities response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 My activities data received:', data);
+        console.log('📊 Organizing count:', data.organizing?.length || 0);
+        console.log('📊 Participating count:', data.participating?.length || 0);
+        console.log('📊 Past count:', data.past?.length || 0);
         setActivities(data);
+      } else {
+        const errorData = await response.json();
+        console.error('❌ My activities API error:', errorData);
       }
     } catch (error) {
       console.error('Error loading my activities:', error);
@@ -122,18 +139,24 @@ const MyActivities = ({ user, onSelectActivity }) => {
   };
 
   const handleCancelActivity = (activityId) => {
+    console.log('🎯 [CACHE-BUST-v2.1] handleCancelActivity called with ID:', activityId);
+    console.log('🎯 [CACHE-BUST-v2.1] Setting cancel dialog state...');
     setCancelReason('');
     setConfirmAction(() => () => performCancelActivity(activityId));
     setShowCancelDialog(true);
+    console.log('🎯 [CACHE-BUST-v2.1] Cancel dialog should now be open, showCancelDialog:', true);
   };
 
   const performCancelActivity = async (activityId) => {
+    console.log('🚀 [CACHE-BUST-v2.1] performCancelActivity called with ID:', activityId, 'Reason:', cancelReason);
     try {
       const response = await fetch(`/api/activities/${activityId}/cancel`, {
         method: 'POST',
         headers: getAuthHeaders(user),
         body: JSON.stringify({ reason: cancelReason })
       });
+      
+      console.log('📡 Cancel response status:', response.status);
 
       if (response.ok) {
         // Update activity status
@@ -195,6 +218,14 @@ const MyActivities = ({ user, onSelectActivity }) => {
   };
 
   const renderActivityActions = (activity, isOrganizing) => {
+    console.log('🎬 renderActivityActions called:', { 
+      activityId: activity._id, 
+      activityTitle: activity.title,
+      isOrganizing, 
+      status: activity.status,
+      role: activity.role 
+    });
+    
     if (activity.status === 'cancelled') {
       return (
         <div className="activity-status-cancelled">
@@ -495,11 +526,20 @@ const MyActivities = ({ user, onSelectActivity }) => {
       />
       
       {/* Cancel Dialog with Reason Input */}
+      {console.log('🎭 [CACHE-BUST-v2.1] Rendering cancel dialog with showCancelDialog:', showCancelDialog)}
       <ConfirmDialog
         isOpen={showCancelDialog}
-        onClose={() => setShowCancelDialog(false)}
+        onClose={() => {
+          console.log('🚪 [CACHE-BUST-v2.1] Cancel dialog onClose called');
+          setShowCancelDialog(false);
+        }}
         onConfirm={() => {
-          confirmAction && confirmAction();
+          console.log('✅ ConfirmDialog onConfirm called, confirmAction:', confirmAction);
+          if (confirmAction) {
+            confirmAction();
+          } else {
+            console.error('❌ confirmAction is null or undefined!');
+          }
           setShowCancelDialog(false);
         }}
         title={t('cancelActivity', 'Activiteit Annuleren')}
